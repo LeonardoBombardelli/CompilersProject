@@ -1,0 +1,6 @@
+// esta deve ser aceita
+"string\n1"
+
+// esta nao
+"outra
+string"
