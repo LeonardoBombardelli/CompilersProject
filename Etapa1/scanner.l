@@ -12,6 +12,10 @@ LETTER [A-Za-z_]
 ALNUM ({DIGIT}|{LETTER})
 INTEGER [+|-]?{DIGIT}+
 
+/* Multiple line comments state. Check more at https://ftp.gnu.org/old-gnu/Manuals/flex-2.5.4/html_node/flex_11.html */
+
+%x MULTIPLE_LINE_COMMENT
+
 %%
 
  /* palavras reservadas */
@@ -80,22 +84,35 @@ INTEGER [+|-]?{DIGIT}+
 "<<" { return TK_OC_SR  ; }
 
  /* literais */
+
 "false" { return TK_LIT_FALSE; }
 "true"  { return TK_LIT_TRUE; }
+
+{DIGIT}[{ALNUM}|_]* { return TOKEN_ERRO; } /* identificador começando com numero */
 {LETTER}{ALNUM}* { return TK_IDENTIFICADOR; }
+
 ['][^\'][']      { return TK_LIT_CHAR; }
 ["][^\"\n]*["]   { return TK_LIT_STRING; }
+
 {INTEGER}        { return TK_LIT_INT; }
 {INTEGER}\.{DIGIT}+(["E"|"e"]{INTEGER})? { return TK_LIT_FLOAT; }
 
  /* comentarios */
-[/][/][^\n]* {}
-[/][*][^\n]*[*][/]  /* nao funciona multilinhas (vai ter que ser com estados) */
+[/][/][^\n]* { }
+
+
+[/][*]        { BEGIN(MULTIPLE_LINE_COMMENT); }
+
+<MULTIPLE_LINE_COMMENT>[*][/]        { BEGIN(INITIAL); }
+<MULTIPLE_LINE_COMMENT>["\n"]        { numberLines+=1; }
+<MULTIPLE_LINE_COMMENT>.             { }
+
 
  /* outros */
 {WHITE} {  }
 [\n] { numberLines+=1; }
-{DIGIT}[{ALNUM}|_]* { return TOKEN_ERRO; }
+
+. { return TOKEN_ERRO; }
 
 %%
 
