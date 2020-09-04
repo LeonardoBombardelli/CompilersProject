@@ -2,11 +2,19 @@
 %{
     #include "tokens.h"
 
-    int numberLines = 0;
+    int numberLines = 1;
+
 %}
+
+WHITE [ \r\t]+
+DIGIT [0-9]
+LETTER [A-Za-z_]
+ALNUM ({DIGIT}|{LETTER})
+INTEGER [+|-]?{DIGIT}+
 
 %%
 
+ /* palavras reservadas */
 "int"       { return TK_PR_INT       ; }
 "float"     { return TK_PR_FLOAT     ; }
 "bool"      { return TK_PR_BOOL      ; }
@@ -32,20 +40,10 @@
 "private"   { return TK_PR_PRIVATE   ; }
 "public"    { return TK_PR_PUBLIC    ; }
 "protected" { return TK_PR_PROTECTED ; }
+"end"       { return TK_PR_END       ; }
+"default"   { return TK_PR_DEFAULT   ; }
 
-"<=" { return TK_OC_LE  ; }
-">=" { return TK_OC_GE  ; }         
-"==" { return TK_OC_EQ  ; }         
-"!=" { return TK_OC_NE  ; }         
-"&&" { return TK_OC_AND ; }         
-"||" { return TK_OC_OR  ; }         
-">>" { return TK_OC_SL  ; }         
-"<<" { return TK_OC_SR  ; }
-
-
-"~" { return '~'; }
-"@" { return '@'; }
-"`" { return '`'; }
+ /* caracteres especiais */
 "," { return ','; }
 ";" { return ';'; }
 ":" { return ':'; }
@@ -57,6 +55,7 @@
 "}" { return '}'; }
 "+" { return '+'; }
 "-" { return '-'; }
+"|" { return '|'; }
 "*" { return '*'; }
 "/" { return '/'; }
 "<" { return '<'; }
@@ -64,30 +63,39 @@
 "=" { return '='; }
 "!" { return '!'; }
 "&" { return '&'; }
-"." { return '.'; }
 "%" { return '%'; }
 "#" { return '#'; }
 "^" { return '^'; }
-"|" { return '|'; }
+"." { return '.'; }
 "$" { return '$'; }
-"?" { return '?'; }
 
-['].[']  { return TK_LIT_CHAR; }
-["].*["] { return TK_LIT_STRING; }
-[[:digit:]]*"."[[:digit:]]+ { return TK_LIT_FLOAT; }
-[[:digit:]]+["E"|"e"][-]?[[:digit:]]* { return TK_LIT_FLOAT; }
-[[:digit:]]* { return TK_LIT_INT; }
+ /* operadores compostos */
+"<=" { return TK_OC_LE  ; }
+">=" { return TK_OC_GE  ; }
+"==" { return TK_OC_EQ  ; }
+"!=" { return TK_OC_NE  ; }
+"&&" { return TK_OC_AND ; }
+"||" { return TK_OC_OR  ; }
+">>" { return TK_OC_SL  ; }
+"<<" { return TK_OC_SR  ; }
+
+ /* literais */
 "false" { return TK_LIT_FALSE; }
-"true" { return TK_LIT_TRUE; }
+"true"  { return TK_LIT_TRUE; }
+{LETTER}{ALNUM}* { return TK_IDENTIFICADOR; }
+['][^\'][']      { return TK_LIT_CHAR; }
+["][^\"\n]*["]   { return TK_LIT_STRING; }
+{INTEGER}        { return TK_LIT_INT; }
+{INTEGER}\.{DIGIT}+(["E"|"e"]{INTEGER})? { return TK_LIT_FLOAT; }
 
+ /* comentarios */
+[/][/][^\n]* {}
+[/][*][^\n]*[*][/]  /* nao funciona multilinhas (vai ter que ser com estados) */
 
-[[:alpha:]|_][[:alnum:]|_]* { return TK_IDENTIFICADOR; }
-[[:digit:]][[:alnum:]|_]* { return TOKEN_ERRO; }
-
-
-" " {  }
+ /* outros */
+{WHITE} {  }
 [\n] { numberLines+=1; }
-[\t] { }
+{DIGIT}[{ALNUM}|_]* { return TOKEN_ERRO; }
 
 %%
 
