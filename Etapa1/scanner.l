@@ -6,7 +6,6 @@
 
 %}
 
-WHITE [ \r\t]+
 DIGIT [0-9]
 LETTER [A-Za-z_]
 ALNUM ({DIGIT}|{LETTER})
@@ -88,28 +87,27 @@ INTEGER [+|-]?{DIGIT}+
 "false" { return TK_LIT_FALSE; }
 "true"  { return TK_LIT_TRUE; }
 
-{DIGIT}[{ALNUM}|_]* { return TOKEN_ERRO; } /* identificador começando com numero */
-{LETTER}{ALNUM}* { return TK_IDENTIFICADOR; }
-
 ['][^\'][']      { return TK_LIT_CHAR; }
+[']\\[rnt][']    { return TK_LIT_CHAR; }
 ["][^\"\n]*["]   { return TK_LIT_STRING; }
 
 {INTEGER}        { return TK_LIT_INT; }
-{INTEGER}\.{DIGIT}+(["E"|"e"]{INTEGER})? { return TK_LIT_FLOAT; }
+{INTEGER}\.{DIGIT}+([Ee]{INTEGER})? { return TK_LIT_FLOAT; }
+
+{DIGIT}({ALNUM}|_)+ { return TOKEN_ERRO; } /* identificador começando com numero */
+{LETTER}{ALNUM}* { return TK_IDENTIFICADOR; }
 
  /* comentarios */
 [/][/][^\n]* { }
 
-
 [/][*]        { BEGIN(MULTIPLE_LINE_COMMENT); }
-
-<MULTIPLE_LINE_COMMENT>[*][/]        { BEGIN(INITIAL); }
-<MULTIPLE_LINE_COMMENT>["\n"]        { numberLines+=1; }
-<MULTIPLE_LINE_COMMENT>.             { }
+<MULTIPLE_LINE_COMMENT>[*][/] { BEGIN(INITIAL); }
+<MULTIPLE_LINE_COMMENT>[\n]   { numberLines+=1; }
+<MULTIPLE_LINE_COMMENT>.      { }
 
 
  /* outros */
-{WHITE} {  }
+[ \r\t]+ {  }
 [\n] { numberLines+=1; }
 
 . { return TOKEN_ERRO; }
