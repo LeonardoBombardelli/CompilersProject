@@ -10,14 +10,15 @@ DIGIT [0-9]
 LETTER [A-Za-z_]
 ALNUM ({DIGIT}|{LETTER})
 INTEGER [+|-]?{DIGIT}+
+EXP [Ee]{INTEGER}
 
 /* Multiple line comments state. Check more at https://ftp.gnu.org/old-gnu/Manuals/flex-2.5.4/html_node/flex_11.html */
-
 %x MULTIPLE_LINE_COMMENT
 
 %%
 
- /* palavras reservadas */
+ /* reserved words */
+
 "int"       { return TK_PR_INT       ; }
 "float"     { return TK_PR_FLOAT     ; }
 "bool"      { return TK_PR_BOOL      ; }
@@ -46,7 +47,9 @@ INTEGER [+|-]?{DIGIT}+
 "end"       { return TK_PR_END       ; }
 "default"   { return TK_PR_DEFAULT   ; }
 
- /* caracteres especiais */
+
+ /* special chars */
+
 "," { return ','; }
 ";" { return ';'; }
 ":" { return ':'; }
@@ -72,7 +75,9 @@ INTEGER [+|-]?{DIGIT}+
 "." { return '.'; }
 "$" { return '$'; }
 
- /* operadores compostos */
+
+ /* compound operators */
+
 "<=" { return TK_OC_LE  ; }
 ">=" { return TK_OC_GE  ; }
 "==" { return TK_OC_EQ  ; }
@@ -82,31 +87,37 @@ INTEGER [+|-]?{DIGIT}+
 ">>" { return TK_OC_SL  ; }
 "<<" { return TK_OC_SR  ; }
 
- /* literais */
 
-"false" { return TK_LIT_FALSE; }
-"true"  { return TK_LIT_TRUE; }
+ /* literals */
 
-['][^\'][']      { return TK_LIT_CHAR; }
-[']\\[rnt][']    { return TK_LIT_CHAR; }
-["][^\"\n]*["]   { return TK_LIT_STRING; }
+"false"                   { return TK_LIT_FALSE; }
+"true"                    { return TK_LIT_TRUE; }
 
-{INTEGER}        { return TK_LIT_INT; }
-{INTEGER}\.{DIGIT}+([Ee]{INTEGER})? { return TK_LIT_FLOAT; }
+['][^\'][']               { return TK_LIT_CHAR; }
+[']\\[rnt][']             { return TK_LIT_CHAR; }
+["][^\"\n]*["]            { return TK_LIT_STRING; }
 
-{DIGIT}({ALNUM}|_)+ { return TOKEN_ERRO; } /* identificador começando com numero */
-{LETTER}{ALNUM}* { return TK_IDENTIFICADOR; }
+{INTEGER}                 { return TK_LIT_INT; }
+{INTEGER}\.{DIGIT}+{EXP}? { return TK_LIT_FLOAT; }
 
- /* comentarios */
-[/][/][^\n]* { }
-
-[/][*]        { BEGIN(MULTIPLE_LINE_COMMENT); }
-<MULTIPLE_LINE_COMMENT>[*][/] { BEGIN(INITIAL); }
-<MULTIPLE_LINE_COMMENT>[\n]   { numberLines+=1; }
-<MULTIPLE_LINE_COMMENT>.      { }
+{DIGIT}({ALNUM}|_)+       { return TOKEN_ERRO; } /* identifier starting with number */
+{LETTER}{ALNUM}*          { return TK_IDENTIFICADOR; }
 
 
- /* outros */
+ /* comments */
+
+[/][/][^\n]* { }                            /* single line comment */
+
+[/][*] { BEGIN(MULTIPLE_LINE_COMMENT); }    /* multiline comment */
+<MULTIPLE_LINE_COMMENT>{
+    [*][/] { BEGIN(INITIAL); }
+    [\n]   { numberLines+=1; }
+    .      { }
+}
+
+
+ /* others */
+
 [ \r\t]+ {  }
 [\n] { numberLines+=1; }
 
