@@ -55,16 +55,54 @@ void yyerror (char const *s);
 %%
 
 programa: program_list;
-program_list: global_var program_list | function_definition program_list | %empty;
+program_list: global_var program_list | func_definition program_list | attribution_command program_list | %empty;
 
-global_var: global_var_definition ';';
-global_var_definition: type global_var_list;
-global_var_list: var ',' global_var_list | var;
+
+maybe_const: %empty | TK_PR_CONST;
+maybe_static: %empty | TK_PR_STATIC;
+maybe_vector: %empty | '[' expression ']';
 
 var: TK_IDENTIFICADOR '[' TK_LIT_INT ']' | TK_IDENTIFICADOR;
 type: TK_PR_INT | TK_PR_FLOAT | TK_PR_CHAR | TK_PR_BOOL | TK_PR_STRING;
+literal: TK_LIT_INT | TK_LIT_FLOAT | TK_LIT_FALSE | TK_LIT_TRUE | TK_LIT_CHAR | TK_LIT_STRING;
+numeric_literal: TK_LIT_INT | TK_LIT_FLOAT;
+
+global_var: global_var_definition ';';
+global_var_definition: maybe_static type global_var_list;
+global_var_list: var ',' global_var_list | var;
 
 
+func_definition: func_header command_block;
+
+func_header: maybe_static type TK_IDENTIFICADOR '(' func_header_list ')';
+func_header_list: %empty | maybe_const type TK_IDENTIFICADOR func_header_list_iterator;
+func_header_list_iterator: ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator | %empty;
+
+simple_command: local_var_declaration | flux_control_command | attribution_command | call_func_command;
+
+command_block: '{' sequence_simple_command '}';
+sequence_simple_command: simple_command ';' sequence_simple_command | %empty;
+
+local_var_declaration: maybe_static maybe_const type TK_IDENTIFICADOR local_var_atribution;
+local_var_atribution: %empty | TK_OC_LE literal | TK_OC_LE TK_IDENTIFICADOR;
+
+attribution_command: TK_IDENTIFICADOR maybe_vector '=' expression;
+
+call_func_command: TK_IDENTIFICADOR '(' func_parameters_list ')' | TK_IDENTIFICADOR '(' ')';
+func_parameters_list: expression | func_parameters_list ',' expression;
+
+flux_control_command: conditional_flux_control;
+conditional_flux_control: TK_PR_IF '(' expression ')' command_block else_conditional_block;
+else_conditional_block: TK_PR_ELSE command_block;
+
+expression: simple_expression;
+simple_expression: unary_op operand | operand binary_op operand;
+
+
+unary_op: '+' | '-' | '!' | '&' | '*' | '?' | '#'; 
+binary_op: '+' | '-' | '*' | '/' | '%' | '|' | '&' | '^' | TK_OC_LE | TK_OC_GE | TK_OC_NE | TK_OC_EQ | TK_OC_OR | TK_OC_AND;
+
+operand: TK_IDENTIFICADOR maybe_vector | numeric_literal | call_func_command;
 
 %%
 
