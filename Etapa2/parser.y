@@ -1,6 +1,7 @@
 %{
     #include "stdio.h"
 
+extern int yylineno;
 int yylex(void);
 void yyerror (char const *s);
 %}
@@ -119,5 +120,5 @@ operand: TK_IDENTIFICADOR maybe_vector | numeric_literal | call_func_command;
 %%
 
 void yyerror (char const *s) {
-    printf("%s\n", s);
+    printf("[ERROR] %s on line %d\n", s, yylineno);
 }

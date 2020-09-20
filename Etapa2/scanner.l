@@ -5,6 +5,7 @@
     int numberLines = 1;
 
 %}
+%option yylineno
 
 DIGIT [0-9]
 LETTER [A-Za-z_]
