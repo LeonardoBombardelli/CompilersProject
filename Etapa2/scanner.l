@@ -50,7 +50,30 @@ EXP [Ee]{INTEGER}
 
  /* special chars */
 
-[,;:\(\)\[\]\{\}+-|*\/<>=!&%#^.$] { return yytext[0]; }
+"," { return yytext[0]; }
+";" { return yytext[0]; }
+":" { return yytext[0]; }
+"(" { return yytext[0]; }
+")" { return yytext[0]; }
+"[" { return yytext[0]; }
+"]" { return yytext[0]; }
+"{" { return yytext[0]; }
+"}" { return yytext[0]; }
+"+" { return yytext[0]; }
+"-" { return yytext[0]; }
+"|" { return yytext[0]; }
+"*" { return yytext[0]; }
+"/" { return yytext[0]; }
+"<" { return yytext[0]; }
+">" { return yytext[0]; }
+"=" { return yytext[0]; }
+"!" { return yytext[0]; }
+"&" { return yytext[0]; }
+"%" { return yytext[0]; }
+"#" { return yytext[0]; }
+"^" { return yytext[0]; }
+"." { return yytext[0]; }
+"$" { return yytext[0]; }
 
 
  /* compound operators */
