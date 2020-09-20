@@ -9,8 +9,8 @@
 DIGIT [0-9]
 LETTER [A-Za-z_]
 ALNUM ({DIGIT}|{LETTER})
-INTEGER [-]?{DIGIT}+
-EXP [Ee]{INTEGER}
+INTEGER {DIGIT}+
+EXP [Ee][+|-]?{INTEGER}
 
 /* Multiple line comments state. Check more at https://ftp.gnu.org/old-gnu/Manuals/flex-2.5.4/html_node/flex_11.html */
 %x MULTIPLE_LINE_COMMENT
