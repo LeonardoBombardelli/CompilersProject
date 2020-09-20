@@ -1,5 +1,5 @@
 etapa2: scanner.l main.c
-	bison -d parser.y 
+	bison -v -d parser.y 
 	flex -o lex.yy.c scanner.l
 	gcc -c lex.yy.c parser.tab.c
 	gcc lex.yy.c parser.tab.c main.c -o etapa2 -lfl
