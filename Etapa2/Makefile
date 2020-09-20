@@ -15,4 +15,4 @@ lexical: scanner.l ../Etapa1/main.c
 	gcc ../Etapa1/main.c lex.yy.c -o lexical -lfl
 
 cleanlexical:
-	rm -f tmpscanner.l lexical
+	rm -f lex.yy.c tmpscanner.l lexical
