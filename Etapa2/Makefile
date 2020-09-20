@@ -5,4 +5,4 @@ etapa2: scanner.l main.c
 	gcc lex.yy.c parser.tab.c main.c -o etapa2 -lfl
 
 clean:
-	rm -f *.tab.c *.tab.h *.yy.c etapa2
+	rm -f *.tab.c *.tab.h *.yy.c *.o etapa2
