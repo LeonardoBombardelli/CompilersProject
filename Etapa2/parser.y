@@ -6,6 +6,9 @@ int yylex(void);
 void yyerror (char const *s);
 %}
 
+%define parse.lac full
+%define parse.error detailed
+
 %token TK_PR_INT
 %token TK_PR_FLOAT
 %token TK_PR_BOOL
@@ -120,5 +123,5 @@ operand: TK_IDENTIFICADOR maybe_vector | numeric_literal | call_func_command;
 %%
 
 void yyerror (char const *s) {
-    printf("[ERROR] %s on line %d\n", s, yylineno);
+    printf("[ERROR, LINE %d] %s.\n", yylineno, s);
 }
