@@ -59,7 +59,7 @@ void yyerror (char const *s);
 %%
 
 programa: program_list;
-program_list: global_var program_list | func_definition program_list | attribution_command program_list | %empty;
+program_list: global_var program_list | func_definition program_list | %empty;
 
 
 maybe_const: %empty | TK_PR_CONST;
@@ -69,10 +69,8 @@ maybe_vector: %empty | '[' expression ']';
 var: TK_IDENTIFICADOR '[' TK_LIT_INT ']' | TK_IDENTIFICADOR;
 type: TK_PR_INT | TK_PR_FLOAT | TK_PR_CHAR | TK_PR_BOOL | TK_PR_STRING;
 literal: TK_LIT_INT | TK_LIT_FLOAT | TK_LIT_FALSE | TK_LIT_TRUE | TK_LIT_CHAR | TK_LIT_STRING;
-numeric_literal: TK_LIT_INT | TK_LIT_FLOAT;
 
-global_var: global_var_definition ';';
-global_var_definition: maybe_static type global_var_list;
+global_var: maybe_static type global_var_list ';';
 global_var_list: var ',' global_var_list | var;
 
 
@@ -111,14 +109,19 @@ maybe_else: TK_PR_ELSE command_block | %empty;
 for_flux_control: TK_PR_FOR '(' attribution_command ':' expression ':' attribution_command ')' command_block ';';
 while_flux_control: TK_PR_WHILE '(' expression ')' TK_PR_DO command_block ';';
 
-expression: simple_expression;
-simple_expression: unary_op operand | operand binary_op operand;
+expression: expression TK_OC_OR exp_log_or | exp_log_or;
+exp_log_or: exp_log_or TK_OC_AND exp_log_and | exp_log_and;
+exp_log_and: exp_log_and '|' exp_bit_or | exp_bit_or;
+exp_bit_or: exp_bit_or '&' exp_bit_and | exp_bit_and;
+exp_bit_and: exp_bit_and TK_OC_EQ exp_relat | exp_bit_and TK_OC_NE exp_relat | exp_relat;
+exp_relat: exp_relat TK_OC_LE exp_sum | exp_relat TK_OC_GE exp_sum | exp_relat '<' exp_sum | exp_relat '>' exp_sum | exp_sum;
+exp_sum: exp_sum '+' exp_mult | exp_sum '-' exp_mult | exp_mult;
+exp_mult: exp_mult '*' exp_pow | exp_mult '/' exp_pow | exp_mult '%' exp_pow | exp_pow;
+exp_pow: exp_pow '^' unary_exp | unary_exp;
 
-
+unary_exp: unary_op unary_exp | operand;
 unary_op: '+' | '-' | '!' | '&' | '*' | '?' | '#'; 
-binary_op: '+' | '-' | '*' | '/' | '%' | '|' | '&' | '^' | TK_OC_LE | TK_OC_GE | TK_OC_NE | TK_OC_EQ | TK_OC_OR | TK_OC_AND;
-
-operand: TK_IDENTIFICADOR maybe_vector | numeric_literal | call_func_command;
+operand: TK_IDENTIFICADOR maybe_vector | literal | call_func_command | '(' expression ')';
 
 %%
 
