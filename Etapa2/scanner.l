@@ -50,30 +50,7 @@ EXP [Ee]{INTEGER}
 
  /* special chars */
 
-"," { return ','; }
-";" { return ';'; }
-":" { return ':'; }
-"(" { return '('; }
-")" { return ')'; }
-"[" { return '['; }
-"]" { return ']'; }
-"{" { return '{'; }
-"}" { return '}'; }
-"+" { return '+'; }
-"-" { return '-'; }
-"|" { return '|'; }
-"*" { return '*'; }
-"/" { return '/'; }
-"<" { return '<'; }
-">" { return '>'; }
-"=" { return '='; }
-"!" { return '!'; }
-"&" { return '&'; }
-"%" { return '%'; }
-"#" { return '#'; }
-"^" { return '^'; }
-"." { return '.'; }
-"$" { return '$'; }
+[,;:\(\)\[\]\{\}+-|*\/<>=!&%#^.$] { return yytext[0]; }
 
 
  /* compound operators */
