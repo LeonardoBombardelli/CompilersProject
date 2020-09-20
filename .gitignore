@@ -1,2 +1,6 @@
 Etapa1/lex.yy.c
 Etapa1/etapa1
+Etapa2/etapa2
+Etapa2/lex.yy.c
+Etapa2/parser.tab.c
+Etapa2/parser.tab.h
