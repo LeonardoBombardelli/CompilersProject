@@ -78,7 +78,7 @@ func_header: maybe_static type TK_IDENTIFICADOR '(' func_header_list ')';
 func_header_list: %empty | maybe_const type TK_IDENTIFICADOR func_header_list_iterator;
 func_header_list_iterator: ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator | %empty;
 
-simple_command: local_var_declaration | flux_control_command | attribution_command | call_func_command;
+simple_command: command_block | local_var_declaration | attribution_command | io_command | call_func_command | shift_command | return_command | flux_control_command;
 
 command_block: '{' sequence_simple_command '}';
 sequence_simple_command: simple_command ';' sequence_simple_command | %empty;
@@ -88,12 +88,24 @@ local_var_atribution: %empty | TK_OC_LE literal | TK_OC_LE TK_IDENTIFICADOR;
 
 attribution_command: TK_IDENTIFICADOR maybe_vector '=' expression;
 
+io_command: TK_PR_INPUT TK_IDENTIFICADOR | TK_PR_OUTPUT id_or_literal;
+id_or_literal: TK_IDENTIFICADOR | literal;
+
 call_func_command: TK_IDENTIFICADOR '(' func_parameters_list ')' | TK_IDENTIFICADOR '(' ')';
 func_parameters_list: expression | func_parameters_list ',' expression;
 
-flux_control_command: conditional_flux_control;
-conditional_flux_control: TK_PR_IF '(' expression ')' command_block else_conditional_block;
-else_conditional_block: TK_PR_ELSE command_block;
+shift_command: TK_IDENTIFICADOR maybe_vector shift_operators TK_LIT_INT;
+shift_operators: TK_OC_SL | TK_OC_SR;
+
+return_command: TK_PR_RETURN expression | TK_PR_BREAK | TK_PR_CONTINUE ;
+
+flux_control_command: conditional_flux_control | for_flux_control | while_flux_control;
+
+conditional_flux_control: TK_PR_IF '(' expression ')' command_block maybe_else;
+maybe_else: TK_PR_ELSE command_block | %empty;
+
+for_flux_control: TK_PR_FOR '(' attribution_command ':' expression ':' attribution_command ')' command_block ';';
+while_flux_control: TK_PR_WHILE '(' expression ')' TK_PR_DO command_block ';';
 
 expression: simple_expression;
 simple_expression: unary_op operand | operand binary_op operand;
