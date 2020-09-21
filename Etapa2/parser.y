@@ -90,8 +90,7 @@ local_var_atribution: %empty | TK_OC_LE literal | TK_OC_LE TK_IDENTIFICADOR;
 
 attribution_command: TK_IDENTIFICADOR maybe_vector '=' expression;
 
-io_command: TK_PR_INPUT TK_IDENTIFICADOR | TK_PR_OUTPUT id_or_literal;
-id_or_literal: TK_IDENTIFICADOR | literal;
+io_command: TK_PR_INPUT TK_IDENTIFICADOR | TK_PR_OUTPUT TK_IDENTIFICADOR | TK_PR_OUTPUT literal;
 
 call_func_command: TK_IDENTIFICADOR '(' func_parameters_list ')' | TK_IDENTIFICADOR '(' ')';
 func_parameters_list: expression | func_parameters_list ',' expression;
@@ -106,10 +105,11 @@ flux_control_command: conditional_flux_control | for_flux_control | while_flux_c
 conditional_flux_control: TK_PR_IF '(' expression ')' command_block maybe_else;
 maybe_else: TK_PR_ELSE command_block | %empty;
 
-for_flux_control: TK_PR_FOR '(' attribution_command ':' expression ':' attribution_command ')' command_block ';';
-while_flux_control: TK_PR_WHILE '(' expression ')' TK_PR_DO command_block ';';
+for_flux_control: TK_PR_FOR '(' attribution_command ':' expression ':' attribution_command ')' command_block;
+while_flux_control: TK_PR_WHILE '(' expression ')' TK_PR_DO command_block;
 
-expression: expression TK_OC_OR exp_log_or | exp_log_or;
+expression: exp_tern '?' expression ':' expression | exp_tern;
+exp_tern: exp_tern TK_OC_OR exp_log_or | exp_log_or;
 exp_log_or: exp_log_or TK_OC_AND exp_log_and | exp_log_and;
 exp_log_and: exp_log_and '|' exp_bit_or | exp_bit_or;
 exp_bit_or: exp_bit_or '&' exp_bit_and | exp_bit_and;
