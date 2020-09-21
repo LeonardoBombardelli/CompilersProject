@@ -108,13 +108,13 @@ maybe_else: TK_PR_ELSE command_block | %empty;
 for_flux_control: TK_PR_FOR '(' attribution_command ':' expression ':' attribution_command ')' command_block;
 while_flux_control: TK_PR_WHILE '(' expression ')' TK_PR_DO command_block;
 
-expression: exp_tern '?' expression ':' expression | exp_tern;
-exp_tern: exp_tern TK_OC_OR exp_log_or | exp_log_or;
-exp_log_or: exp_log_or TK_OC_AND exp_log_and | exp_log_and;
-exp_log_and: exp_log_and '|' exp_bit_or | exp_bit_or;
-exp_bit_or: exp_bit_or '&' exp_bit_and | exp_bit_and;
-exp_bit_and: exp_bit_and TK_OC_EQ exp_relat | exp_bit_and TK_OC_NE exp_relat | exp_relat;
-exp_relat: exp_relat TK_OC_LE exp_sum | exp_relat TK_OC_GE exp_sum | exp_relat '<' exp_sum | exp_relat '>' exp_sum | exp_sum;
+expression: exp_log_or '?' expression ':' expression | exp_log_or;
+exp_log_or: exp_log_or TK_OC_OR exp_log_and | exp_log_and;
+exp_log_and: exp_log_and TK_OC_AND exp_bit_or | exp_bit_or;
+exp_bit_or: exp_bit_or '|' exp_bit_and | exp_bit_and;
+exp_bit_and: exp_bit_and '&' exp_relat_1 | exp_relat_1;
+exp_relat_1: exp_relat_1 TK_OC_EQ exp_relat_2 | exp_relat_1 TK_OC_NE exp_relat_2 | exp_relat_2;
+exp_relat_2: exp_relat_2 TK_OC_LE exp_sum | exp_relat_2 TK_OC_GE exp_sum | exp_relat_2 '<' exp_sum | exp_relat_2 '>' exp_sum | exp_sum;
 exp_sum: exp_sum '+' exp_mult | exp_sum '-' exp_mult | exp_mult;
 exp_mult: exp_mult '*' exp_pow | exp_mult '/' exp_pow | exp_mult '%' exp_pow | exp_pow;
 exp_pow: exp_pow '^' unary_exp | unary_exp;
@@ -124,6 +124,8 @@ unary_op: '+' | '-' | '!' | '&' | '*' | '?' | '#';
 operand: TK_IDENTIFICADOR maybe_vector | literal | call_func_command | '(' expression ')';
 
 %%
+// Referencia para precedencia e associatividade dos operadores nas expressoes: https://en.cppreference.com/w/cpp/language/operator_precedence
+
 
 void yyerror (char const *s) {
     printf("[ERROR, LINE %d] %s.\n", yylineno, s);
