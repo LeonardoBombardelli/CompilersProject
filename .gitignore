@@ -6,7 +6,4 @@ Etapa2/lex.yy.o
 Etapa2/parser.tab.c
 Etapa2/parser.tab.h
 Etapa2/parser.tab.o
-
-
-Etapa2/lexical
-Etapa2/tmpscanner.l
+Etapa2/parser.output
