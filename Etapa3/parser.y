@@ -64,12 +64,14 @@ void yyerror (char const *s);
 
 %type<node> programa
 %type<node> program_list
-
+%type<node> maybe_const
+%type<node> maybe_static
 %type<node> maybe_vector
 %type<node> var
 %type<node> type
 %type<node> literal
-
+%type<node> global_var
+%type<node> global_var_list
 %type<node> func_definition
 %type<node> func_header
 %type<node> func_header_list
