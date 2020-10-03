@@ -66,11 +66,10 @@ void yyerror (char const *s);
 %type<node> program_list
 %type<node> maybe_const
 %type<node> maybe_static
-%type<node> maybe_vector
-%type<node> var
 %type<node> type
 %type<node> literal
 %type<node> global_var
+%type<node> global_var_declaration
 %type<node> global_var_list
 %type<node> func_definition
 %type<node> func_header
@@ -80,13 +79,14 @@ void yyerror (char const *s);
 %type<node> command_block
 %type<node> sequence_simple_command
 %type<node> local_var_declaration
-%type<node> local_var_atribution
+%type<node> maybe_initialization
+%type<node> var_access
 %type<node> attribution_command
 %type<node> io_command
 %type<node> call_func_command
 %type<node> func_parameters_list
 %type<node> shift_command
-%type<node> shift_operators
+%type<node> shift_operator
 %type<node> return_command
 %type<node> flux_control_command
 %type<node> conditional_flux_control
@@ -94,7 +94,6 @@ void yyerror (char const *s);
 %type<node> for_flux_control
 %type<node> while_flux_control
 %type<node> expression
-
 %type<node> exp_log_or 
 %type<node> exp_log_and
 %type<node> exp_bit_or 
@@ -110,19 +109,18 @@ void yyerror (char const *s);
 
 %%
 programa: program_list;
-program_list: global_var program_list | func_definition program_list | %empty;
+program_list: global_var_declaration program_list | func_definition program_list | %empty;
 
 
 maybe_const: %empty | TK_PR_CONST;
 maybe_static: %empty | TK_PR_STATIC;
-maybe_vector: %empty | '[' expression ']';
 
-var: TK_IDENTIFICADOR '[' TK_LIT_INT ']' | TK_IDENTIFICADOR;
 type: TK_PR_INT | TK_PR_FLOAT | TK_PR_CHAR | TK_PR_BOOL | TK_PR_STRING;
 literal: TK_LIT_INT | TK_LIT_FLOAT | TK_LIT_FALSE | TK_LIT_TRUE | TK_LIT_CHAR | TK_LIT_STRING;
 
-global_var: maybe_static type global_var_list ';';
-global_var_list: var ',' global_var_list | var;
+global_var: TK_IDENTIFICADOR '[' TK_LIT_INT ']' | TK_IDENTIFICADOR;
+global_var_declaration: maybe_static type global_var_list ';';
+global_var_list: global_var ',' global_var_list | global_var;
 
 
 func_definition: func_header command_block;
@@ -131,25 +129,28 @@ func_header: maybe_static type TK_IDENTIFICADOR '(' func_header_list ')';
 func_header_list: %empty | maybe_const type TK_IDENTIFICADOR func_header_list_iterator;
 func_header_list_iterator: ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator | %empty;
 
-simple_command: command_block | local_var_declaration | attribution_command | io_command | call_func_command | shift_command | return_command | flux_control_command;
+simple_command: command_block | local_var_declaration | attribution_command | io_command | call_func_command
+                | shift_command | return_command | TK_PR_BREAK | TK_PR_CONTINUE | flux_control_command;
 
 command_block: '{' sequence_simple_command '}';
 sequence_simple_command: simple_command ';' sequence_simple_command | %empty;
 
-local_var_declaration: maybe_static maybe_const type TK_IDENTIFICADOR local_var_atribution;
-local_var_atribution: %empty | TK_OC_LE literal | TK_OC_LE TK_IDENTIFICADOR;
+local_var_declaration: maybe_static maybe_const type TK_IDENTIFICADOR maybe_initialization;
+maybe_initialization: %empty | TK_OC_LE literal | TK_OC_LE TK_IDENTIFICADOR;
 
-attribution_command: TK_IDENTIFICADOR maybe_vector '=' expression;
+var_access: TK_IDENTIFICADOR | TK_IDENTIFICADOR '[' expression ']';
+
+attribution_command: var_access '=' expression;
 
 io_command: TK_PR_INPUT TK_IDENTIFICADOR | TK_PR_OUTPUT TK_IDENTIFICADOR | TK_PR_OUTPUT literal;
 
 call_func_command: TK_IDENTIFICADOR '(' func_parameters_list ')' | TK_IDENTIFICADOR '(' ')';
 func_parameters_list: expression | func_parameters_list ',' expression;
 
-shift_command: TK_IDENTIFICADOR maybe_vector shift_operators TK_LIT_INT;
-shift_operators: TK_OC_SL | TK_OC_SR;
+shift_command: var_access shift_operator TK_LIT_INT;
+shift_operator: TK_OC_SL | TK_OC_SR;
 
-return_command: TK_PR_RETURN expression | TK_PR_BREAK | TK_PR_CONTINUE ;
+return_command: TK_PR_RETURN expression;
 
 flux_control_command: conditional_flux_control | for_flux_control | while_flux_control;
 
@@ -172,7 +173,7 @@ exp_pow: exp_pow '^' unary_exp | unary_exp;
 
 unary_exp: unary_op unary_exp | operand;
 unary_op: '+' | '-' | '!' | '&' | '*' | '?' | '#'; 
-operand: TK_IDENTIFICADOR maybe_vector | literal | call_func_command | '(' expression ')';
+operand: var_access | literal | call_func_command | '(' expression ')';
 
 %%
 // Referencia para precedencia e associatividade dos operadores nas expressoes: https://en.cppreference.com/w/cpp/language/operator_precedence
