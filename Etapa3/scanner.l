@@ -1,6 +1,7 @@
 
 %{
     #include "parser.tab.h"
+    #include "definitions.h"
 
     int numberLines = 1;
 
