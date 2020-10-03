@@ -73,7 +73,7 @@ Node* create_node_function_call (Node* expressionList)
 
 Node* create_node_shift_left (ValorLexico* identifier, Node* indexVector, Node* expression)
 {
-    Node* newNode = CreateGenericNode(NODE_SHIFT_LEFT);newNode->n_shift_right
+    Node* newNode = CreateGenericNode(NODE_SHIFT_LEFT);newNode->n_shift_right;
     newNode->n_shift_right.expression = expression;
 
     return newNode;
