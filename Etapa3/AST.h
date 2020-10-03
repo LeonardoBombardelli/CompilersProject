@@ -21,8 +21,7 @@ typedef enum
     NODE_VECTOR_INDEX     ,
     NODE_UNARY_OPERATION  ,
     NODE_BINARY_OPERATION ,
-    NODE_TERNARY_OPERATION,
-    NODE_LITERAL
+    NODE_TERNARY_OPERATION
 
 } NodeType;
 
@@ -53,6 +52,7 @@ typedef union TokenValue
     char literal_char       ;
     bool literal_bool       ;
     char* literal_string    ;
+    char* not_literal       ;
 
 } TokenValue;
 
