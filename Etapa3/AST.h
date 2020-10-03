@@ -78,7 +78,6 @@ struct node_vector_index {
 struct node_unary_operation {
     ValorLexico* operation;
     Node* expression1;
-    Node* expression2;
 };
 
 struct node_binary_operation {
@@ -99,6 +98,7 @@ struct node_literal {
 
 typedef struct node {
     NodeType nodeType;
+    Node* sequenceNode;
 
     union 
     {
@@ -125,6 +125,7 @@ typedef struct node {
      
 } Node;
 
+Node* CreateGenericNode(NodeType type);
 
 Node* create_node_function_declaration (Node* firstCommand, Node* nextFunction);
 Node* create_node_var_access           (ValorLexico* identifier, Node* index);
@@ -141,7 +142,7 @@ Node* create_node_if                   (Node* expression, Node* ifTrue, Node* if
 Node* create_node_for_loop             (Node* attr, Node* expression,Node* incOrDec, Node* firstCommand);
 Node* create_node_while_loop           (Node* expression, Node* firstCommand);
 Node* create_node_vector_index         (ValorLexico* identifier, Node* index);
-Node* create_node_unary_operation      (ValorLexico* operation, Node* expression1, Node* expression2);
+Node* create_node_unary_operation      (ValorLexico* operation, Node* expression1);
 Node* create_node_binary_operation     (ValorLexico* operation, Node* expression1, Node* expression2);
 Node* create_node_ternary_operation    (Node* expression1, Node* expression2, Node* expression3);
 Node* create_node_literal              (ValorLexico* literal);
