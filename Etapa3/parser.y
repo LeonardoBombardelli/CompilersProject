@@ -147,7 +147,7 @@ global_var_list:
     global_var                            { $$ = NULL; };
 
 
-func_definition:    // TODO: command_block ok?
+func_definition:
     func_header command_block { create_node_function_declaration($2, $1); };
 
 func_header:
@@ -160,7 +160,7 @@ func_header_list_iterator:
     %empty                                                          { $$ = NULL; };
 
 simple_command: 
-    command_block         { /* TODO */                   } |
+    command_block         { $$ = $1;                     } |
     local_var_declaration { $$ = $1;                     } |
     attribution_command   { $$ = $1;                     } |
     io_command            { $$ = $1;                     } |
@@ -172,9 +172,9 @@ simple_command:
     flux_control_command  { $$ = $1;                     };
 
 command_block: 
-    '{' sequence_simple_command '}' { $$ = $2; /* TODO: how to link next commands correctly? */ };
+    '{' sequence_simple_command '}' { $$ = $2; };
 sequence_simple_command: 
-    simple_command ';' sequence_simple_command  { $1->sequenceNode = $3; $$ = $1; } |
+    simple_command ';' sequence_simple_command  { last_command_of_chain($1)->sequenceNode = $3; $$ = $1; } |
     %empty                                      { $$ = NULL; };
 
 local_var_declaration: 
@@ -294,6 +294,15 @@ operand:    // TODO: solve conflict: if we remove node_literal, literal is Valor
 %%
 // Referencia para precedencia e associatividade dos operadores nas expressoes: https://en.cppreference.com/w/cpp/language/operator_precedence
 
+
+Node* last_command_of_chain(Node* n) {
+    Node* temp = n->sequenceNode;
+    while (temp != NULL) {
+        n = temp;
+        temp = temp->sequenceNode;
+    }
+    return n;
+}
 
 void yyerror (char const *s) {
     printf("[ERROR, LINE %d] %s.\n", yylineno, s);
