@@ -48,12 +48,11 @@ typedef enum
 
 typedef union tokenValue
 {
-    int literal_int         ;
-    float literal_float     ;
-    char literal_char       ;
-    bool literal_bool       ;
-    char* literal_string    ;
-    char* not_literal       ;
+    int integer    ;
+    float floating ;
+    char character ;
+    bool boolean   ;
+    char* string   ;
 
 } TokenValue;
 

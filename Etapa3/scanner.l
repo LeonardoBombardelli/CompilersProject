@@ -20,6 +20,7 @@ EXP [Ee][+|-]?{INTEGER}
 %%
 
  /* reserved words */
+ /* no need to call create_token_not_literal for these */
 
 "int"       { return TK_PR_INT       ; }
 "float"     { return TK_PR_FLOAT     ; }
@@ -51,60 +52,61 @@ EXP [Ee][+|-]?{INTEGER}
 
 
  /* special chars */
+ // TODO: make all this one single regex
 
-"," { return yytext[0]; }
-";" { return yytext[0]; }
-":" { return yytext[0]; }
-"(" { return yytext[0]; }
-")" { return yytext[0]; }
-"[" { return yytext[0]; }
-"]" { return yytext[0]; }
-"{" { return yytext[0]; }
-"}" { return yytext[0]; }
-"+" { return yytext[0]; }
-"-" { return yytext[0]; }
-"|" { return yytext[0]; }
-"*" { return yytext[0]; }
-"/" { return yytext[0]; }
-"<" { return yytext[0]; }
-">" { return yytext[0]; }
-"=" { return yytext[0]; }
-"!" { return yytext[0]; }
-"&" { return yytext[0]; }
-"%" { return yytext[0]; }
-"#" { return yytext[0]; }
-"^" { return yytext[0]; }
-"." { return yytext[0]; }
-"$" { return yytext[0]; }
-"?" { return yytext[0]; }
+"," { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+";" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+":" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"(" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+")" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"[" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"]" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"{" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"}" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"+" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"-" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"|" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"*" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"/" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"<" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+">" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"=" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"!" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"&" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"%" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"#" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"^" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"." { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"$" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
+"?" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
 
 
- /* compound operators */
+ /* composite operators */
 
-"<=" { return TK_OC_LE  ; }
-">=" { return TK_OC_GE  ; }
-"==" { return TK_OC_EQ  ; }
-"!=" { return TK_OC_NE  ; }
-"&&" { return TK_OC_AND ; }
-"||" { return TK_OC_OR  ; }
-">>" { return TK_OC_SR  ; }
-"<<" { return TK_OC_SL  ; }
+"<=" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_LE  ; }
+">=" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_GE  ; }
+"==" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_EQ  ; }
+"!=" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_NE  ; }
+"&&" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_AND ; }
+"||" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_OR  ; }
+">>" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_SR  ; }
+"<<" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_SL  ; }
 
 
  /* literals */
 
-"false"                   { return TK_LIT_FALSE; }
-"true"                    { return TK_LIT_TRUE; }
+"false"                   { create_token_literal(LITERAL_TYPE_BOOL); return TK_LIT_FALSE; }
+"true"                    { create_token_literal(LITERAL_TYPE_BOOL); return TK_LIT_TRUE; }
 
-['][^\'][']               { return TK_LIT_CHAR; }
-[']\\[rnt][']             { return TK_LIT_CHAR; }
-["][^\"\n]*["]            { return TK_LIT_STRING; }
+['][^\'][']               { create_token_literal(LITERAL_TYPE_CHAR); return TK_LIT_CHAR; }
+[']\\[rnt][']             { create_token_literal(LITERAL_TYPE_CHAR); return TK_LIT_CHAR; }
+["][^\"\n]*["]            { create_token_literal(LITERAL_TYPE_STRING); return TK_LIT_STRING; }
 
-{INTEGER}                 { return TK_LIT_INT; }
-{INTEGER}\.{DIGIT}+{EXP}? { return TK_LIT_FLOAT; }
+{INTEGER}                 { create_token_literal(LITERAL_TYPE_INT); return TK_LIT_INT; }
+{INTEGER}\.{DIGIT}+{EXP}? { create_token_literal(LITERAL_TYPE_FLOAT); return TK_LIT_FLOAT; }
 
 {DIGIT}({ALNUM}|_)+       { return TOKEN_ERRO; } /* identifier starting with number */
-{LETTER}{ALNUM}*          { return TK_IDENTIFICADOR; }
+{LETTER}{ALNUM}*          { create_token_not_literal(TOKEN_TYPE_IDENTIFIER); return TK_IDENTIFICADOR; }
 
 
  /* comments */
@@ -127,6 +129,68 @@ EXP [Ee][+|-]?{INTEGER}
 . { return TOKEN_ERRO; }
 
 %%
+
+void create_token_not_literal(TokenType token_type) {
+    yylval.valor_lexico = (ValorLexico*) calloc(1, sizeof(ValorLexico));
+    yylval.valor_lexico->line_number = get_line_number();
+    yylval.valor_lexico->tokenType = token_type;
+    yylval.valor_lexico->literalType = NOT_LITERAL_TYPE;
+
+    if (token_type == TOKEN_TYPE_SPECIAL_CHAR)
+    {
+        yylval.valor_lexico->tokenValue.character = yytext[0];
+    }
+    else // TOKEN_TYPE_COMPOSITE_OP or TOKEN_TYPE_IDENTIFIER
+    {
+        yylval.valor_lexico->tokenValue.string = strdup(yytext);
+    }
+}
+
+void create_token_literal(LiteralType literal_type) {
+    yylval.valor_lexico = (ValorLexico*) calloc(1, sizeof(ValorLexico));
+    yylval.valor_lexico->line_number = get_line_number();
+    yylval.valor_lexico->tokenType = TOKEN_TYPE_LITERAL;
+    yylval.valor_lexico->literalType = literal_type;
+
+    switch(literal_type) {
+        case LITERAL_TYPE_INTEGER:
+            yylval.valor_lexico->tokenValue.integer = atoi(yytext);
+            break;
+
+        case LITERAL_TYPE_FLOAT:
+            yylval.valor_lexico->tokenValue.floating = atof(yytext);
+            break;
+
+        case LITERAL_TYPE_CHAR:
+            if (yytext[1] == '\\')    // if literal was an escaped char
+            {
+                char escaped_char;
+                switch(yytext[2]) {
+                    case 'r': escaped_char = '\r'; break;
+                    case 'n': escaped_char = '\n'; break;
+                    case 't': escaped_char = '\t';
+                }
+                yylval.valor_lexico->tokenValue.character = escaped_char;
+            }
+            else
+            {
+                yylval.valor_lexico->tokenValue.character = yytext[1];
+            }
+            break;
+
+        case LITERAL_TYPE_BOOL:
+            yylval.valor_lexico->tokenValue.boolean = yytext == "true" ? true : false;
+            // TODO: ternary op ok?
+            break;
+
+        case LITERAL_TYPE_STRING:
+            yylval.valor_lexico->tokenValue.string = strdup(yytext);
+            // TODO: maybe string handler function?
+            break;
+    }
+            
+
+}
 
 int get_line_number() {
     return numberLines;
