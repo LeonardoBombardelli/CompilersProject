@@ -4,6 +4,8 @@
     #include "definitions.h"
 
     int numberLines = 1;
+    void create_token_not_literal(TokenType token_type);
+    void create_token_literal(LiteralType literal_type);
 
 %}
 %option yylineno
@@ -52,7 +54,6 @@ EXP [Ee][+|-]?{INTEGER}
 
 
  /* special chars */
- // TODO: make all this one single regex
 
 "," { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
 ";" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }

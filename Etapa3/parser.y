@@ -1,6 +1,6 @@
 %{
     #include "stdio.h"
-    #include "definitions.h"
+    #include "AST.h"
 
 extern int yylineno;
 extern void *arvore;
@@ -62,6 +62,31 @@ void yyerror (char const *s);
 %token<valor_lexico> TK_LIT_STRING
 %token<valor_lexico> TK_IDENTIFICADOR
 %token<valor_lexico> TOKEN_ERRO
+%token<valor_lexico> ','
+%token<valor_lexico> ';'
+%token<valor_lexico> ':'
+%token<valor_lexico> '('
+%token<valor_lexico> ')'
+%token<valor_lexico> '['
+%token<valor_lexico> ']'
+%token<valor_lexico> '{'
+%token<valor_lexico> '}'
+%token<valor_lexico> '+'
+%token<valor_lexico> '-'
+%token<valor_lexico> '|'
+%token<valor_lexico> '*'
+%token<valor_lexico> '/'
+%token<valor_lexico> '<'
+%token<valor_lexico> '>'
+%token<valor_lexico> '='
+%token<valor_lexico> '!'
+%token<valor_lexico> '&'
+%token<valor_lexico> '%'
+%token<valor_lexico> '#'
+%token<valor_lexico> '^'
+%token<valor_lexico> '.'
+%token<valor_lexico> '$'
+%token<valor_lexico> '?'
 
 %type<node> programa
 %type<node> program_list
@@ -214,7 +239,7 @@ func_parameters_list:
     func_parameters_list ',' expression  { $1->sequenceNode = $3; $$ = $1; };
 
 shift_command:
-    var_access TK_OC_SL TK_LIT_INT { $$ = create_node_shift_left($1, $3);  };
+    var_access TK_OC_SL TK_LIT_INT { $$ = create_node_shift_left($1, $3);  } |
     var_access TK_OC_SR TK_LIT_INT { $$ = create_node_shift_right($1, $3); };
 
 return_command:
@@ -306,4 +331,12 @@ Node* last_command_of_chain(Node* n) {
 
 void yyerror (char const *s) {
     printf("[ERROR, LINE %d] %s.\n", yylineno, s);
+}
+
+void exporta (void *arvore) {
+    PrintAll((Node*) arvore);
+}
+
+void libera (void *arvore) {
+    FreeTree((Node*) arvore);
 }
