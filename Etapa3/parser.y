@@ -3,6 +3,7 @@
     #include "definitions.h"
 
 extern int yylineno;
+extern void *arvore;
 int yylex(void);
 void yyerror (char const *s);
 %}
@@ -86,7 +87,6 @@ void yyerror (char const *s);
 %type<node> call_func_command
 %type<node> func_parameters_list
 %type<node> shift_command
-%type<node> shift_operator
 %type<node> return_command
 %type<node> flux_control_command
 %type<node> conditional_flux_control
@@ -108,72 +108,188 @@ void yyerror (char const *s);
 %type<node> operand
 
 %%
-programa: program_list;
-program_list: global_var_declaration program_list | func_definition program_list | %empty;
+programa: 
+    program_list { $$ = $1; arvore = $$; };
+program_list: 
+    global_var_declaration program_list   { $$ = $2; /* ignore global vars */ } |
+    func_definition program_list          { $1->sequenceNode = $2; } |
+    %empty                                { $$ = NULL; };
 
 
-maybe_const: %empty | TK_PR_CONST;
-maybe_static: %empty | TK_PR_STATIC;
+maybe_const: 
+    %empty        { $$ = NULL; } |
+    TK_PR_CONST   { $$ = $1;   };
+maybe_static: 
+    %empty        { $$ = NULL; } |
+    TK_PR_STATIC  { $$ = $1;   };
 
-type: TK_PR_INT | TK_PR_FLOAT | TK_PR_CHAR | TK_PR_BOOL | TK_PR_STRING;
-literal: TK_LIT_INT | TK_LIT_FLOAT | TK_LIT_FALSE | TK_LIT_TRUE | TK_LIT_CHAR | TK_LIT_STRING;
+type:
+    TK_PR_INT     { $$ = NULL; /* ignore types */ } |
+    TK_PR_FLOAT   { $$ = NULL;                    } |
+    TK_PR_CHAR    { $$ = NULL;                    } |
+    TK_PR_BOOL    { $$ = NULL;                    } |
+    TK_PR_STRING  { $$ = NULL;                    };
+literal: 
+    TK_LIT_INT    { $$ = create_node_literal($1); /* TODO: remove node_literal? */ } |
+    TK_LIT_FLOAT  { $$ = create_node_literal($1); } |
+    TK_LIT_FALSE  { $$ = create_node_literal($1); } |
+    TK_LIT_TRUE   { $$ = create_node_literal($1); } |
+    TK_LIT_CHAR   { $$ = create_node_literal($1); } |
+    TK_LIT_STRING { $$ = create_node_literal($1); };
 
-global_var: TK_IDENTIFICADOR '[' TK_LIT_INT ']' | TK_IDENTIFICADOR;
-global_var_declaration: maybe_static type global_var_list ';';
-global_var_list: global_var ',' global_var_list | global_var;
+global_var: 
+    TK_IDENTIFICADOR '[' TK_LIT_INT ']'   { $$ = NULL; /* ignore global vars */ } |
+    TK_IDENTIFICADOR                      { $$ = NULL;                          };
+global_var_declaration: 
+    maybe_static type global_var_list ';' { $$ = NULL; };
+global_var_list: 
+    global_var ',' global_var_list        { $$ = NULL; } |
+    global_var                            { $$ = NULL; };
 
 
-func_definition: func_header command_block;
+func_definition:    // TODO: command_block ok?
+    func_header command_block { create_node_function_declaration($2, $1); };
 
-func_header: maybe_static type TK_IDENTIFICADOR '(' func_header_list ')';
-func_header_list: %empty | maybe_const type TK_IDENTIFICADOR func_header_list_iterator;
-func_header_list_iterator: ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator | %empty;
+func_header:
+    maybe_static type TK_IDENTIFICADOR '(' func_header_list ')' { $$ = $3 /* ignore all but function name */ };
+func_header_list:
+    %empty                                                          { $$ = NULL; } |
+    maybe_const type TK_IDENTIFICADOR func_header_list_iterator     { $$ = NULL; };
+func_header_list_iterator: 
+    ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator { $$ = NULL; } |
+    %empty                                                          { $$ = NULL; };
 
-simple_command: command_block | local_var_declaration | attribution_command | io_command | call_func_command
-                | shift_command | return_command | TK_PR_BREAK | TK_PR_CONTINUE | flux_control_command;
+simple_command: 
+    command_block         { /* TODO */                   } |
+    local_var_declaration { $$ = $1;                     } |
+    attribution_command   { $$ = $1;                     } |
+    io_command            { $$ = $1;                     } |
+    call_func_command     { $$ = $1;                     } |
+    shift_command         { $$ = $1;                     } |
+    return_command        { $$ = $1;                     } |
+    TK_PR_BREAK           { $$ = create_node_break();    } |
+    TK_PR_CONTINUE        { $$ = create_node_continue(); } |
+    flux_control_command  { $$ = $1;                     };
 
-command_block: '{' sequence_simple_command '}';
-sequence_simple_command: simple_command ';' sequence_simple_command | %empty;
+command_block: 
+    '{' sequence_simple_command '}' { $$ = $2; /* TODO: how to link next commands correctly? */ };
+sequence_simple_command: 
+    simple_command ';' sequence_simple_command  { $1->sequenceNode = $3; $$ = $1; } |
+    %empty                                      { $$ = NULL; };
 
-local_var_declaration: maybe_static maybe_const type TK_IDENTIFICADOR maybe_initialization;
-maybe_initialization: %empty | TK_OC_LE literal | TK_OC_LE TK_IDENTIFICADOR;
+local_var_declaration: 
+    maybe_static maybe_const type TK_IDENTIFICADOR maybe_initialization {
+        if ($5 != NULL)
+        {
+            Node* temp = create_node_var_access($4, NULL);
+            $$ = create_node_var_attr(temp, $5);
+        }
+        else    // ignore declaration without attribution
+        {
+            return NULL;
+        }
+    };
+maybe_initialization: 
+    %empty                      { $$ = NULL; } |
+    TK_OC_LE literal            { $$ = $2;   } |
+    TK_OC_LE TK_IDENTIFICADOR   { $$ = $2;   };
 
-var_access: TK_IDENTIFICADOR | TK_IDENTIFICADOR '[' expression ']';
+var_access:
+    TK_IDENTIFICADOR                    { $$ = create_node_var_access($1, NULL); } | 
+    TK_IDENTIFICADOR '[' expression ']' { $$ = create_node_var_access($1, $3);   };
 
-attribution_command: var_access '=' expression;
+attribution_command:
+    var_access '=' expression { $$ = create_node_var_attr($1, $3); };
 
-io_command: TK_PR_INPUT TK_IDENTIFICADOR | TK_PR_OUTPUT TK_IDENTIFICADOR | TK_PR_OUTPUT literal;
+io_command: 
+    TK_PR_INPUT TK_IDENTIFICADOR    { $$ = create_node_input($2);  } | 
+    TK_PR_OUTPUT TK_IDENTIFICADOR   { $$ = create_node_output($2); } | 
+    TK_PR_OUTPUT literal            { $$ = create_node_output($2); } ;
 
-call_func_command: TK_IDENTIFICADOR '(' func_parameters_list ')' | TK_IDENTIFICADOR '(' ')';
-func_parameters_list: expression | func_parameters_list ',' expression;
+call_func_command:
+    TK_IDENTIFICADOR '(' func_parameters_list ')' { $$ = create_node_function_call($3);   } | 
+    TK_IDENTIFICADOR '(' ')'                      { $$ = create_node_function_call(NULL); };
+func_parameters_list: 
+    expression                           { $$ = $1; } | 
+    func_parameters_list ',' expression  { $1->sequenceNode = $3; $$ = $1; };
 
-shift_command: var_access shift_operator TK_LIT_INT;
-shift_operator: TK_OC_SL | TK_OC_SR;
+shift_command:
+    var_access TK_OC_SL TK_LIT_INT { $$ = create_node_shift_left($1, $3);  };
+    var_access TK_OC_SR TK_LIT_INT { $$ = create_node_shift_right($1, $3); };
 
-return_command: TK_PR_RETURN expression;
+return_command:
+    TK_PR_RETURN expression { $$ = create_node_return($2); };
 
-flux_control_command: conditional_flux_control | for_flux_control | while_flux_control;
+flux_control_command: 
+    conditional_flux_control { $$ = $1; } | 
+    for_flux_control         { $$ = $1; } | 
+    while_flux_control       { $$ = $1; };
 
-conditional_flux_control: TK_PR_IF '(' expression ')' command_block maybe_else;
-maybe_else: TK_PR_ELSE command_block | %empty;
+conditional_flux_control: 
+    TK_PR_IF '(' expression ')' command_block maybe_else { $$ = create_node_if($3, $5, $6); };
+maybe_else: 
+    TK_PR_ELSE command_block { $$ = $2;   } | 
+    %empty                   { $$ = NULL; };
 
-for_flux_control: TK_PR_FOR '(' attribution_command ':' expression ':' attribution_command ')' command_block;
-while_flux_control: TK_PR_WHILE '(' expression ')' TK_PR_DO command_block;
+for_flux_control: 
+    TK_PR_FOR '(' attribution_command ':' expression ':' attribution_command ')' command_block { $$ = create_node_for_loop($3, $5, $7, $9); };
+while_flux_control:
+    TK_PR_WHILE '(' expression ')' TK_PR_DO command_block { $$ = create_node_while_loop($3, $6); };
 
-expression: exp_log_or '?' expression ':' expression | exp_log_or;
-exp_log_or: exp_log_or TK_OC_OR exp_log_and | exp_log_and;
-exp_log_and: exp_log_and TK_OC_AND exp_bit_or | exp_bit_or;
-exp_bit_or: exp_bit_or '|' exp_bit_and | exp_bit_and;
-exp_bit_and: exp_bit_and '&' exp_relat_1 | exp_relat_1;
-exp_relat_1: exp_relat_1 TK_OC_EQ exp_relat_2 | exp_relat_1 TK_OC_NE exp_relat_2 | exp_relat_2;
-exp_relat_2: exp_relat_2 TK_OC_LE exp_sum | exp_relat_2 TK_OC_GE exp_sum | exp_relat_2 '<' exp_sum | exp_relat_2 '>' exp_sum | exp_sum;
-exp_sum: exp_sum '+' exp_mult | exp_sum '-' exp_mult | exp_mult;
-exp_mult: exp_mult '*' exp_pow | exp_mult '/' exp_pow | exp_mult '%' exp_pow | exp_pow;
-exp_pow: exp_pow '^' unary_exp | unary_exp;
+expression: 
+    exp_log_or '?' expression ':' expression    { $$ = create_node_ternary_operation($1, $3, $5); } | 
+    exp_log_or                                  { $$ = $1; };
+exp_log_or: 
+    exp_log_or TK_OC_OR exp_log_and             { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_log_and                                 { $$ = $1; };
+exp_log_and: 
+    exp_log_and TK_OC_AND exp_bit_or            { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_bit_or                                  { $$ = $1; };
+exp_bit_or: 
+    exp_bit_or '|' exp_bit_and                  { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_bit_and                                 { $$ = $1; };
+exp_bit_and: 
+    exp_bit_and '&' exp_relat_1                 { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_relat_1                                 { $$ = $1; };
+exp_relat_1: 
+    exp_relat_1 TK_OC_EQ exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_relat_1 TK_OC_NE exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_relat_2                                 { $$ = $1; };
+exp_relat_2: 
+    exp_relat_2 TK_OC_LE exp_sum                { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_relat_2 TK_OC_GE exp_sum                { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_relat_2 '<' exp_sum                     { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_relat_2 '>' exp_sum                     { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_sum                                     { $$ = $1; };
+exp_sum:
+    exp_sum '+' exp_mult                        { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_sum '-' exp_mult                        { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_mult                                    { $$ = $1; };
+exp_mult: 
+    exp_mult '*' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_mult '/' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_mult '%' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_pow                                     { $$ = $1; };
+exp_pow: 
+    exp_pow '^' unary_exp                       { $$ = create_node_binary_operation($2, $1, $3); } | 
+    unary_exp                                   { $$ = $1; };
 
-unary_exp: unary_op unary_exp | operand;
-unary_op: '+' | '-' | '!' | '&' | '*' | '?' | '#'; 
-operand: var_access | literal | call_func_command | '(' expression ')';
+unary_exp: 
+    unary_op unary_exp  { $$ = create_node_unary_operation($1, $2); } | 
+    operand             { $$ = $1; };
+unary_op: 
+    '+' { $$ = $1; } | 
+    '-' { $$ = $1; } | 
+    '!' { $$ = $1; } | 
+    '&' { $$ = $1; } | 
+    '*' { $$ = $1; } | 
+    '?' { $$ = $1; } | 
+    '#' { $$ = $1; }; 
+operand:    // TODO: solve conflict: if we remove node_literal, literal is ValorLexico, other ones are nodes
+    var_access         { $$ = $1; } | 
+    literal            { $$ = $1; } | 
+    call_func_command  { $$ = $1; } | 
+    '(' expression ')' { $$ = $2; };
 
 %%
 // Referencia para precedencia e associatividade dos operadores nas expressoes: https://en.cppreference.com/w/cpp/language/operator_precedence
