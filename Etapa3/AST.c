@@ -1,4 +1,4 @@
-#include "definitions.h"
+
 #include "AST.h"
 
 /* Schnorrrrrrr nos deixa usar Cpp pfvr a gente poderia resolver isso com classes de forma mais elegante :c */

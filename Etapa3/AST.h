@@ -1,18 +1,19 @@
 #include "definitions.h"
+#include <stdlib.h>
 
 struct node_function_declaration {
-    Node* firstCommand;
+    struct node* firstCommand;
     ValorLexico* identifier;
 };
 
 struct node_var_access {
     ValorLexico* identifier;
-    Node* index;
+    struct node* index;
 };
 
 struct node_var_attr {
-    Node* identifier;
-    Node* expression;
+    struct node* identifier;
+    struct node* expression;
 };
 
 struct node_input {
@@ -24,17 +25,17 @@ struct node_output {
 };
 
 struct node_function_call {
-    Node* expressionList;
+    struct node* expressionList;
 };
 
 struct node_shift_left {
-    Node* identifier;
-    Node* expression;
+    struct node* identifier;
+    struct node* expression;
 };
 
 struct node_shift_right {
-    Node* identifier; 
-    Node* expression;
+    struct node* identifier; 
+    struct node* expression;
 };
 
 struct node_break {
@@ -46,42 +47,42 @@ struct node_continue {
 };
 
 struct node_return {
-    Node* toReturn;
+    struct node* toReturn;
 };
 
 struct node_if {
-    Node* expression;
-    Node* ifTrue;
-    Node* ifFalse;
+    struct node* expression;
+    struct node* ifTrue;
+    struct node* ifFalse;
 };
 
 struct node_for_loop {
-    Node* attr;
-    Node* expression;
-    Node* incOrDec;
-    Node* firstCommand;    
+    struct node* attr;
+    struct node* expression;
+    struct node* incOrDec;
+    struct node* firstCommand;    
 };
 
 struct node_while_loop {
-    Node* expression;
-    Node* firstCommand;
+    struct node* expression;
+    struct node* firstCommand;
 };
 
 struct node_unary_operation {
     ValorLexico* operation;
-    Node* expression1;
+    struct node* expression1;
 };
 
 struct node_binary_operation {
     ValorLexico* operation;
-    Node* expression1;
-    Node* expression2;
+    struct node* expression1;
+    struct node* expression2;
 };
 
 struct node_ternary_operation {
-    Node* expression1;
-    Node* expression2;
-    Node* expression3;
+    struct node* expression1;
+    struct node* expression2;
+    struct node* expression3;
 };
 
 struct node_literal {
@@ -90,7 +91,7 @@ struct node_literal {
 
 typedef struct node {
     NodeType nodeType;
-    Node* sequenceNode;
+    struct node* sequenceNode;
 
     union 
     {
