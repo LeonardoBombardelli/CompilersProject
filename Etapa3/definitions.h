@@ -4,7 +4,6 @@
 typedef enum 
 {
     NODE_FUNCTION_DECLARATION    ,
-    NODE_EXPRESSION              ,
     NODE_VAR_ACCESS              ,
     NODE_VAR_ATTR                ,
     NODE_INPUT                   ,

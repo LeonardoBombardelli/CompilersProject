@@ -151,3 +151,4 @@ Node* create_node_literal              (ValorLexico* literal);
 
 void FreeValorLexico(ValorLexico* val);
 void FreeTree(Node* treeRoot);
+void FreeNode(Node* node);

@@ -208,5 +208,153 @@ void FreeValorLexico(ValorLexico* val)
 
 void FreeTree(Node* treeRoot)
 {
+    FreeNode(treeRoot);
+}
+
+void FreeNode(Node* node)
+{
+    if(node->sequenceNode != NULL)
+    {
+        FreeNode(node->sequenceNode);
+    }
+
+    switch (node->nodeType)
+    {
+    case NODE_FUNCTION_DECLARATION:
+        if(node->n_function_declaration.firstCommand != NULL)
+            FreeNode(node->n_function_declaration.firstCommand);
+        if(node->n_function_declaration.nextFunction != NULL)
+            FreeNode(node->n_function_declaration.nextFunction);
+        break;
+
+    case NODE_VAR_ACCESS:
+        if(node->n_var_access.index != NULL)
+            FreeNode(node->n_var_access.index);
+        if(node->n_var_access.identifier != NULL)
+            FreeValorLexico(node->n_var_access.identifier);
+        break;
     
+    case NODE_VAR_ATTR:
+        if(node->n_var_attr.expression != NULL)
+            FreeNode(node->n_var_attr.expression);
+        if(node->n_var_attr.identifier != NULL)
+            FreeValorLexico(node->n_var_attr.identifier);
+        if(node->n_var_attr.indexVector != NULL)
+            FreeNode(node->n_var_attr.indexVector);
+        break;
+
+    case NODE_INPUT:
+        if(node->n_input.input != NULL)
+            FreeNode(node->n_input.input);
+        break;
+    
+    case NODE_OUTPUT:
+        if(node->n_output.output != NULL)
+            FreeNode(node->n_output.output);
+        break;
+
+    case NODE_FUNCTION_CALL:
+        if(node->n_function_call.expressionList != NULL)
+            FreeNode(node->n_function_call.expressionList);
+        break;
+
+    case NODE_SHIFT_LEFT:
+        if(node->n_shift_left.expression != NULL)
+            FreeNode(node->n_shift_left.expression);
+        if(node->n_shift_left.identifier != NULL)
+            FreeValorLexico(node->n_shift_left.identifier);
+        if(node->n_shift_left.indexVector != NULL)
+            FreeNode(node->n_shift_left.indexVector);
+        break;
+
+    case NODE_SHIFT_RIGHT:
+        if(node->n_shift_right.expression != NULL)
+            FreeNode(node->n_shift_right.expression);
+        if(node->n_shift_right.identifier != NULL)
+            FreeValorLexico(node->n_shift_right.identifier);
+        if(node->n_shift_right.indexVector != NULL)
+            FreeNode(node->n_shift_right.indexVector);
+        break;
+
+    case NODE_BREAK:
+        break;
+    
+    case NODE_CONTINUE:
+        break;
+
+    case NODE_RETURN:
+        if(node->n_return.toReturn != NULL)
+            FreeNode(node->n_return.toReturn);
+        break;
+    
+    case NODE_IF:
+        if(node->n_if.expression != NULL)
+            FreeNode(node->n_if.expression);
+        if(node->n_if.ifFalse != NULL)
+            FreeNode(node->n_if.ifFalse);
+        if(node->n_if.ifTrue != NULL)
+            FreeNode(node->n_if.ifTrue);
+        break;
+    
+    case NODE_FOR_LOOP:
+        if(node->n_for_loop.attr != NULL)
+            FreeNode(node->n_for_loop.attr);
+        if(node->n_for_loop.expression != NULL);
+            FreeNode(node->n_for_loop.expression);
+        if(node->n_for_loop.firstCommand != NULL)
+            FreeNode(node->n_for_loop.firstCommand);
+        if(node->n_for_loop.incOrDec != NULL)
+            FreeNode(node->n_for_loop.incOrDec);
+        break;
+
+    case NODE_WHILE_LOOP:
+        if(node->n_while_loop.expression != NULL)
+            FreeNode(node->n_while_loop.expression);
+        if(node->n_while_loop.firstCommand != NULL)
+            FreeNode(node->n_while_loop.firstCommand);
+        break;
+    
+    case NODE_VECTOR_INDEX:
+        if(node->n_vector_index.identifier != NULL)
+            FreeValorLexico(node->n_vector_index.identifier);
+        if(node->n_vector_index.index != NULL)
+            FreeNode(node->n_vector_index.index);
+        break;
+    
+    case NODE_UNARY_OPERATION:
+        if(node->n_unary_operation.expression1 != NULL)
+            FreeNode(node->n_unary_operation.expression1);
+        if(node->n_unary_operation.operation != NULL)
+            FreeValorLexico(node->n_unary_operation.operation);
+        break;
+    
+    case NODE_BINARY_OPERATION:
+        if(node->n_binary_operation.expression1 != NULL)
+            FreeNode(node->n_binary_operation.expression1);
+        if(node->n_binary_operation.expression2 != NULL)
+            FreeNode(node->n_binary_operation.expression2);
+        if(node->n_binary_operation.operation != NULL)
+            FreeValorLexico(node->n_binary_operation.operation);
+        break;
+    
+    case NODE_TERNARY_OPERATION:
+        if(node->n_ternary_operation.expression1 != NULL)
+            FreeNode(node->n_ternary_operation.expression1);
+        if(node->n_ternary_operation.expression2 != NULL)
+            FreeNode(node->n_ternary_operation.expression2);
+        if(node->n_ternary_operation.expression3 != NULL)
+            FreeNode(node->n_ternary_operation.expression3);
+        break;
+    
+    case NODE_LITERAL:
+        if(node->n_literal.literal != NULL)
+            FreeValorLexico(node->n_literal.literal);
+        break;
+
+    default:
+        printf("Erro ao desalocar memoria!!!");
+        //TODO: CRIAR UM DEFAULT
+    }
+
+    free(node);
 }
