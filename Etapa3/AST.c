@@ -44,7 +44,7 @@ Node* create_node_var_attr (ValorLexico* identifier, Node* indexVector, Node* ex
     return newNode;
 }
 
-Node* create_node_input (Node* input)
+Node* create_node_input (ValorLexico* input)
 {
     Node* newNode = CreateGenericNode(NODE_INPUT);
 
@@ -53,7 +53,7 @@ Node* create_node_input (Node* input)
     return newNode;
 }
 
-Node* create_node_output (Node* output)
+Node* create_node_output (ValorLexico* output)
 {
     Node* newNode = CreateGenericNode(NODE_OUTPUT);
 
@@ -131,16 +131,6 @@ Node* create_node_while_loop (Node* expression, Node* firstCommand)
 
     newNode->n_while_loop.expression = expression;
     newNode->n_while_loop.firstCommand = firstCommand;
-
-    return newNode;
-}
-
-Node* create_node_vector_index (ValorLexico* identifier, Node* index)
-{
-    Node* newNode = CreateGenericNode(NODE_VECTOR_INDEX);
-
-    newNode->n_vector_index.identifier = identifier;
-    newNode->n_vector_index.index = index;
 
     return newNode;
 }
@@ -245,12 +235,12 @@ void FreeNode(Node* node)
 
     case NODE_INPUT:
         if(node->n_input.input != NULL)
-            FreeNode(node->n_input.input);
+            FreeValorLexico(node->n_input.input);
         break;
     
     case NODE_OUTPUT:
         if(node->n_output.output != NULL)
-            FreeNode(node->n_output.output);
+            FreeValorLexico(node->n_output.output);
         break;
 
     case NODE_FUNCTION_CALL:
@@ -314,13 +304,6 @@ void FreeNode(Node* node)
             FreeNode(node->n_while_loop.firstCommand);
         break;
     
-    case NODE_VECTOR_INDEX:
-        if(node->n_vector_index.identifier != NULL)
-            FreeValorLexico(node->n_vector_index.identifier);
-        if(node->n_vector_index.index != NULL)
-            FreeNode(node->n_vector_index.index);
-        break;
-    
     case NODE_UNARY_OPERATION:
         if(node->n_unary_operation.expression1 != NULL)
             FreeNode(node->n_unary_operation.expression1);
@@ -359,4 +342,17 @@ void FreeNode(Node* node)
     free(node);
 }
 
+void PrintAll(Node* treeRoot)
+{
 
+}
+
+void PrintNode(Node* node)
+{
+
+}
+
+void PrintLabel(Node* node)
+{
+
+}

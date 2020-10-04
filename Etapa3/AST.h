@@ -17,11 +17,11 @@ struct node_var_attr {
 };
 
 struct node_input {
-    Node* input;
+    ValorLexico* input;
 };
 
 struct node_output {
-    Node* output;
+    ValorLexico* output;
 };
 
 struct node_function_call {
@@ -70,11 +70,6 @@ struct node_while_loop {
     Node* firstCommand;
 };
 
-struct node_vector_index {
-    ValorLexico* identifier;
-    Node* index;
-};
-
 struct node_unary_operation {
     ValorLexico* operation;
     Node* expression1;
@@ -116,7 +111,6 @@ typedef struct node {
         struct node_if                      n_if                      ;
         struct node_for_loop                n_for_loop                ;
         struct node_while_loop              n_while_loop              ;
-        struct node_vector_index            n_vector_index            ;
         struct node_unary_operation         n_unary_operation         ;
         struct node_binary_operation        n_binary_operation        ;
         struct node_ternary_operation       n_ternary_operation       ;
@@ -130,8 +124,8 @@ Node* CreateGenericNode(NodeType type);
 Node* create_node_function_declaration (Node* firstCommand, ValorLexico* identifier);
 Node* create_node_var_access           (ValorLexico* identifier, Node* index);
 Node* create_node_var_attr             (ValorLexico* identifier, Node* indexVector, Node* expression);
-Node* create_node_input                (Node* input);
-Node* create_node_output               (Node* output);
+Node* create_node_input                (ValorLexico* input);
+Node* create_node_output               (ValorLexico* output);
 Node* create_node_function_call        (Node* expressionList);
 Node* create_node_shift_left           (ValorLexico* identifier, Node* indexVector, Node* expression);
 Node* create_node_shift_right          (ValorLexico* identifier, Node* indexVector, Node* expression);
@@ -141,7 +135,6 @@ Node* create_node_return               (Node* toReturn);
 Node* create_node_if                   (Node* expression, Node* ifTrue, Node* ifFalse);
 Node* create_node_for_loop             (Node* attr, Node* expression,Node* incOrDec, Node* firstCommand);
 Node* create_node_while_loop           (Node* expression, Node* firstCommand);
-Node* create_node_vector_index         (ValorLexico* identifier, Node* index);
 Node* create_node_unary_operation      (ValorLexico* operation, Node* expression1);
 Node* create_node_binary_operation     (ValorLexico* operation, Node* expression1, Node* expression2);
 Node* create_node_ternary_operation    (Node* expression1, Node* expression2, Node* expression3);
@@ -156,4 +149,5 @@ void FreeNode(Node* node);
 /* Print operations */
 
 void PrintAll(Node* treeRoot);
-
+void PrintNode(Node* node);
+void PrintLabel(Node* node);

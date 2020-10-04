@@ -17,7 +17,6 @@ typedef enum
     NODE_IF                      ,
     NODE_FOR_LOOP                ,
     NODE_WHILE_LOOP              ,
-    NODE_VECTOR_INDEX            ,
     NODE_UNARY_OPERATION         ,
     NODE_BINARY_OPERATION        ,
     NODE_TERNARY_OPERATION       ,
