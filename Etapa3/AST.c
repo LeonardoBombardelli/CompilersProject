@@ -1,7 +1,7 @@
 #include "definitions.h"
 #include "AST.h"
 
-/* Schnorrrrrrr nos deixa usar Cpp pfvr a gente poderia resolver isso com classes de forma tão elegante :c */
+/* Schnorrrrrrr nos deixa usar Cpp pfvr a gente poderia resolver isso com classes de forma mais elegante :c */
 
 Node* CreateGenericNode(NodeType type)
 {
@@ -184,4 +184,29 @@ Node* create_node_literal (ValorLexico* literal)
     newNode->n_literal.literal = literal;
 
     return newNode;
+}
+
+/* Free operations */
+
+void FreeValorLexico(ValorLexico* val)
+{
+    if(val->tokenType == TOKEN_TYPE_COMPOSITE_OP || val->tokenType == TOKEN_TYPE_IDENTIFIER)
+    {
+        free(val->tokenValue.string);
+    }
+
+    if(val->tokenType == TOKEN_TYPE_LITERAL)
+    {
+        if(val->literalType == LITERAL_TYPE_STRING)
+        {
+            free(val->tokenValue.string);
+        }
+    }
+
+    free(val);
+}
+
+void FreeTree(Node* treeRoot)
+{
+    
 }

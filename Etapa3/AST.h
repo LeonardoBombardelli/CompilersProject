@@ -146,3 +146,8 @@ Node* create_node_unary_operation      (ValorLexico* operation, Node* expression
 Node* create_node_binary_operation     (ValorLexico* operation, Node* expression1, Node* expression2);
 Node* create_node_ternary_operation    (Node* expression1, Node* expression2, Node* expression3);
 Node* create_node_literal              (ValorLexico* literal);
+
+/* Free operations */
+
+void FreeValorLexico(ValorLexico* val);
+void FreeTree(Node* treeRoot);
