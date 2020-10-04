@@ -11,8 +11,7 @@ struct node_var_access {
 };
 
 struct node_var_attr {
-    ValorLexico* identifier; 
-    Node* indexVector;
+    Node* identifier;
     Node* expression;
 };
 
@@ -29,14 +28,12 @@ struct node_function_call {
 };
 
 struct node_shift_left {
-    ValorLexico* identifier;
-    Node* indexVector;
+    Node* identifier;
     Node* expression;
 };
 
 struct node_shift_right {
-    ValorLexico* identifier; 
-    Node* indexVector;
+    Node* identifier; 
     Node* expression;
 };
 
@@ -123,12 +120,12 @@ Node* CreateGenericNode(NodeType type);
 
 Node* create_node_function_declaration (Node* firstCommand, ValorLexico* identifier);
 Node* create_node_var_access           (ValorLexico* identifier, Node* index);
-Node* create_node_var_attr             (ValorLexico* identifier, Node* indexVector, Node* expression);
+Node* create_node_var_attr             (Node* identifier, Node* expression);
 Node* create_node_input                (ValorLexico* input);
 Node* create_node_output               (ValorLexico* output);
 Node* create_node_function_call        (Node* expressionList);
-Node* create_node_shift_left           (ValorLexico* identifier, Node* indexVector, Node* expression);
-Node* create_node_shift_right          (ValorLexico* identifier, Node* indexVector, Node* expression);
+Node* create_node_shift_left           (Node* identifier, Node* expression);
+Node* create_node_shift_right          (Node* identifier, Node* expression);
 Node* create_node_break                ();
 Node* create_node_continue             ();
 Node* create_node_return               (Node* toReturn);

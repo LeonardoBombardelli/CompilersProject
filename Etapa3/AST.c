@@ -33,12 +33,11 @@ Node* create_node_var_access (ValorLexico* identifier, Node* index)
     return newNode;
 }
 
-Node* create_node_var_attr (ValorLexico* identifier, Node* indexVector, Node* expression)
+Node* create_node_var_attr (Node* identifier, Node* expression)
 {
     Node* newNode = CreateGenericNode(NODE_VAR_ATTR);
 
     newNode->n_var_attr.identifier = identifier;
-    newNode->n_var_attr.indexVector = indexVector;
     newNode->n_var_attr.expression = expression;
 
     return newNode;
@@ -71,9 +70,19 @@ Node* create_node_function_call (Node* expressionList)
     return newNode;
 }
 
-Node* create_node_shift_left (ValorLexico* identifier, Node* indexVector, Node* expression)
+Node* create_node_shift_left (Node* identifier, Node* expression)
 {
-    Node* newNode = CreateGenericNode(NODE_SHIFT_LEFT);newNode->n_shift_right;
+    Node* newNode = CreateGenericNode(NODE_SHIFT_LEFT);
+    newNode->n_shift_left.identifier = identifier;
+    newNode->n_shift_left.expression = expression;
+
+    return newNode;
+}
+
+Node* create_node_shift_right (Node* identifier, Node* expression)
+{
+    Node* newNode = CreateGenericNode(NODE_SHIFT_RIGHT);
+    newNode->n_shift_right.identifier = identifier;
     newNode->n_shift_right.expression = expression;
 
     return newNode;
@@ -228,9 +237,7 @@ void FreeNode(Node* node)
         if(node->n_var_attr.expression != NULL)
             FreeNode(node->n_var_attr.expression);
         if(node->n_var_attr.identifier != NULL)
-            FreeValorLexico(node->n_var_attr.identifier);
-        if(node->n_var_attr.indexVector != NULL)
-            FreeNode(node->n_var_attr.indexVector);
+            FreeNode(node->n_var_attr.identifier);
         break;
 
     case NODE_INPUT:
@@ -252,18 +259,14 @@ void FreeNode(Node* node)
         if(node->n_shift_left.expression != NULL)
             FreeNode(node->n_shift_left.expression);
         if(node->n_shift_left.identifier != NULL)
-            FreeValorLexico(node->n_shift_left.identifier);
-        if(node->n_shift_left.indexVector != NULL)
-            FreeNode(node->n_shift_left.indexVector);
+            FreeNode(node->n_shift_left.identifier);
         break;
 
     case NODE_SHIFT_RIGHT:
         if(node->n_shift_right.expression != NULL)
             FreeNode(node->n_shift_right.expression);
         if(node->n_shift_right.identifier != NULL)
-            FreeValorLexico(node->n_shift_right.identifier);
-        if(node->n_shift_right.indexVector != NULL)
-            FreeNode(node->n_shift_right.indexVector);
+            FreeNode(node->n_shift_right.identifier);
         break;
 
     case NODE_BREAK:
