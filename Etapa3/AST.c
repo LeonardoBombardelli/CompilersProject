@@ -13,12 +13,12 @@ Node* CreateGenericNode(NodeType type)
 }
 
 
-Node* create_node_function_declaration (Node* firstCommand, Node* nextFunction)
+Node* create_node_function_declaration (Node* firstCommand, ValorLexico* identifier)
 {
     Node* newNode = CreateGenericNode(NODE_FUNCTION_DECLARATION);
 
     newNode->n_function_declaration.firstCommand = firstCommand;
-    newNode->n_function_declaration.nextFunction = nextFunction;
+    newNode->n_function_declaration.identifier = identifier;
 
     return newNode;
 }
@@ -223,8 +223,8 @@ void FreeNode(Node* node)
     case NODE_FUNCTION_DECLARATION:
         if(node->n_function_declaration.firstCommand != NULL)
             FreeNode(node->n_function_declaration.firstCommand);
-        if(node->n_function_declaration.nextFunction != NULL)
-            FreeNode(node->n_function_declaration.nextFunction);
+        if(node->n_function_declaration.identifier != NULL)
+            FreeValorLexico(node->n_function_declaration.identifier);
         break;
 
     case NODE_VAR_ACCESS:
@@ -358,3 +358,5 @@ void FreeNode(Node* node)
 
     free(node);
 }
+
+

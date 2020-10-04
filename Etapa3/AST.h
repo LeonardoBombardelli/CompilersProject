@@ -2,7 +2,7 @@
 
 struct node_function_declaration {
     Node* firstCommand;
-    Node* nextFunction;
+    ValorLexico* identifier;
 };
 
 struct node_var_access {
@@ -127,7 +127,7 @@ typedef struct node {
 
 Node* CreateGenericNode(NodeType type);
 
-Node* create_node_function_declaration (Node* firstCommand, Node* nextFunction);
+Node* create_node_function_declaration (Node* firstCommand, ValorLexico* identifier);
 Node* create_node_var_access           (ValorLexico* identifier, Node* index);
 Node* create_node_var_attr             (ValorLexico* identifier, Node* indexVector, Node* expression);
 Node* create_node_input                (Node* input);
@@ -152,3 +152,8 @@ Node* create_node_literal              (ValorLexico* literal);
 void FreeValorLexico(ValorLexico* val);
 void FreeTree(Node* treeRoot);
 void FreeNode(Node* node);
+
+/* Print operations */
+
+void PrintAll(Node* treeRoot);
+
