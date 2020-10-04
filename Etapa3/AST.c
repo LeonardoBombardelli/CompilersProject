@@ -548,8 +548,8 @@ void PrintNode(Node* node)
 
 void PrintLabel(Node* node)
 {
-    printf("DALHE");
-    if(node->sequenceNode != NULL)
+
+   if(node->sequenceNode != NULL)
     {
         PrintLabel(node->sequenceNode);
     }
@@ -558,21 +558,21 @@ void PrintLabel(Node* node)
     switch (node->nodeType)
     {
     case NODE_FUNCTION_DECLARATION:
-        printf("%p [label=\"%s\"]", node, node->n_function_declaration.identifier->tokenValue.string);
+        printf("%p [label=\"%s\"]\n", node, node->n_function_declaration.identifier->tokenValue.string);
        
         if(node->n_function_declaration.firstCommand != NULL)
             PrintLabel(node->n_function_declaration.firstCommand);
         break;
 
     case NODE_VAR_ACCESS:
-        printf("%p [label=\"[]\"]", node);
+        printf("%p [label=\"[]\"]\n", node);
        
         if(node->n_var_access.index != NULL)
             PrintLabel(node->n_var_access.index);
         break;
     
     case NODE_VAR_ATTR:
-        printf("%p [label=\"=\"]", node);
+        printf("%p [label=\"=\"]\n", node);
        
         if(node->n_var_attr.expression != NULL)
             PrintLabel(node->n_var_attr.expression);
@@ -583,22 +583,22 @@ void PrintLabel(Node* node)
         break;
 
     case NODE_INPUT:
-        printf("%p [label=\"input\"]", node);
+        printf("%p [label=\"input\"]\n", node);
         break;
     
     case NODE_OUTPUT:
-        printf("%p [label=\"output\"]", node);
+        printf("%p [label=\"output\"]\n", node);
         break;
 
     case NODE_FUNCTION_CALL:
-        printf("%p [label=\"call \"]", node); //TODO: GET FUNCTION NAME
+        printf("%p [label=\"call \"]\n", node); //TODO: GET FUNCTION NAME
 
         if(node->n_function_call.expressionList != NULL)
             PrintLabel(node->n_function_call.expressionList);
         break;
 
     case NODE_SHIFT_LEFT:
-        printf("%p [label=\"<<\"]", node);
+        printf("%p [label=\"<<\"]\n", node);
 
         if(node->n_shift_left.expression != NULL)
             PrintLabel(node->n_shift_left.expression);
@@ -608,7 +608,7 @@ void PrintLabel(Node* node)
         break;
 
     case NODE_SHIFT_RIGHT:
-        printf("%p [label=\">>\"]", node);
+        printf("%p [label=\">>\"]\n", node);
 
         if(node->n_shift_right.expression != NULL)
             PrintLabel(node->n_shift_right.expression);
@@ -618,22 +618,22 @@ void PrintLabel(Node* node)
         break;
 
     case NODE_BREAK:
-        printf("%p [label=\"break\"]", node);
+        printf("%p [label=\"break\"]\n", node);
         break;
     
     case NODE_CONTINUE:
-        printf("%p [label=\"continue\"]", node);
+        printf("%p [label=\"continue\"]\n", node);
         break;
 
     case NODE_RETURN:
-        printf("%p [label=\"return\"]", node);
+        printf("%p [label=\"return\"]\n", node);
 
         if(node->n_return.toReturn != NULL)
             PrintLabel(node->n_return.toReturn);
         break;
     
     case NODE_IF:
-        printf("%p [label=\"if\"]", node);
+        printf("%p [label=\"if\"]\n", node);
 
         if(node->n_if.expression != NULL)
             PrintLabel(node->n_if.expression);
@@ -647,7 +647,7 @@ void PrintLabel(Node* node)
         break;
     
     case NODE_FOR_LOOP:
-        printf("%p [label=\"for\"]", node);
+        printf("%p [label=\"for\"]\n", node);
 
         if(node->n_for_loop.attr != NULL)
             PrintLabel(node->n_for_loop.attr);
@@ -664,7 +664,7 @@ void PrintLabel(Node* node)
         break;
 
     case NODE_WHILE_LOOP:
-        printf("%p [label=\"while\"]", node);
+        printf("%p [label=\"while\"]\n", node);
 
         if(node->n_while_loop.expression != NULL)
             PrintLabel(node->n_while_loop.expression);
@@ -675,7 +675,7 @@ void PrintLabel(Node* node)
         break;
     
     case NODE_UNARY_OPERATION:
-        printf("%p [label=\"%s\"]", node, node->n_unary_operation.operation->tokenValue.string);
+        printf("%p [label=\"%s\"]\n", node, node->n_unary_operation.operation->tokenValue.string);
 
         if(node->n_unary_operation.expression1 != NULL)
             PrintLabel(node->n_unary_operation.expression1);
@@ -683,7 +683,7 @@ void PrintLabel(Node* node)
         break;
     
     case NODE_BINARY_OPERATION:
-        printf("%p [label=\"%s\"]", node, node->n_binary_operation.operation->tokenValue.string);
+        printf("%p [label=\"%s\"]\n", node, node->n_binary_operation.operation->tokenValue.string);
 
         if(node->n_binary_operation.expression1 != NULL)
             PrintLabel(node->n_binary_operation.expression1);
@@ -694,7 +694,7 @@ void PrintLabel(Node* node)
         break;
     
     case NODE_TERNARY_OPERATION:
-        printf("%p [label=\"?:\"]", node);
+        printf("%p [label=\"?:\"]\n", node);
 
         if(node->n_ternary_operation.expression1 != NULL)
             PrintLabel(node->n_ternary_operation.expression1);
@@ -711,26 +711,26 @@ void PrintLabel(Node* node)
         switch (node->n_literal.literal->literalType)
         {
         case LITERAL_TYPE_INTEGER:
-            printf("%p [label=\"%d\"]", node, node->n_literal.literal->tokenValue.integer);
+            printf("%p [label=\"%d\"]\n", node, node->n_literal.literal->tokenValue.integer);
             break;
 
         case LITERAL_TYPE_STRING:
-            printf("%p [label=\"%s\"]", node, node->n_literal.literal->tokenValue.string);
+            printf("%p [label=\"%s\"]\n", node, node->n_literal.literal->tokenValue.string);
             break;
         
         case LITERAL_TYPE_BOOL:
             if(node->n_literal.literal->tokenValue.integer)
-                printf("%p [label=\"true\"]", node);
+                printf("%p [label=\"true\"]\n", node);
             else
-                printf("%p [label=\"false\"]", node);
+                printf("%p [label=\"false\"]\n", node);
             break;
         
         case LITERAL_TYPE_FLOAT:
-            printf("%p [label=\"%f\"]", node, node->n_literal.literal->tokenValue.floating);
+            printf("%p [label=\"%f\"]\n", node, node->n_literal.literal->tokenValue.floating);
             break;
         
         case LITERAL_TYPE_CHAR:
-            printf("%p [label=\"%c\"]", node, node->n_literal.literal->tokenValue.character);
+            printf("%p [label=\"%c\"]\n", node, node->n_literal.literal->tokenValue.character);
             break;
 
         case NOT_LITERAL_TYPE:
