@@ -347,12 +347,202 @@ void FreeNode(Node* node)
 
 void PrintAll(Node* treeRoot)
 {
-
+    
 }
 
 void PrintNode(Node* node)
 {
+    if(node->sequenceNode != NULL)
+    {
+        printf("%p, %p\n", node, node->sequenceNode);
+        PrintNode(node->sequenceNode);
+    }
 
+    switch (node->nodeType)
+    {
+    case NODE_FUNCTION_DECLARATION:
+        if(node->n_function_declaration.firstCommand != NULL)
+        {
+            printf("%p, %p\n", node, node->n_function_declaration.firstCommand);
+            PrintNode(node->n_function_declaration.firstCommand);
+        }
+        break;
+
+    case NODE_VAR_ACCESS:
+        if(node->n_var_access.index != NULL)
+        {
+            printf("%p, %p\n", node, node->n_var_access.index);
+            PrintNode(node->n_var_access.index);
+        }
+        break;
+    
+    case NODE_VAR_ATTR:
+        if(node->n_var_attr.expression != NULL)
+        {
+            printf("%p, %p\n", node, node->n_var_attr.expression);
+            PrintNode(node->n_var_attr.expression);
+        }
+        if(node->n_var_attr.identifier != NULL)
+        {
+            printf("%p, %p\n", node, node->n_var_attr.identifier);
+            PrintNode(node->n_var_attr.identifier);
+        }
+        break;
+
+    case NODE_INPUT:
+        break;
+    
+    case NODE_OUTPUT:
+        break;
+
+    case NODE_FUNCTION_CALL:
+        if(node->n_function_call.expressionList != NULL)
+        {
+            printf("%p, %p\n", node, node->n_function_call.expressionList);
+            PrintNode(node->n_function_call.expressionList);
+        }
+        break;
+
+    case NODE_SHIFT_LEFT:
+        if(node->n_shift_left.expression != NULL)
+        {
+            printf("%p, %p\n", node, node->n_shift_left.expression);
+            PrintNode(node->n_shift_left.expression);
+        }
+        if(node->n_shift_left.identifier != NULL)
+        {
+            printf("%p, %p\n", node, node->n_shift_left.identifier);
+            PrintNode(node->n_shift_left.identifier);
+        }
+        break;
+
+    case NODE_SHIFT_RIGHT:
+        if(node->n_shift_right.expression != NULL)
+        {
+            printf("%p, %p\n", node, node->n_shift_right.expression);
+            PrintNode(node->n_shift_right.expression);
+        }
+        if(node->n_shift_right.identifier != NULL)
+        {
+            printf("%p, %p\n", node, node->n_shift_right.identifier);
+            PrintNode(node->n_shift_right.identifier);
+        }
+        break;
+
+    case NODE_BREAK:
+        break;
+    
+    case NODE_CONTINUE:
+        break;
+
+    case NODE_RETURN:
+        if(node->n_return.toReturn != NULL)
+        {
+            printf("%p, %p\n", node, node->n_return.toReturn);
+            PrintNode(node->n_return.toReturn);
+        }
+        break;
+    
+    case NODE_IF:
+        if(node->n_if.expression != NULL)
+        {
+            printf("%p, %p\n", node, node->n_if.expression);
+            PrintNode(node->n_if.expression);
+        }
+        if(node->n_if.ifFalse != NULL)
+        {
+            printf("%p, %p\n", node, node->n_if.ifFalse);
+            PrintNode(node->n_if.ifFalse);
+        }
+        if(node->n_if.ifTrue != NULL)
+        {
+            printf("%p, %p\n", node, node->n_if.ifTrue);
+            PrintNode(node->n_if.ifTrue);
+        }
+        break;
+    
+    case NODE_FOR_LOOP:
+        if(node->n_for_loop.attr != NULL)
+        {
+            printf("%p, %p\n", node, node->n_for_loop.attr);
+            PrintNode(node->n_for_loop.attr);
+        }
+        if(node->n_for_loop.expression != NULL);
+        {
+            printf("%p, %p\n", node, node->n_for_loop.expression);
+            PrintNode(node->n_for_loop.expression);
+        }
+        if(node->n_for_loop.firstCommand != NULL)
+        {
+            printf("%p, %p\n", node, node->n_for_loop.firstCommand);
+            PrintNode(node->n_for_loop.firstCommand);
+        }
+        if(node->n_for_loop.incOrDec != NULL)
+        {
+            printf("%p, %p\n", node, node->n_for_loop.incOrDec);
+            PrintNode(node->n_for_loop.incOrDec);
+        }
+        break;
+
+    case NODE_WHILE_LOOP:
+        if(node->n_while_loop.expression != NULL)
+        {
+            printf("%p, %p\n", node, node->n_while_loop.expression);
+            PrintNode(node->n_while_loop.expression);
+        }
+        if(node->n_while_loop.firstCommand != NULL)
+        {
+            printf("%p, %p\n", node, node->n_while_loop.firstCommand);
+            PrintNode(node->n_while_loop.firstCommand);
+        }
+        break;
+    
+    case NODE_UNARY_OPERATION:
+        if(node->n_unary_operation.expression1 != NULL)
+        {
+            printf("%p, %p\n", node, node->n_unary_operation.expression1);
+            PrintNode(node->n_unary_operation.expression1);
+        }
+        break;
+    
+    case NODE_BINARY_OPERATION:
+        if(node->n_binary_operation.expression1 != NULL)
+        {
+            printf("%p, %p\n", node, node->n_binary_operation.expression1);
+            PrintNode(node->n_binary_operation.expression1);
+        }
+        if(node->n_binary_operation.expression2 != NULL)
+        {
+            printf("%p, %p\n", node, node->n_binary_operation.expression2);
+            PrintNode(node->n_binary_operation.expression2);
+        }
+        break;
+    
+    case NODE_TERNARY_OPERATION:
+        if(node->n_ternary_operation.expression1 != NULL)
+        {
+            printf("%p, %p\n", node, node->n_ternary_operation.expression1);
+            PrintNode(node->n_ternary_operation.expression1);
+        }
+        if(node->n_ternary_operation.expression2 != NULL)
+        {
+            printf("%p, %p\n", node, node->n_ternary_operation.expression2);
+            PrintNode(node->n_ternary_operation.expression2);
+        }
+        if(node->n_ternary_operation.expression3 != NULL)
+        {
+            printf("%p, %p\n", node, node->n_ternary_operation.expression3);
+            PrintNode(node->n_ternary_operation.expression3);
+        }
+        break;
+    
+    case NODE_LITERAL:
+        break;
+
+    default:
+        printf("Erro ao printar!!!");
+        //TODO: CRIAR UM DEFAULT
+    }
 }
 
 void PrintLabel(Node* node)
