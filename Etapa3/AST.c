@@ -292,7 +292,7 @@ void FreeNode(Node* node)
     case NODE_FOR_LOOP:
         if(node->n_for_loop.attr != NULL)
             FreeNode(node->n_for_loop.attr);
-        if(node->n_for_loop.expression != NULL);
+        if(node->n_for_loop.expression != NULL)
             FreeNode(node->n_for_loop.expression);
         if(node->n_for_loop.firstCommand != NULL)
             FreeNode(node->n_for_loop.firstCommand);
@@ -468,7 +468,7 @@ void PrintNode(Node* node)
             printf("%p, %p\n", node, node->n_for_loop.attr);
             PrintNode(node->n_for_loop.attr);
         }
-        if(node->n_for_loop.expression != NULL);
+        if(node->n_for_loop.expression != NULL)
         {
             printf("%p, %p\n", node, node->n_for_loop.expression);
             PrintNode(node->n_for_loop.expression);
@@ -548,7 +548,7 @@ void PrintNode(Node* node)
 
 void PrintLabel(Node* node)
 {
-
+    printf("DALHE");
     if(node->sequenceNode != NULL)
     {
         PrintLabel(node->sequenceNode);
@@ -652,7 +652,7 @@ void PrintLabel(Node* node)
         if(node->n_for_loop.attr != NULL)
             PrintLabel(node->n_for_loop.attr);
 
-        if(node->n_for_loop.expression != NULL);
+        if(node->n_for_loop.expression != NULL)
             PrintLabel(node->n_for_loop.expression);
 
         if(node->n_for_loop.firstCommand != NULL)
@@ -731,6 +731,9 @@ void PrintLabel(Node* node)
         
         case LITERAL_TYPE_CHAR:
             printf("%p [label=\"%c\"]", node, node->n_literal.literal->tokenValue.character);
+            break;
+
+        case NOT_LITERAL_TYPE:
             break;
         
         }
