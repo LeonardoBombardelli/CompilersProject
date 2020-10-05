@@ -137,7 +137,7 @@ programa:
     program_list { $$ = $1; arvore = $$; };
 program_list: 
     global_var_declaration program_list   { $$ = $2; /* ignore global vars */ } |
-    func_definition program_list          { $1->sequenceNode = $2; } |
+    func_definition program_list          { $1->sequenceNode = $2; $$ = $1; } |
     %empty                                { $$ = NULL; };
 
 

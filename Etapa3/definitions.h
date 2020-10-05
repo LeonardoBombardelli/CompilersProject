@@ -41,7 +41,7 @@ typedef enum
     LITERAL_TYPE_CHAR    ,
     LITERAL_TYPE_BOOL    ,
     LITERAL_TYPE_STRING  ,
-    NOT_LITERAL_TYPE        //Caso, obviamente, não seja um literal :)
+    NOT_LITERAL_TYPE
 
 } LiteralType;
 

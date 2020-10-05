@@ -1,8 +1,6 @@
 
 #include "AST.h"
 
-/* Schnorrrrrrr nos deixa usar Cpp pfvr a gente poderia resolver isso com classes de forma mais elegante :c */
-
 Node* CreateGenericNode(NodeType type)
 {
     Node* node = (Node *) malloc(sizeof(Node));
@@ -355,7 +353,6 @@ void FreeNode(Node* node)
 
     default:
         printf("Erro ao desalocar memoria!!!");
-        //TODO: CRIAR UM DEFAULT
     }
 
     free(node);
