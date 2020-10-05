@@ -5,6 +5,7 @@
 extern int yylineno;
 extern void *arvore;
 int yylex(void);
+Node* last_command_of_chain(Node* n);
 void yyerror (char const *s);
 %}
 
@@ -13,8 +14,8 @@ void yyerror (char const *s);
 
 %union 
 {
-    ValorLexico* valor_lexico;
-    Node* node;
+    struct valorLexico* valor_lexico;
+    struct node* node;
 }
 
 %token<valor_lexico> TK_PR_INT
@@ -98,14 +99,13 @@ void yyerror (char const *s);
 %type<node> global_var_declaration
 %type<node> global_var_list
 %type<node> func_definition
-%type<node> func_header
+%type<valor_lexico> func_header
 %type<node> func_header_list
 %type<node> func_header_list_iterator
 %type<node> simple_command
 %type<node> command_block
 %type<node> sequence_simple_command
 %type<node> local_var_declaration
-%type<node> maybe_initialization
 %type<node> var_access
 %type<node> attribution_command
 %type<node> io_command
@@ -129,7 +129,7 @@ void yyerror (char const *s);
 %type<node> exp_mult
 %type<node> exp_pow
 %type<node> unary_exp
-%type<node> unary_op
+%type<valor_lexico> unary_op
 %type<node> operand
 
 %%
@@ -143,10 +143,10 @@ program_list:
 
 maybe_const: 
     %empty        { $$ = NULL; } |
-    TK_PR_CONST   { $$ = $1;   };
+    TK_PR_CONST   { $$ = NULL; };
 maybe_static: 
     %empty        { $$ = NULL; } |
-    TK_PR_STATIC  { $$ = $1;   };
+    TK_PR_STATIC  { $$ = NULL; };
 
 type:
     TK_PR_INT     { $$ = NULL; /* ignore types */ } |
@@ -155,7 +155,7 @@ type:
     TK_PR_BOOL    { $$ = NULL;                    } |
     TK_PR_STRING  { $$ = NULL;                    };
 literal: 
-    TK_LIT_INT    { $$ = create_node_literal($1); /* TODO: remove node_literal? */ } |
+    TK_LIT_INT    { $$ = create_node_literal($1); } |
     TK_LIT_FLOAT  { $$ = create_node_literal($1); } |
     TK_LIT_FALSE  { $$ = create_node_literal($1); } |
     TK_LIT_TRUE   { $$ = create_node_literal($1); } |
@@ -176,7 +176,7 @@ func_definition:
     func_header command_block { create_node_function_declaration($2, $1); };
 
 func_header:
-    maybe_static type TK_IDENTIFICADOR '(' func_header_list ')' { $$ = $3 /* ignore all but function name */ };
+    maybe_static type TK_IDENTIFICADOR '(' func_header_list ')' { $$ = $3; /* ignore all but function name */ };
 func_header_list:
     %empty                                                          { $$ = NULL; } |
     maybe_const type TK_IDENTIFICADOR func_header_list_iterator     { $$ = NULL; };
@@ -203,21 +203,13 @@ sequence_simple_command:
     %empty                                      { $$ = NULL; };
 
 local_var_declaration: 
-    maybe_static maybe_const type TK_IDENTIFICADOR maybe_initialization {
-        if ($5 != NULL)
-        {
-            Node* temp = create_node_var_access($4, NULL);
-            $$ = create_node_var_attr(temp, $5);
-        }
-        else    // ignore declaration without attribution
-        {
-            return NULL;
-        }
+    maybe_static maybe_const type TK_IDENTIFICADOR { $$ = NULL; } |
+    maybe_static maybe_const type TK_IDENTIFICADOR TK_OC_LE literal {
+        $$ = create_node_var_attr(create_node_var_access($4, NULL), $6);
+    } |
+    maybe_static maybe_const type TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
+        $$ = create_node_var_attr(create_node_var_access($4, NULL), create_node_literal($6));
     };
-maybe_initialization: 
-    %empty                      { $$ = NULL; } |
-    TK_OC_LE literal            { $$ = $2;   } |
-    TK_OC_LE TK_IDENTIFICADOR   { $$ = $2;   };
 
 var_access:
     TK_IDENTIFICADOR                    { $$ = create_node_var_access($1, NULL); } | 
@@ -228,19 +220,19 @@ attribution_command:
 
 io_command: 
     TK_PR_INPUT TK_IDENTIFICADOR    { $$ = create_node_input($2);  } | 
-    TK_PR_OUTPUT TK_IDENTIFICADOR   { $$ = create_node_output($2); } | 
-    TK_PR_OUTPUT literal            { $$ = create_node_output($2); } ;
+    TK_PR_OUTPUT TK_IDENTIFICADOR   { $$ = create_node_output_lex($2); } | 
+    TK_PR_OUTPUT literal            { $$ = create_node_output_nod($2); } ;
 
 call_func_command:
-    TK_IDENTIFICADOR '(' func_parameters_list ')' { $$ = create_node_function_call($3);   } | 
-    TK_IDENTIFICADOR '(' ')'                      { $$ = create_node_function_call(NULL); };
+    TK_IDENTIFICADOR '(' func_parameters_list ')' { $$ = create_node_function_call($1, $3);   } | 
+    TK_IDENTIFICADOR '(' ')'                      { $$ = create_node_function_call($1, NULL); };
 func_parameters_list: 
     expression                           { $$ = $1; } | 
     func_parameters_list ',' expression  { $1->sequenceNode = $3; $$ = $1; };
 
 shift_command:
-    var_access TK_OC_SL TK_LIT_INT { $$ = create_node_shift_left($1, $3);  } |
-    var_access TK_OC_SR TK_LIT_INT { $$ = create_node_shift_right($1, $3); };
+    var_access TK_OC_SL TK_LIT_INT { $$ = create_node_shift_left($1, create_node_literal($3));  } |
+    var_access TK_OC_SR TK_LIT_INT { $$ = create_node_shift_right($1, create_node_literal($3)); };
 
 return_command:
     TK_PR_RETURN expression { $$ = create_node_return($2); };
@@ -310,7 +302,7 @@ unary_op:
     '*' { $$ = $1; } | 
     '?' { $$ = $1; } | 
     '#' { $$ = $1; }; 
-operand:    // TODO: solve conflict: if we remove node_literal, literal is ValorLexico, other ones are nodes
+operand:
     var_access         { $$ = $1; } | 
     literal            { $$ = $1; } | 
     call_func_command  { $$ = $1; } | 

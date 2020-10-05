@@ -52,19 +52,29 @@ Node* create_node_input (ValorLexico* input)
     return newNode;
 }
 
-Node* create_node_output (ValorLexico* output)
+Node* create_node_output_lex (ValorLexico* output)
 {
-    Node* newNode = CreateGenericNode(NODE_OUTPUT);
+    Node* newNode = CreateGenericNode(NODE_OUTPUT_LEX);
 
-    newNode->n_output.output = output;
+    newNode->n_output_lex.output = output;
 
     return newNode;
 }
 
-Node* create_node_function_call (Node* expressionList)
+Node* create_node_output_nod (Node* output)
+{
+    Node* newNode = CreateGenericNode(NODE_OUTPUT_NOD);
+
+    newNode->n_output_nod.output = output;
+
+    return newNode;
+}
+
+Node* create_node_function_call (ValorLexico* identifier, Node* expressionList)
 {
     Node* newNode = CreateGenericNode(NODE_FUNCTION_CALL);
 
+    newNode->n_function_call.identifier = identifier;
     newNode->n_function_call.expressionList = expressionList;
 
     return newNode;
@@ -245,13 +255,19 @@ void FreeNode(Node* node)
             FreeValorLexico(node->n_input.input);
         break;
     
-    case NODE_OUTPUT:
-        if(node->n_output.output != NULL)
-            FreeValorLexico(node->n_output.output);
+    case NODE_OUTPUT_LEX:
+        if(node->n_output_lex.output != NULL)
+            FreeValorLexico(node->n_output_lex.output);
+        break;
+
+    case NODE_OUTPUT_NOD:
+        if(node->n_output_nod.output != NULL)
+            FreeNode(node->n_output_nod.output);
         break;
 
     case NODE_FUNCTION_CALL:
         if(node->n_function_call.expressionList != NULL)
+            FreeValorLexico(node->n_function_call.identifier);
             FreeNode(node->n_function_call.expressionList);
         break;
 
@@ -393,7 +409,8 @@ void PrintNode(Node* node)
     case NODE_INPUT:
         break;
     
-    case NODE_OUTPUT:
+    case NODE_OUTPUT_LEX:
+    case NODE_OUTPUT_NOD:
         break;
 
     case NODE_FUNCTION_CALL:
@@ -586,12 +603,13 @@ void PrintLabel(Node* node)
         printf("%p [label=\"input\"]\n", node);
         break;
     
-    case NODE_OUTPUT:
+    case NODE_OUTPUT_LEX:
+    case NODE_OUTPUT_NOD:
         printf("%p [label=\"output\"]\n", node);
         break;
 
     case NODE_FUNCTION_CALL:
-        printf("%p [label=\"call \"]\n", node); //TODO: GET FUNCTION NAME
+        printf("%p [label=\"call %s\"]\n", node, node->n_function_call.identifier->tokenValue.string);
 
         if(node->n_function_call.expressionList != NULL)
             PrintLabel(node->n_function_call.expressionList);

@@ -20,11 +20,16 @@ struct node_input {
     ValorLexico* input;
 };
 
-struct node_output {
+struct node_output_lex {
     ValorLexico* output;
 };
 
+struct node_output_nod {
+    struct node* output;
+};
+
 struct node_function_call {
+    ValorLexico* identifier;
     struct node* expressionList;
 };
 
@@ -99,7 +104,8 @@ typedef struct node {
         struct node_var_access              n_var_access              ;
         struct node_var_attr                n_var_attr                ;
         struct node_input                   n_input                   ;
-        struct node_output                  n_output                  ;
+        struct node_output_lex              n_output_lex              ;
+        struct node_output_nod              n_output_nod              ;
         struct node_function_call           n_function_call           ;
         struct node_shift_left              n_shift_left              ;
         struct node_shift_right             n_shift_right             ;
@@ -123,8 +129,9 @@ Node* create_node_function_declaration (Node* firstCommand, ValorLexico* identif
 Node* create_node_var_access           (ValorLexico* identifier, Node* index);
 Node* create_node_var_attr             (Node* identifier, Node* expression);
 Node* create_node_input                (ValorLexico* input);
-Node* create_node_output               (ValorLexico* output);
-Node* create_node_function_call        (Node* expressionList);
+Node* create_node_output_lex           (ValorLexico* output);
+Node* create_node_output_nod           (Node* output);
+Node* create_node_function_call        (ValorLexico* identifier, Node* expressionList);
 Node* create_node_shift_left           (Node* identifier, Node* expression);
 Node* create_node_shift_right          (Node* identifier, Node* expression);
 Node* create_node_break                ();

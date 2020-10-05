@@ -103,7 +103,7 @@ EXP [Ee][+|-]?{INTEGER}
 [']\\[rnt][']             { create_token_literal(LITERAL_TYPE_CHAR); return TK_LIT_CHAR; }
 ["][^\"\n]*["]            { create_token_literal(LITERAL_TYPE_STRING); return TK_LIT_STRING; }
 
-{INTEGER}                 { create_token_literal(LITERAL_TYPE_INT); return TK_LIT_INT; }
+{INTEGER}                 { create_token_literal(LITERAL_TYPE_INTEGER); return TK_LIT_INT; }
 {INTEGER}\.{DIGIT}+{EXP}? { create_token_literal(LITERAL_TYPE_FLOAT); return TK_LIT_FLOAT; }
 
 {DIGIT}({ALNUM}|_)+       { return TOKEN_ERRO; } /* identifier starting with number */
@@ -133,7 +133,7 @@ EXP [Ee][+|-]?{INTEGER}
 
 void create_token_not_literal(TokenType token_type) {
     yylval.valor_lexico = (ValorLexico*) calloc(1, sizeof(ValorLexico));
-    yylval.valor_lexico->line_number = get_line_number();
+    yylval.valor_lexico->line_number = yylineno;
     yylval.valor_lexico->tokenType = token_type;
     yylval.valor_lexico->literalType = NOT_LITERAL_TYPE;
 
@@ -149,7 +149,7 @@ void create_token_not_literal(TokenType token_type) {
 
 void create_token_literal(LiteralType literal_type) {
     yylval.valor_lexico = (ValorLexico*) calloc(1, sizeof(ValorLexico));
-    yylval.valor_lexico->line_number = get_line_number();
+    yylval.valor_lexico->line_number = yylineno;
     yylval.valor_lexico->tokenType = TOKEN_TYPE_LITERAL;
     yylval.valor_lexico->literalType = literal_type;
 
