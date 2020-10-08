@@ -180,14 +180,17 @@ void create_token_literal(LiteralType literal_type) {
             break;
 
         case LITERAL_TYPE_BOOL:
-            yylval.valor_lexico->tokenValue.boolean = yytext == "true" ? true : false;
-            // TODO: ternary op ok?
+            // strcmp returns 0 if equal
+            yylval.valor_lexico->tokenValue.boolean = strcmp(yytext, "true") ? false : true;
             break;
 
         case LITERAL_TYPE_STRING:
             yylval.valor_lexico->tokenValue.string = strdup(yytext);
             // TODO: maybe string handler function?
             break;
+        
+        default:
+            printf("Erro!!!");
     }
             
 

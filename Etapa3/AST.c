@@ -265,8 +265,9 @@ void FreeNode(Node* node)
 
     case NODE_FUNCTION_CALL:
         if(node->n_function_call.expressionList != NULL)
-            FreeValorLexico(node->n_function_call.identifier);
             FreeNode(node->n_function_call.expressionList);
+        if(node->n_function_call.identifier != NULL)
+            FreeValorLexico(node->n_function_call.identifier);
         break;
 
     case NODE_SHIFT_LEFT:
