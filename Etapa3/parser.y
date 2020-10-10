@@ -226,7 +226,7 @@ call_func_command:
     TK_IDENTIFICADOR '(' ')'                      { $$ = create_node_function_call($1, NULL); };
 func_parameters_list: 
     expression                           { $$ = $1; } | 
-    func_parameters_list ',' expression  { $1->sequenceNode = $3; $$ = $1; };
+    func_parameters_list ',' expression  { last_command_of_chain($1)->sequenceNode = $3; $$ = $1; };
 
 shift_command:
     var_access TK_OC_SL TK_LIT_INT { $$ = create_node_shift_left($1, create_node_literal($3));  } |
