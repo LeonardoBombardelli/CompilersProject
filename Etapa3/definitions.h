@@ -5,6 +5,7 @@ typedef enum
 {
     NODE_FUNCTION_DECLARATION    ,
     NODE_VAR_ACCESS              ,
+    NODE_VECTOR_ACCESS           ,
     NODE_VAR_ATTR                ,
     NODE_INPUT                   ,
     NODE_OUTPUT_LEX              ,

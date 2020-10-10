@@ -21,12 +21,21 @@ Node* create_node_function_declaration (Node* firstCommand, ValorLexico* identif
     return newNode;
 }
 
-Node* create_node_var_access (ValorLexico* identifier, Node* index)
+Node* create_node_var_access (ValorLexico* identifier)
 {
     Node* newNode = CreateGenericNode(NODE_VAR_ACCESS);
 
     newNode->n_var_access.identifier = identifier;
-    newNode->n_var_access.index = index;
+
+    return newNode;
+}
+
+Node* create_node_vector_access (Node* var, Node* index)
+{
+    Node* newNode = CreateGenericNode(NODE_VECTOR_ACCESS);
+
+    newNode->n_vector_access.var = var;
+    newNode->n_vector_access.index = index;
 
     return newNode;
 }
@@ -235,10 +244,15 @@ void FreeNode(Node* node)
         break;
 
     case NODE_VAR_ACCESS:
-        if(node->n_var_access.index != NULL)
-            FreeNode(node->n_var_access.index);
         if(node->n_var_access.identifier != NULL)
             FreeValorLexico(node->n_var_access.identifier);
+        break;
+
+    case NODE_VECTOR_ACCESS:
+        if(node->n_vector_access.var != NULL)
+            FreeNode(node->n_vector_access.var);
+        if(node->n_vector_access.index != NULL)
+            FreeNode(node->n_vector_access.index);
         break;
     
     case NODE_VAR_ATTR:
@@ -389,10 +403,18 @@ void PrintNode(Node* node)
         break;
 
     case NODE_VAR_ACCESS:
-        if(node->n_var_access.index != NULL)
+        break;
+
+    case NODE_VECTOR_ACCESS:
+        if(node->n_vector_access.index != NULL)
         {
-            printf("%p, %p\n", node, node->n_var_access.index);
-            PrintNode(node->n_var_access.index);
+            printf("%p, %p\n", node, node->n_vector_access.index);
+            PrintNode(node->n_vector_access.index);
+        }
+        if(node->n_vector_access.var != NULL)
+        {
+            printf("%p, %p\n", node, node->n_vector_access.var);
+            PrintNode(node->n_vector_access.var);
         }
         break;
     
@@ -568,13 +590,6 @@ void PrintNode(Node* node)
 
 void PrintLabel(Node* node)
 {
-  
-   if(node->sequenceNode != NULL)
-    {
-        PrintLabel(node->sequenceNode);
-    }
-
-
     switch (node->nodeType)
     {
     case NODE_FUNCTION_DECLARATION:
@@ -587,8 +602,17 @@ void PrintLabel(Node* node)
     case NODE_VAR_ACCESS:
         printf("%p [label=\"%s\"]\n", node, node->n_var_access.identifier->tokenValue.string);
        
-        if(node->n_var_access.index != NULL)
-            PrintLabel(node->n_var_access.index);
+        break;
+    
+    case NODE_VECTOR_ACCESS:
+        printf("%p [label=\"[]\"]\n", node);
+
+        if(node->n_vector_access.var != NULL)
+            PrintLabel(node->n_vector_access.var);
+
+        if(node->n_vector_access.index != NULL)
+            PrintLabel(node->n_vector_access.index);
+
         break;
     
     case NODE_VAR_ATTR:
@@ -767,5 +791,10 @@ void PrintLabel(Node* node)
     default:
         printf("Erro ao printar!!!");
         //TODO: CRIAR UM DEFAULT
+    }
+
+    if(node->sequenceNode != NULL)
+    {
+        PrintLabel(node->sequenceNode);
     }
 }

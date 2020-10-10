@@ -203,15 +203,15 @@ sequence_simple_command:
 local_var_declaration: 
     maybe_static maybe_const type TK_IDENTIFICADOR {$$ = NULL; } |
     maybe_static maybe_const type TK_IDENTIFICADOR TK_OC_LE literal {
-        $$ = create_node_var_attr(create_node_var_access($4, NULL), $6);
+        $$ = create_node_var_attr(create_node_var_access($4), $6);
     } |
     maybe_static maybe_const type TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
-        $$ = create_node_var_attr(create_node_var_access($4, NULL), create_node_literal($6));
+        $$ = create_node_var_attr(create_node_var_access($4), create_node_literal($6));
     };
 
 var_access:
-    TK_IDENTIFICADOR                    { $$ = create_node_var_access($1, NULL); } | 
-    TK_IDENTIFICADOR '[' expression ']' { $$ = create_node_var_access($1, $3);   };
+    TK_IDENTIFICADOR                    { $$ = create_node_var_access($1); } | 
+    TK_IDENTIFICADOR '[' expression ']' { $$ = create_node_vector_access(create_node_var_access($1), $3);   };
 
 attribution_command:
     var_access '=' expression { $$ = create_node_var_attr($1, $3); };

@@ -9,6 +9,10 @@ struct node_function_declaration {
 
 struct node_var_access {
     ValorLexico* identifier;
+};
+
+struct node_vector_access {
+    struct node* var;
     struct node* index;
 };
 
@@ -103,6 +107,7 @@ typedef struct node {
     {
         struct node_function_declaration    n_function_declaration    ;
         struct node_var_access              n_var_access              ;
+        struct node_vector_access           n_vector_access           ;
         struct node_var_attr                n_var_attr                ;
         struct node_input                   n_input                   ;
         struct node_output_lex              n_output_lex              ;
@@ -127,7 +132,8 @@ typedef struct node {
 Node* CreateGenericNode(NodeType type);
 
 Node* create_node_function_declaration (Node* firstCommand, ValorLexico* identifier);
-Node* create_node_var_access           (ValorLexico* identifier, Node* index);
+Node* create_node_var_access           (ValorLexico* identifier);
+Node* create_node_vector_access        (Node* var, Node* index);
 Node* create_node_var_attr             (Node* identifier, Node* expression);
 Node* create_node_input                (ValorLexico* input);
 Node* create_node_output_lex           (ValorLexico* output);
