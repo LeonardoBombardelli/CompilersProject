@@ -50,7 +50,7 @@ Node* create_node_var_attr (Node* identifier, Node* expression)
     return newNode;
 }
 
-Node* create_node_input (ValorLexico* input)
+Node* create_node_input (Node* input)
 {
     Node* newNode = CreateGenericNode(NODE_INPUT);
 
@@ -59,20 +59,11 @@ Node* create_node_input (ValorLexico* input)
     return newNode;
 }
 
-Node* create_node_output_lex (ValorLexico* output)
+Node* create_node_output (Node* output)
 {
-    Node* newNode = CreateGenericNode(NODE_OUTPUT_LEX);
+    Node* newNode = CreateGenericNode(NODE_OUTPUT);
 
-    newNode->n_output_lex.output = output;
-
-    return newNode;
-}
-
-Node* create_node_output_nod (Node* output)
-{
-    Node* newNode = CreateGenericNode(NODE_OUTPUT_NOD);
-
-    newNode->n_output_nod.output = output;
+    newNode->n_output.output = output;
 
     return newNode;
 }
@@ -264,17 +255,12 @@ void FreeNode(Node* node)
 
     case NODE_INPUT:
         if(node->n_input.input != NULL)
-            FreeValorLexico(node->n_input.input);
+            FreeNode(node->n_input.input);
         break;
     
-    case NODE_OUTPUT_LEX:
-        if(node->n_output_lex.output != NULL)
-            FreeValorLexico(node->n_output_lex.output);
-        break;
-
-    case NODE_OUTPUT_NOD:
-        if(node->n_output_nod.output != NULL)
-            FreeNode(node->n_output_nod.output);
+    case NODE_OUTPUT:
+        if(node->n_output.output != NULL)
+            FreeNode(node->n_output.output);
         break;
 
     case NODE_FUNCTION_CALL:
@@ -432,10 +418,19 @@ void PrintNode(Node* node)
         break;
 
     case NODE_INPUT:
+        if(node->n_input.input != NULL)
+        {
+            printf("%p, %p\n", node, node->n_input.input);
+            PrintNode(node->n_input.input);
+        }
         break;
     
-    case NODE_OUTPUT_LEX:
-    case NODE_OUTPUT_NOD:
+    case NODE_OUTPUT:
+        if(node->n_output.output != NULL)
+        {
+            printf("%p, %p\n", node, node->n_output.output);
+            PrintNode(node->n_output.output);
+        }
         break;
 
     case NODE_FUNCTION_CALL:
@@ -628,11 +623,16 @@ void PrintLabel(Node* node)
 
     case NODE_INPUT:
         printf("%p [label=\"input\"]\n", node);
+
+        if(node->n_input.input != NULL)
+            PrintLabel(node->n_input.input);
         break;
     
-    case NODE_OUTPUT_LEX:
-    case NODE_OUTPUT_NOD:
+    case NODE_OUTPUT:
         printf("%p [label=\"output\"]\n", node);
+
+        if(node->n_output.output != NULL)
+            PrintLabel(node->n_output.output);
         break;
 
     case NODE_FUNCTION_CALL:

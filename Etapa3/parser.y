@@ -217,9 +217,9 @@ attribution_command:
     var_access '=' expression { $$ = create_node_var_attr($1, $3); };
 
 io_command: 
-    TK_PR_INPUT TK_IDENTIFICADOR    { $$ = create_node_input($2);  } | 
-    TK_PR_OUTPUT TK_IDENTIFICADOR   { $$ = create_node_output_lex($2); } | 
-    TK_PR_OUTPUT literal            { $$ = create_node_output_nod($2); } ;
+    TK_PR_INPUT TK_IDENTIFICADOR    { $$ = create_node_input(create_node_var_access($2));  } | 
+    TK_PR_OUTPUT TK_IDENTIFICADOR   { $$ = create_node_output(create_node_var_access($2)); } | 
+    TK_PR_OUTPUT literal            { $$ = create_node_output($2); } ;
 
 call_func_command:
     TK_IDENTIFICADOR '(' func_parameters_list ')' { $$ = create_node_function_call($1, $3);   } | 
