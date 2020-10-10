@@ -367,6 +367,11 @@ void PrintAll(Node* treeRoot)
 
 void PrintNode(Node* node)
 {
+    if(node == NULL)
+    {
+        return;
+    }
+
     if(node->sequenceNode != NULL)
     {
         printf("%p, %p\n", node, node->sequenceNode);
@@ -563,7 +568,7 @@ void PrintNode(Node* node)
 
 void PrintLabel(Node* node)
 {
-
+  
    if(node->sequenceNode != NULL)
     {
         PrintLabel(node->sequenceNode);
@@ -691,15 +696,20 @@ void PrintLabel(Node* node)
         break;
     
     case NODE_UNARY_OPERATION:
-        printf("%p [label=\"%s\"]\n", node, node->n_unary_operation.operation->tokenValue.string);
-
+        if (node->n_unary_operation.operation->tokenType == TOKEN_TYPE_SPECIAL_CHAR)
+            printf("%p [label=\"%c\"]\n", node, node->n_binary_operation.operation->tokenValue.character);
+        if (node->n_unary_operation.operation->tokenType == TOKEN_TYPE_COMPOSITE_OP)
+            printf("%p [label=\"%s\"]\n", node, node->n_binary_operation.operation->tokenValue.string);
         if(node->n_unary_operation.expression1 != NULL)
             PrintLabel(node->n_unary_operation.expression1);
 
         break;
     
     case NODE_BINARY_OPERATION:
-        printf("%p [label=\"%s\"]\n", node, node->n_binary_operation.operation->tokenValue.string);
+        if (node->n_binary_operation.operation->tokenType == TOKEN_TYPE_SPECIAL_CHAR)
+            printf("%p [label=\"%c\"]\n", node, node->n_binary_operation.operation->tokenValue.character);
+        if (node->n_binary_operation.operation->tokenType == TOKEN_TYPE_COMPOSITE_OP)
+            printf("%p [label=\"%s\"]\n", node, node->n_binary_operation.operation->tokenValue.string);
 
         if(node->n_binary_operation.expression1 != NULL)
             PrintLabel(node->n_binary_operation.expression1);

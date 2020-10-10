@@ -1,5 +1,6 @@
 #include "definitions.h"
 #include <stdlib.h>
+#include <string.h>
 
 struct node_function_declaration {
     struct node* firstCommand;
