@@ -585,7 +585,7 @@ void PrintLabel(Node* node)
         break;
 
     case NODE_VAR_ACCESS:
-        printf("%p [label=\"[]\"]\n", node);
+        printf("%p [label=\"%s\"]\n", node, node->n_var_access.identifier->tokenValue.string);
        
         if(node->n_var_access.index != NULL)
             PrintLabel(node->n_var_access.index);
@@ -594,11 +594,11 @@ void PrintLabel(Node* node)
     case NODE_VAR_ATTR:
         printf("%p [label=\"=\"]\n", node);
        
-        if(node->n_var_attr.expression != NULL)
-            PrintLabel(node->n_var_attr.expression);
-        
         if(node->n_var_attr.identifier != NULL)
             PrintLabel(node->n_var_attr.identifier);
+
+        if(node->n_var_attr.expression != NULL)
+            PrintLabel(node->n_var_attr.expression);
         
         break;
 
@@ -698,8 +698,7 @@ void PrintLabel(Node* node)
     case NODE_UNARY_OPERATION:
         if (node->n_unary_operation.operation->tokenType == TOKEN_TYPE_SPECIAL_CHAR)
             printf("%p [label=\"%c\"]\n", node, node->n_binary_operation.operation->tokenValue.character);
-        if (node->n_unary_operation.operation->tokenType == TOKEN_TYPE_COMPOSITE_OP)
-            printf("%p [label=\"%s\"]\n", node, node->n_binary_operation.operation->tokenValue.string);
+
         if(node->n_unary_operation.expression1 != NULL)
             PrintLabel(node->n_unary_operation.expression1);
 

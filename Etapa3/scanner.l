@@ -53,6 +53,18 @@ EXP [Ee][+|-]?{INTEGER}
 "default"   { return TK_PR_DEFAULT   ; }
 
 
+ /* composite operators */
+
+"<=" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_LE  ; }
+">=" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_GE  ; }
+"==" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_EQ  ; }
+"!=" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_NE  ; }
+"&&" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_AND ; }
+"||" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_OR  ; }
+">>" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_SR  ; }
+"<<" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_SL  ; }
+
+
  /* special chars */
 
 "," { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
@@ -81,17 +93,6 @@ EXP [Ee][+|-]?{INTEGER}
 "$" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
 "?" { create_token_not_literal(TOKEN_TYPE_SPECIAL_CHAR); return yytext[0]; }
 
-
- /* composite operators */
-
-"<=" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_LE  ; }
-">=" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_GE  ; }
-"==" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_EQ  ; }
-"!=" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_NE  ; }
-"&&" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_AND ; }
-"||" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_OR  ; }
-">>" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_SR  ; }
-"<<" { create_token_not_literal(TOKEN_TYPE_COMPOSITE_OP); return TK_OC_SL  ; }
 
 
  /* literals */

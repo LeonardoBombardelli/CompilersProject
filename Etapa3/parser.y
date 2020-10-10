@@ -9,8 +9,6 @@ Node* last_command_of_chain(Node* n);
 void yyerror (char const *s);
 %}
 
-%define parse.lac full
-%define parse.error detailed
 
 %union 
 {
@@ -173,7 +171,7 @@ global_var_list:
 
 
 func_definition:
-    func_header command_block { create_node_function_declaration($2, $1); };
+    func_header command_block { $$ = create_node_function_declaration($2, $1); };
 
 func_header:
     maybe_static type TK_IDENTIFICADOR '(' func_header_list ')' { $$ = $3; /* ignore all but function name */ };
@@ -203,7 +201,7 @@ sequence_simple_command:
     %empty                                      { $$ = NULL; };
 
 local_var_declaration: 
-    maybe_static maybe_const type TK_IDENTIFICADOR { $$ = NULL; } |
+    maybe_static maybe_const type TK_IDENTIFICADOR {$$ = NULL; } |
     maybe_static maybe_const type TK_IDENTIFICADOR TK_OC_LE literal {
         $$ = create_node_var_attr(create_node_var_access($4, NULL), $6);
     } |
