@@ -7,6 +7,7 @@ typedef enum
     NODE_VAR_ACCESS              ,
     NODE_VECTOR_ACCESS           ,
     NODE_VAR_ATTR                ,
+    NODE_VAR_INIT                ,
     NODE_INPUT                   ,
     NODE_OUTPUT                  ,
     NODE_FUNCTION_CALL           ,

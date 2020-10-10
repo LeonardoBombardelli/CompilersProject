@@ -50,6 +50,16 @@ Node* create_node_var_attr (Node* identifier, Node* expression)
     return newNode;
 }
 
+Node* create_node_var_init (Node* identifier, Node* expression)
+{
+    Node* newNode = CreateGenericNode(NODE_VAR_INIT);
+
+    newNode->n_var_init.identifier = identifier;
+    newNode->n_var_init.expression = expression;
+
+    return newNode;
+}
+
 Node* create_node_input (Node* input)
 {
     Node* newNode = CreateGenericNode(NODE_INPUT);
@@ -253,6 +263,13 @@ void FreeNode(Node* node)
             FreeNode(node->n_var_attr.identifier);
         break;
 
+    case NODE_VAR_INIT:
+        if(node->n_var_init.expression != NULL)
+            FreeNode(node->n_var_init.expression);
+        if(node->n_var_init.identifier != NULL)
+            FreeNode(node->n_var_init.identifier);
+        break;
+
     case NODE_INPUT:
         if(node->n_input.input != NULL)
             FreeNode(node->n_input.input);
@@ -417,6 +434,19 @@ void PrintNode(Node* node)
         }
         break;
 
+    case NODE_VAR_INIT:
+        if(node->n_var_init.expression != NULL)
+        {
+            printf("%p, %p\n", node, node->n_var_init.expression);
+            PrintNode(node->n_var_init.expression);
+        }
+        if(node->n_var_init.identifier != NULL)
+        {
+            printf("%p, %p\n", node, node->n_var_init.identifier);
+            PrintNode(node->n_var_init.identifier);
+        }
+        break;
+
     case NODE_INPUT:
         if(node->n_input.input != NULL)
         {
@@ -510,15 +540,15 @@ void PrintNode(Node* node)
             printf("%p, %p\n", node, node->n_for_loop.expression);
             PrintNode(node->n_for_loop.expression);
         }
-        if(node->n_for_loop.firstCommand != NULL)
-        {
-            printf("%p, %p\n", node, node->n_for_loop.firstCommand);
-            PrintNode(node->n_for_loop.firstCommand);
-        }
         if(node->n_for_loop.incOrDec != NULL)
         {
             printf("%p, %p\n", node, node->n_for_loop.incOrDec);
             PrintNode(node->n_for_loop.incOrDec);
+        }
+        if(node->n_for_loop.firstCommand != NULL)
+        {
+            printf("%p, %p\n", node, node->n_for_loop.firstCommand);
+            PrintNode(node->n_for_loop.firstCommand);
         }
         break;
 
@@ -618,6 +648,17 @@ void PrintLabel(Node* node)
 
         if(node->n_var_attr.expression != NULL)
             PrintLabel(node->n_var_attr.expression);
+        
+        break;
+
+    case NODE_VAR_INIT:
+        printf("%p [label=\"<=\"]\n", node);
+       
+        if(node->n_var_init.identifier != NULL)
+            PrintLabel(node->n_var_init.identifier);
+
+        if(node->n_var_init.expression != NULL)
+            PrintLabel(node->n_var_init.expression);
         
         break;
 
@@ -790,7 +831,6 @@ void PrintLabel(Node* node)
 
     default:
         printf("Erro ao printar!!!");
-        //TODO: CRIAR UM DEFAULT
     }
 
     if(node->sequenceNode != NULL)

@@ -21,6 +21,11 @@ struct node_var_attr {
     struct node* expression;
 };
 
+struct node_var_init {
+    struct node* identifier;
+    struct node* expression;
+};
+
 struct node_input {
     struct node* input;
 };
@@ -105,6 +110,7 @@ typedef struct node {
         struct node_var_access              n_var_access              ;
         struct node_vector_access           n_vector_access           ;
         struct node_var_attr                n_var_attr                ;
+        struct node_var_init                n_var_init                ;
         struct node_input                   n_input                   ;
         struct node_output                  n_output                  ;
         struct node_function_call           n_function_call           ;
@@ -130,6 +136,7 @@ Node* create_node_function_declaration (Node* firstCommand, ValorLexico* identif
 Node* create_node_var_access           (ValorLexico* identifier);
 Node* create_node_vector_access        (Node* var, Node* index);
 Node* create_node_var_attr             (Node* identifier, Node* expression);
+Node* create_node_var_init             (Node* identifier, Node* expression);
 Node* create_node_input                (Node* input);
 Node* create_node_output               (Node* output);
 Node* create_node_function_call        (ValorLexico* identifier, Node* expressionList);

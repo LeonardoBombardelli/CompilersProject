@@ -154,6 +154,9 @@ void create_token_literal(LiteralType literal_type) {
     yylval.valor_lexico->tokenType = TOKEN_TYPE_LITERAL;
     yylval.valor_lexico->literalType = literal_type;
 
+    char *tmp1 = (char *) calloc(strlen(yytext)+1,sizeof(char));
+    char *tmp2 = (char *) calloc(strlen(yytext)+1,sizeof(char));
+
     switch(literal_type) {
         case LITERAL_TYPE_INTEGER:
             yylval.valor_lexico->tokenValue.integer = atoi(yytext);
@@ -186,15 +189,19 @@ void create_token_literal(LiteralType literal_type) {
             break;
 
         case LITERAL_TYPE_STRING:
-            yylval.valor_lexico->tokenValue.string = strdup(yytext);
-            // TODO: maybe string handler function?
+            tmp1 = strcpy(tmp1, &yytext[1]);
+            tmp2 = strncpy(tmp2,tmp1,strlen(tmp1)-1);
+
+            yylval.valor_lexico->tokenValue.string = strdup(tmp2);
+
             break;
         
         default:
             printf("Erro!!!");
     }
-            
-
+    
+    free(tmp1); tmp1 = NULL;
+    free(tmp2); tmp2 = NULL;  
 }
 
 int get_line_number() {
