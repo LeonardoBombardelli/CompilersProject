@@ -11,12 +11,12 @@ Node* CreateGenericNode(NodeType type)
 }
 
 
-Node* create_node_function_declaration (Node* firstCommand, ValorLexico* identifier)
+Node* create_node_function_declaration (ValorLexico* identifier, Node* firstCommand)
 {
     Node* newNode = CreateGenericNode(NODE_FUNCTION_DECLARATION);
 
-    newNode->n_function_declaration.firstCommand = firstCommand;
     newNode->n_function_declaration.identifier = identifier;
+    newNode->n_function_declaration.firstCommand = firstCommand;
 
     return newNode;
 }
@@ -88,20 +88,20 @@ Node* create_node_function_call (ValorLexico* identifier, Node* expressionList)
     return newNode;
 }
 
-Node* create_node_shift_left (Node* identifier, Node* expression)
+Node* create_node_shift_left (Node* identifier, Node* shiftNumber)
 {
     Node* newNode = CreateGenericNode(NODE_SHIFT_LEFT);
     newNode->n_shift_left.identifier = identifier;
-    newNode->n_shift_left.expression = expression;
+    newNode->n_shift_left.shiftNumber = shiftNumber;
 
     return newNode;
 }
 
-Node* create_node_shift_right (Node* identifier, Node* expression)
+Node* create_node_shift_right (Node* identifier, Node* shiftNumber)
 {
     Node* newNode = CreateGenericNode(NODE_SHIFT_RIGHT);
     newNode->n_shift_right.identifier = identifier;
-    newNode->n_shift_right.expression = expression;
+    newNode->n_shift_right.shiftNumber = shiftNumber;
 
     return newNode;
 }
@@ -140,7 +140,7 @@ Node* create_node_if (Node* expression, Node* ifTrue, Node* ifFalse)
     return newNode;
 }
 
-Node* create_node_for_loop (Node* attr, Node* expression,Node* incOrDec, Node* firstCommand)
+Node* create_node_for_loop (Node* attr, Node* expression, Node* incOrDec, Node* firstCommand)
 {
     Node* newNode = CreateGenericNode(NODE_FOR_LOOP);
 
@@ -243,8 +243,8 @@ void FreeNode(Node* node)
     switch (node->nodeType)
     {
     case NODE_FUNCTION_DECLARATION:
-        FreeNode(node->n_function_declaration.firstCommand);
         FreeValorLexico(node->n_function_declaration.identifier);
+        FreeNode(node->n_function_declaration.firstCommand);
         break;
 
     case NODE_VAR_ACCESS:
@@ -257,13 +257,13 @@ void FreeNode(Node* node)
         break;
     
     case NODE_VAR_ATTR:
-        FreeNode(node->n_var_attr.expression);
         FreeNode(node->n_var_attr.identifier);
+        FreeNode(node->n_var_attr.expression);
         break;
 
     case NODE_VAR_INIT:
-        FreeNode(node->n_var_init.expression);
         FreeNode(node->n_var_init.identifier);
+        FreeNode(node->n_var_init.expression);
         break;
 
     case NODE_INPUT:
@@ -275,18 +275,18 @@ void FreeNode(Node* node)
         break;
 
     case NODE_FUNCTION_CALL:
-        FreeNode(node->n_function_call.expressionList);
         FreeValorLexico(node->n_function_call.identifier);
+        FreeNode(node->n_function_call.expressionList);
         break;
 
     case NODE_SHIFT_LEFT:
-        FreeNode(node->n_shift_left.expression);
         FreeNode(node->n_shift_left.identifier);
+        FreeNode(node->n_shift_left.shiftNumber);
         break;
 
     case NODE_SHIFT_RIGHT:
-        FreeNode(node->n_shift_right.expression);
         FreeNode(node->n_shift_right.identifier);
+        FreeNode(node->n_shift_right.shiftNumber);
         break;
 
     case NODE_BREAK:
@@ -301,15 +301,15 @@ void FreeNode(Node* node)
     
     case NODE_IF:
         FreeNode(node->n_if.expression);
-        FreeNode(node->n_if.ifFalse);
         FreeNode(node->n_if.ifTrue);
+        FreeNode(node->n_if.ifFalse);
         break;
     
     case NODE_FOR_LOOP:
         FreeNode(node->n_for_loop.attr);
         FreeNode(node->n_for_loop.expression);
-        FreeNode(node->n_for_loop.firstCommand);
         FreeNode(node->n_for_loop.incOrDec);
+        FreeNode(node->n_for_loop.firstCommand);
         break;
 
     case NODE_WHILE_LOOP:
@@ -318,14 +318,14 @@ void FreeNode(Node* node)
         break;
     
     case NODE_UNARY_OPERATION:
-        FreeNode(node->n_unary_operation.expression1);
         FreeValorLexico(node->n_unary_operation.operation);
+        FreeNode(node->n_unary_operation.expression1);
         break;
     
     case NODE_BINARY_OPERATION:
+        FreeValorLexico(node->n_binary_operation.operation);
         FreeNode(node->n_binary_operation.expression1);
         FreeNode(node->n_binary_operation.expression2);
-        FreeValorLexico(node->n_binary_operation.operation);
         break;
     
     case NODE_TERNARY_OPERATION:
@@ -373,8 +373,8 @@ void PrintNode(Node* node, Node* parent)
         break;
 
     case NODE_VECTOR_ACCESS:
-        PrintNode(node->n_vector_access.index, node);
         PrintNode(node->n_vector_access.var, node);
+        PrintNode(node->n_vector_access.index, node);
         break;
     
     case NODE_VAR_ATTR:
@@ -383,8 +383,8 @@ void PrintNode(Node* node, Node* parent)
         break;
 
     case NODE_VAR_INIT:
-        PrintNode(node->n_var_init.expression, node);
         PrintNode(node->n_var_init.identifier, node);
+        PrintNode(node->n_var_init.expression, node);
         break;
 
     case NODE_INPUT:
@@ -400,13 +400,13 @@ void PrintNode(Node* node, Node* parent)
         break;
 
     case NODE_SHIFT_LEFT:
-        PrintNode(node->n_shift_left.expression, node);
         PrintNode(node->n_shift_left.identifier, node);
+        PrintNode(node->n_shift_left.shiftNumber, node);
         break;
 
     case NODE_SHIFT_RIGHT:
-        PrintNode(node->n_shift_right.expression, node);
         PrintNode(node->n_shift_right.identifier, node);
+        PrintNode(node->n_shift_right.shiftNumber, node);
         break;
 
     case NODE_BREAK:
@@ -421,8 +421,8 @@ void PrintNode(Node* node, Node* parent)
     
     case NODE_IF:
         PrintNode(node->n_if.expression, node);
-        PrintNode(node->n_if.ifFalse, node);
         PrintNode(node->n_if.ifTrue, node);
+        PrintNode(node->n_if.ifFalse, node);
         break;
     
     case NODE_FOR_LOOP:
@@ -520,14 +520,14 @@ void PrintLabel(Node* node)
 
     case NODE_SHIFT_LEFT:
         printf("%p [label=\"<<\"]\n", node);
-        PrintLabel(node->n_shift_left.expression);
         PrintLabel(node->n_shift_left.identifier);
+        PrintLabel(node->n_shift_left.shiftNumber);
         break;
 
     case NODE_SHIFT_RIGHT:
         printf("%p [label=\">>\"]\n", node);
-        PrintLabel(node->n_shift_right.expression);
         PrintLabel(node->n_shift_right.identifier);
+        PrintLabel(node->n_shift_right.shiftNumber);
         break;
 
     case NODE_BREAK:
@@ -546,8 +546,8 @@ void PrintLabel(Node* node)
     case NODE_IF:
         printf("%p [label=\"if\"]\n", node);
         PrintLabel(node->n_if.expression);
-        PrintLabel(node->n_if.ifFalse);
         PrintLabel(node->n_if.ifTrue);
+        PrintLabel(node->n_if.ifFalse);
         break;
     
     case NODE_FOR_LOOP:
