@@ -230,6 +230,11 @@ void FreeTree(Node* treeRoot)
 
 void FreeNode(Node* node)
 {
+    if(node == NULL)
+    {
+        return;
+    }
+
     if(node->sequenceNode != NULL)
     {
         FreeNode(node->sequenceNode);
@@ -238,67 +243,50 @@ void FreeNode(Node* node)
     switch (node->nodeType)
     {
     case NODE_FUNCTION_DECLARATION:
-        if(node->n_function_declaration.firstCommand != NULL)
-            FreeNode(node->n_function_declaration.firstCommand);
-        if(node->n_function_declaration.identifier != NULL)
-            FreeValorLexico(node->n_function_declaration.identifier);
+        FreeNode(node->n_function_declaration.firstCommand);
+        FreeValorLexico(node->n_function_declaration.identifier);
         break;
 
     case NODE_VAR_ACCESS:
-        if(node->n_var_access.identifier != NULL)
-            FreeValorLexico(node->n_var_access.identifier);
+        FreeValorLexico(node->n_var_access.identifier);
         break;
 
     case NODE_VECTOR_ACCESS:
-        if(node->n_vector_access.var != NULL)
-            FreeNode(node->n_vector_access.var);
-        if(node->n_vector_access.index != NULL)
-            FreeNode(node->n_vector_access.index);
+        FreeNode(node->n_vector_access.var);
+        FreeNode(node->n_vector_access.index);
         break;
     
     case NODE_VAR_ATTR:
-        if(node->n_var_attr.expression != NULL)
-            FreeNode(node->n_var_attr.expression);
-        if(node->n_var_attr.identifier != NULL)
-            FreeNode(node->n_var_attr.identifier);
+        FreeNode(node->n_var_attr.expression);
+        FreeNode(node->n_var_attr.identifier);
         break;
 
     case NODE_VAR_INIT:
-        if(node->n_var_init.expression != NULL)
-            FreeNode(node->n_var_init.expression);
-        if(node->n_var_init.identifier != NULL)
-            FreeNode(node->n_var_init.identifier);
+        FreeNode(node->n_var_init.expression);
+        FreeNode(node->n_var_init.identifier);
         break;
 
     case NODE_INPUT:
-        if(node->n_input.input != NULL)
-            FreeNode(node->n_input.input);
+        FreeNode(node->n_input.input);
         break;
     
     case NODE_OUTPUT:
-        if(node->n_output.output != NULL)
-            FreeNode(node->n_output.output);
+        FreeNode(node->n_output.output);
         break;
 
     case NODE_FUNCTION_CALL:
-        if(node->n_function_call.expressionList != NULL)
-            FreeNode(node->n_function_call.expressionList);
-        if(node->n_function_call.identifier != NULL)
-            FreeValorLexico(node->n_function_call.identifier);
+        FreeNode(node->n_function_call.expressionList);
+        FreeValorLexico(node->n_function_call.identifier);
         break;
 
     case NODE_SHIFT_LEFT:
-        if(node->n_shift_left.expression != NULL)
-            FreeNode(node->n_shift_left.expression);
-        if(node->n_shift_left.identifier != NULL)
-            FreeNode(node->n_shift_left.identifier);
+        FreeNode(node->n_shift_left.expression);
+        FreeNode(node->n_shift_left.identifier);
         break;
 
     case NODE_SHIFT_RIGHT:
-        if(node->n_shift_right.expression != NULL)
-            FreeNode(node->n_shift_right.expression);
-        if(node->n_shift_right.identifier != NULL)
-            FreeNode(node->n_shift_right.identifier);
+        FreeNode(node->n_shift_right.expression);
+        FreeNode(node->n_shift_right.identifier);
         break;
 
     case NODE_BREAK:
@@ -308,65 +296,46 @@ void FreeNode(Node* node)
         break;
 
     case NODE_RETURN:
-        if(node->n_return.toReturn != NULL)
-            FreeNode(node->n_return.toReturn);
+        FreeNode(node->n_return.toReturn);
         break;
     
     case NODE_IF:
-        if(node->n_if.expression != NULL)
-            FreeNode(node->n_if.expression);
-        if(node->n_if.ifFalse != NULL)
-            FreeNode(node->n_if.ifFalse);
-        if(node->n_if.ifTrue != NULL)
-            FreeNode(node->n_if.ifTrue);
+        FreeNode(node->n_if.expression);
+        FreeNode(node->n_if.ifFalse);
+        FreeNode(node->n_if.ifTrue);
         break;
     
     case NODE_FOR_LOOP:
-        if(node->n_for_loop.attr != NULL)
-            FreeNode(node->n_for_loop.attr);
-        if(node->n_for_loop.expression != NULL)
-            FreeNode(node->n_for_loop.expression);
-        if(node->n_for_loop.firstCommand != NULL)
-            FreeNode(node->n_for_loop.firstCommand);
-        if(node->n_for_loop.incOrDec != NULL)
-            FreeNode(node->n_for_loop.incOrDec);
+        FreeNode(node->n_for_loop.attr);
+        FreeNode(node->n_for_loop.expression);
+        FreeNode(node->n_for_loop.firstCommand);
+        FreeNode(node->n_for_loop.incOrDec);
         break;
 
     case NODE_WHILE_LOOP:
-        if(node->n_while_loop.expression != NULL)
-            FreeNode(node->n_while_loop.expression);
-        if(node->n_while_loop.firstCommand != NULL)
-            FreeNode(node->n_while_loop.firstCommand);
+        FreeNode(node->n_while_loop.expression);
+        FreeNode(node->n_while_loop.firstCommand);
         break;
     
     case NODE_UNARY_OPERATION:
-        if(node->n_unary_operation.expression1 != NULL)
-            FreeNode(node->n_unary_operation.expression1);
-        if(node->n_unary_operation.operation != NULL)
-            FreeValorLexico(node->n_unary_operation.operation);
+        FreeNode(node->n_unary_operation.expression1);
+        FreeValorLexico(node->n_unary_operation.operation);
         break;
     
     case NODE_BINARY_OPERATION:
-        if(node->n_binary_operation.expression1 != NULL)
-            FreeNode(node->n_binary_operation.expression1);
-        if(node->n_binary_operation.expression2 != NULL)
-            FreeNode(node->n_binary_operation.expression2);
-        if(node->n_binary_operation.operation != NULL)
-            FreeValorLexico(node->n_binary_operation.operation);
+        FreeNode(node->n_binary_operation.expression1);
+        FreeNode(node->n_binary_operation.expression2);
+        FreeValorLexico(node->n_binary_operation.operation);
         break;
     
     case NODE_TERNARY_OPERATION:
-        if(node->n_ternary_operation.expression1 != NULL)
-            FreeNode(node->n_ternary_operation.expression1);
-        if(node->n_ternary_operation.expression2 != NULL)
-            FreeNode(node->n_ternary_operation.expression2);
-        if(node->n_ternary_operation.expression3 != NULL)
-            FreeNode(node->n_ternary_operation.expression3);
+        FreeNode(node->n_ternary_operation.expression1);
+        FreeNode(node->n_ternary_operation.expression2);
+        FreeNode(node->n_ternary_operation.expression3);
         break;
     
     case NODE_LITERAL:
-        if(node->n_literal.literal != NULL)
-            FreeValorLexico(node->n_literal.literal);
+        FreeValorLexico(node->n_literal.literal);
         break;
 
     default:
@@ -378,123 +347,66 @@ void FreeNode(Node* node)
 
 void PrintAll(Node* treeRoot)
 {
-    PrintNode(treeRoot);
+    PrintNode(treeRoot, NULL);
     PrintLabel(treeRoot);
 }
 
-void PrintNode(Node* node)
+void PrintNode(Node* node, Node* parent)
 {
     if(node == NULL)
     {
         return;
     }
 
-    if(node->sequenceNode != NULL)
+    if(parent != NULL)
     {
-        printf("%p, %p\n", node, node->sequenceNode);
-        PrintNode(node->sequenceNode);
+        printf("%p, %p\n", parent, node);
     }
 
     switch (node->nodeType)
     {
     case NODE_FUNCTION_DECLARATION:
-        if(node->n_function_declaration.firstCommand != NULL)
-        {
-            printf("%p, %p\n", node, node->n_function_declaration.firstCommand);
-            PrintNode(node->n_function_declaration.firstCommand);
-        }
+        PrintNode(node->n_function_declaration.firstCommand, node);
         break;
 
     case NODE_VAR_ACCESS:
         break;
 
     case NODE_VECTOR_ACCESS:
-        if(node->n_vector_access.index != NULL)
-        {
-            printf("%p, %p\n", node, node->n_vector_access.index);
-            PrintNode(node->n_vector_access.index);
-        }
-        if(node->n_vector_access.var != NULL)
-        {
-            printf("%p, %p\n", node, node->n_vector_access.var);
-            PrintNode(node->n_vector_access.var);
-        }
+        PrintNode(node->n_vector_access.index, node);
+        PrintNode(node->n_vector_access.var, node);
         break;
     
     case NODE_VAR_ATTR:
-        if(node->n_var_attr.expression != NULL)
-        {
-            printf("%p, %p\n", node, node->n_var_attr.expression);
-            PrintNode(node->n_var_attr.expression);
-        }
-        if(node->n_var_attr.identifier != NULL)
-        {
-            printf("%p, %p\n", node, node->n_var_attr.identifier);
-            PrintNode(node->n_var_attr.identifier);
-        }
+        PrintNode(node->n_var_attr.identifier, node);
+        PrintNode(node->n_var_attr.expression, node);
         break;
 
     case NODE_VAR_INIT:
-        if(node->n_var_init.expression != NULL)
-        {
-            printf("%p, %p\n", node, node->n_var_init.expression);
-            PrintNode(node->n_var_init.expression);
-        }
-        if(node->n_var_init.identifier != NULL)
-        {
-            printf("%p, %p\n", node, node->n_var_init.identifier);
-            PrintNode(node->n_var_init.identifier);
-        }
+        PrintNode(node->n_var_init.expression, node);
+        PrintNode(node->n_var_init.identifier, node);
         break;
 
     case NODE_INPUT:
-        if(node->n_input.input != NULL)
-        {
-            printf("%p, %p\n", node, node->n_input.input);
-            PrintNode(node->n_input.input);
-        }
+        PrintNode(node->n_input.input, node);
         break;
     
     case NODE_OUTPUT:
-        if(node->n_output.output != NULL)
-        {
-            printf("%p, %p\n", node, node->n_output.output);
-            PrintNode(node->n_output.output);
-        }
+        PrintNode(node->n_output.output, node);
         break;
 
     case NODE_FUNCTION_CALL:
-        if(node->n_function_call.expressionList != NULL)
-        {
-            printf("%p, %p\n", node, node->n_function_call.expressionList);
-            PrintNode(node->n_function_call.expressionList);
-        }
+        PrintNode(node->n_function_call.expressionList, node);
         break;
 
     case NODE_SHIFT_LEFT:
-        if(node->n_shift_left.expression != NULL)
-        {
-            printf("%p, %p\n", node, node->n_shift_left.expression);
-            PrintNode(node->n_shift_left.expression);
-        }
-        if(node->n_shift_left.identifier != NULL)
-        {
-            printf("%p, %p\n", node, node->n_shift_left.identifier);
-            PrintNode(node->n_shift_left.identifier);
-        }
+        PrintNode(node->n_shift_left.expression, node);
+        PrintNode(node->n_shift_left.identifier, node);
         break;
 
     case NODE_SHIFT_RIGHT:
-        if(node->n_shift_right.expression != NULL)
-        {
-            printf("%p, %p\n", node, node->n_shift_right.expression);
-            PrintNode(node->n_shift_right.expression);
-        }
-        if(node->n_shift_right.identifier != NULL)
-        {
-            printf("%p, %p\n", node, node->n_shift_right.identifier);
-            PrintNode(node->n_shift_right.identifier);
-        }
+        PrintNode(node->n_shift_right.expression, node);
+        PrintNode(node->n_shift_right.identifier, node);
         break;
 
     case NODE_BREAK:
@@ -504,104 +416,40 @@ void PrintNode(Node* node)
         break;
 
     case NODE_RETURN:
-        if(node->n_return.toReturn != NULL)
-        {
-            printf("%p, %p\n", node, node->n_return.toReturn);
-            PrintNode(node->n_return.toReturn);
-        }
+        PrintNode(node->n_return.toReturn, node);
         break;
     
     case NODE_IF:
-        if(node->n_if.expression != NULL)
-        {
-            printf("%p, %p\n", node, node->n_if.expression);
-            PrintNode(node->n_if.expression);
-        }
-        if(node->n_if.ifFalse != NULL)
-        {
-            printf("%p, %p\n", node, node->n_if.ifFalse);
-            PrintNode(node->n_if.ifFalse);
-        }
-        if(node->n_if.ifTrue != NULL)
-        {
-            printf("%p, %p\n", node, node->n_if.ifTrue);
-            PrintNode(node->n_if.ifTrue);
-        }
+        PrintNode(node->n_if.expression, node);
+        PrintNode(node->n_if.ifFalse, node);
+        PrintNode(node->n_if.ifTrue, node);
         break;
     
     case NODE_FOR_LOOP:
-        if(node->n_for_loop.attr != NULL)
-        {
-            printf("%p, %p\n", node, node->n_for_loop.attr);
-            PrintNode(node->n_for_loop.attr);
-        }
-        if(node->n_for_loop.expression != NULL)
-        {
-            printf("%p, %p\n", node, node->n_for_loop.expression);
-            PrintNode(node->n_for_loop.expression);
-        }
-        if(node->n_for_loop.incOrDec != NULL)
-        {
-            printf("%p, %p\n", node, node->n_for_loop.incOrDec);
-            PrintNode(node->n_for_loop.incOrDec);
-        }
-        if(node->n_for_loop.firstCommand != NULL)
-        {
-            printf("%p, %p\n", node, node->n_for_loop.firstCommand);
-            PrintNode(node->n_for_loop.firstCommand);
-        }
+        PrintNode(node->n_for_loop.attr, node);
+        PrintNode(node->n_for_loop.expression, node);
+        PrintNode(node->n_for_loop.incOrDec, node);
+        PrintNode(node->n_for_loop.firstCommand, node);
         break;
 
     case NODE_WHILE_LOOP:
-        if(node->n_while_loop.expression != NULL)
-        {
-            printf("%p, %p\n", node, node->n_while_loop.expression);
-            PrintNode(node->n_while_loop.expression);
-        }
-        if(node->n_while_loop.firstCommand != NULL)
-        {
-            printf("%p, %p\n", node, node->n_while_loop.firstCommand);
-            PrintNode(node->n_while_loop.firstCommand);
-        }
+        PrintNode(node->n_while_loop.expression, node);
+        PrintNode(node->n_while_loop.firstCommand, node);
         break;
     
     case NODE_UNARY_OPERATION:
-        if(node->n_unary_operation.expression1 != NULL)
-        {
-            printf("%p, %p\n", node, node->n_unary_operation.expression1);
-            PrintNode(node->n_unary_operation.expression1);
-        }
+        PrintNode(node->n_unary_operation.expression1, node);
         break;
     
     case NODE_BINARY_OPERATION:
-        if(node->n_binary_operation.expression1 != NULL)
-        {
-            printf("%p, %p\n", node, node->n_binary_operation.expression1);
-            PrintNode(node->n_binary_operation.expression1);
-        }
-        if(node->n_binary_operation.expression2 != NULL)
-        {
-            printf("%p, %p\n", node, node->n_binary_operation.expression2);
-            PrintNode(node->n_binary_operation.expression2);
-        }
+        PrintNode(node->n_binary_operation.expression1, node);
+        PrintNode(node->n_binary_operation.expression2, node);
         break;
     
     case NODE_TERNARY_OPERATION:
-        if(node->n_ternary_operation.expression1 != NULL)
-        {
-            printf("%p, %p\n", node, node->n_ternary_operation.expression1);
-            PrintNode(node->n_ternary_operation.expression1);
-        }
-        if(node->n_ternary_operation.expression2 != NULL)
-        {
-            printf("%p, %p\n", node, node->n_ternary_operation.expression2);
-            PrintNode(node->n_ternary_operation.expression2);
-        }
-        if(node->n_ternary_operation.expression3 != NULL)
-        {
-            printf("%p, %p\n", node, node->n_ternary_operation.expression3);
-            PrintNode(node->n_ternary_operation.expression3);
-        }
+        PrintNode(node->n_ternary_operation.expression1, node);
+        PrintNode(node->n_ternary_operation.expression2, node);
+        PrintNode(node->n_ternary_operation.expression3, node);
         break;
     
     case NODE_LITERAL:
@@ -611,96 +459,75 @@ void PrintNode(Node* node)
         printf("Erro ao printar!!!");
         //TODO: CRIAR UM DEFAULT
     }
+
+    if(node->sequenceNode != NULL)
+    {
+        PrintNode(node->sequenceNode, node);
+    }
+
 }
 
 void PrintLabel(Node* node)
 {
+    if(node == NULL)
+    {
+        return;
+    }
+
     switch (node->nodeType)
     {
     case NODE_FUNCTION_DECLARATION:
         printf("%p [label=\"%s\"]\n", node, node->n_function_declaration.identifier->tokenValue.string);
-       
-        if(node->n_function_declaration.firstCommand != NULL)
-            PrintLabel(node->n_function_declaration.firstCommand);
+        PrintLabel(node->n_function_declaration.firstCommand);
         break;
 
     case NODE_VAR_ACCESS:
         printf("%p [label=\"%s\"]\n", node, node->n_var_access.identifier->tokenValue.string);
-       
         break;
     
     case NODE_VECTOR_ACCESS:
         printf("%p [label=\"[]\"]\n", node);
-
-        if(node->n_vector_access.var != NULL)
-            PrintLabel(node->n_vector_access.var);
-
-        if(node->n_vector_access.index != NULL)
-            PrintLabel(node->n_vector_access.index);
-
+        PrintLabel(node->n_vector_access.var);
+        PrintLabel(node->n_vector_access.index);
         break;
     
     case NODE_VAR_ATTR:
         printf("%p [label=\"=\"]\n", node);
-       
-        if(node->n_var_attr.identifier != NULL)
-            PrintLabel(node->n_var_attr.identifier);
-
-        if(node->n_var_attr.expression != NULL)
-            PrintLabel(node->n_var_attr.expression);
-        
+        PrintLabel(node->n_var_attr.identifier);
+        PrintLabel(node->n_var_attr.expression);
         break;
 
     case NODE_VAR_INIT:
         printf("%p [label=\"<=\"]\n", node);
-       
-        if(node->n_var_init.identifier != NULL)
-            PrintLabel(node->n_var_init.identifier);
-
-        if(node->n_var_init.expression != NULL)
-            PrintLabel(node->n_var_init.expression);
-        
+        PrintLabel(node->n_var_init.identifier);
+        PrintLabel(node->n_var_init.expression);
         break;
 
     case NODE_INPUT:
         printf("%p [label=\"input\"]\n", node);
-
-        if(node->n_input.input != NULL)
-            PrintLabel(node->n_input.input);
+        PrintLabel(node->n_input.input);
         break;
     
     case NODE_OUTPUT:
         printf("%p [label=\"output\"]\n", node);
-
-        if(node->n_output.output != NULL)
-            PrintLabel(node->n_output.output);
+        PrintLabel(node->n_output.output);
         break;
 
     case NODE_FUNCTION_CALL:
         printf("%p [label=\"call %s\"]\n", node, node->n_function_call.identifier->tokenValue.string);
-
-        if(node->n_function_call.expressionList != NULL)
-            PrintLabel(node->n_function_call.expressionList);
+        PrintLabel(node->n_function_call.expressionList);
         break;
 
     case NODE_SHIFT_LEFT:
         printf("%p [label=\"<<\"]\n", node);
-
-        if(node->n_shift_left.expression != NULL)
-            PrintLabel(node->n_shift_left.expression);
-
-        if(node->n_shift_left.identifier != NULL)
-            PrintLabel(node->n_shift_left.identifier);
+        PrintLabel(node->n_shift_left.expression);
+        PrintLabel(node->n_shift_left.identifier);
         break;
 
     case NODE_SHIFT_RIGHT:
         printf("%p [label=\">>\"]\n", node);
-
-        if(node->n_shift_right.expression != NULL)
-            PrintLabel(node->n_shift_right.expression);
-
-        if(node->n_shift_right.identifier != NULL)
-            PrintLabel(node->n_shift_right.identifier);
+        PrintLabel(node->n_shift_right.expression);
+        PrintLabel(node->n_shift_right.identifier);
         break;
 
     case NODE_BREAK:
@@ -713,60 +540,34 @@ void PrintLabel(Node* node)
 
     case NODE_RETURN:
         printf("%p [label=\"return\"]\n", node);
-
-        if(node->n_return.toReturn != NULL)
-            PrintLabel(node->n_return.toReturn);
+        PrintLabel(node->n_return.toReturn);
         break;
     
     case NODE_IF:
         printf("%p [label=\"if\"]\n", node);
-
-        if(node->n_if.expression != NULL)
-            PrintLabel(node->n_if.expression);
- 
-        if(node->n_if.ifFalse != NULL)
-            PrintLabel(node->n_if.ifFalse);
- 
-        if(node->n_if.ifTrue != NULL)
-            PrintLabel(node->n_if.ifTrue);
- 
+        PrintLabel(node->n_if.expression);
+        PrintLabel(node->n_if.ifFalse);
+        PrintLabel(node->n_if.ifTrue);
         break;
     
     case NODE_FOR_LOOP:
         printf("%p [label=\"for\"]\n", node);
-
-        if(node->n_for_loop.attr != NULL)
-            PrintLabel(node->n_for_loop.attr);
-
-        if(node->n_for_loop.expression != NULL)
-            PrintLabel(node->n_for_loop.expression);
-
-        if(node->n_for_loop.firstCommand != NULL)
-            PrintLabel(node->n_for_loop.firstCommand);
-
-        if(node->n_for_loop.incOrDec != NULL)
-            PrintLabel(node->n_for_loop.incOrDec);
-
+        PrintLabel(node->n_for_loop.attr);
+        PrintLabel(node->n_for_loop.expression);
+        PrintLabel(node->n_for_loop.incOrDec);
+        PrintLabel(node->n_for_loop.firstCommand);
         break;
 
     case NODE_WHILE_LOOP:
         printf("%p [label=\"while\"]\n", node);
-
-        if(node->n_while_loop.expression != NULL)
-            PrintLabel(node->n_while_loop.expression);
-
-        if(node->n_while_loop.firstCommand != NULL)
-            PrintLabel(node->n_while_loop.firstCommand);
-
+        PrintLabel(node->n_while_loop.expression);
+        PrintLabel(node->n_while_loop.firstCommand);
         break;
     
     case NODE_UNARY_OPERATION:
         if (node->n_unary_operation.operation->tokenType == TOKEN_TYPE_SPECIAL_CHAR)
             printf("%p [label=\"%c\"]\n", node, node->n_binary_operation.operation->tokenValue.character);
-
-        if(node->n_unary_operation.expression1 != NULL)
-            PrintLabel(node->n_unary_operation.expression1);
-
+        PrintLabel(node->n_unary_operation.expression1);
         break;
     
     case NODE_BINARY_OPERATION:
@@ -775,26 +576,15 @@ void PrintLabel(Node* node)
         if (node->n_binary_operation.operation->tokenType == TOKEN_TYPE_COMPOSITE_OP)
             printf("%p [label=\"%s\"]\n", node, node->n_binary_operation.operation->tokenValue.string);
 
-        if(node->n_binary_operation.expression1 != NULL)
-            PrintLabel(node->n_binary_operation.expression1);
-
-        if(node->n_binary_operation.expression2 != NULL)
-            PrintLabel(node->n_binary_operation.expression2);
-
+        PrintLabel(node->n_binary_operation.expression1);
+        PrintLabel(node->n_binary_operation.expression2);
         break;
     
     case NODE_TERNARY_OPERATION:
         printf("%p [label=\"?:\"]\n", node);
-
-        if(node->n_ternary_operation.expression1 != NULL)
-            PrintLabel(node->n_ternary_operation.expression1);
-
-        if(node->n_ternary_operation.expression2 != NULL)
-            PrintLabel(node->n_ternary_operation.expression2);
-
-        if(node->n_ternary_operation.expression3 != NULL)
-            PrintLabel(node->n_ternary_operation.expression3);
-
+        PrintLabel(node->n_ternary_operation.expression1);
+        PrintLabel(node->n_ternary_operation.expression2);
+        PrintLabel(node->n_ternary_operation.expression3);
         break;
     
     case NODE_LITERAL:

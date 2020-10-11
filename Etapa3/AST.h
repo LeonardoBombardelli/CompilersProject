@@ -162,5 +162,5 @@ void FreeNode(Node* node);
 /* Print operations */
 
 void PrintAll(Node* treeRoot);
-void PrintNode(Node* node);
+void PrintNode(Node* node, Node* parent);
 void PrintLabel(Node* node);
