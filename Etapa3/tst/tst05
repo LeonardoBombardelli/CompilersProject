@@ -1,0 +1,7 @@
+int foo(char c, bool b)
+{
+    while (b) do
+    {
+        c = x>7 ? 'a' : 'c';
+    };
+}
