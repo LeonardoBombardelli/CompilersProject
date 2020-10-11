@@ -197,8 +197,18 @@ simple_command:
 command_block: 
     '{' sequence_simple_command '}' { $$ = $2; };
 sequence_simple_command: 
-    simple_command ';' sequence_simple_command  { last_command_of_chain($1)->sequenceNode = $3; $$ = $1; } |
-    %empty                                      { $$ = NULL; };
+    %empty { $$ = NULL; } |
+    simple_command ';' sequence_simple_command  { 
+        if ($1 != NULL)
+        {
+            last_command_of_chain($1)->sequenceNode = $3;
+            $$ = $1;
+        }
+        else
+        {
+            $$ = $3;
+        }
+    };
 
 local_var_declaration: 
     maybe_static maybe_const type TK_IDENTIFICADOR {$$ = NULL; } |
