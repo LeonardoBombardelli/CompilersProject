@@ -1,4 +1,4 @@
-int y;
+int y[2];
 
 bool foo(int a, float b, float c)
 {
