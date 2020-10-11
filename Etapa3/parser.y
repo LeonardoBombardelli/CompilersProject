@@ -161,8 +161,14 @@ literal:
     TK_LIT_STRING { $$ = create_node_literal($1); };
 
 global_var: 
-    TK_IDENTIFICADOR '[' TK_LIT_INT ']'   { $$ = NULL; /* ignore global vars */ FreeValorLexico($2); FreeValorLexico($4); } |
-    TK_IDENTIFICADOR                      { $$ = NULL; };
+    TK_IDENTIFICADOR {  /* ignore global vars */
+        $$ = NULL; 
+        FreeValorLexico($1);
+    } |
+    TK_IDENTIFICADOR '[' TK_LIT_INT ']' {
+        $$ = NULL; 
+        FreeValorLexico($1); FreeValorLexico($2); FreeValorLexico($3); FreeValorLexico($4);
+    };
 global_var_declaration: 
     maybe_static type global_var_list ';' { $$ = NULL; FreeValorLexico($4); };
 global_var_list: 
@@ -174,12 +180,15 @@ func_definition:
     func_header command_block { $$ = create_node_function_declaration($1, $2); };
 
 func_header:
-    maybe_static type TK_IDENTIFICADOR '(' func_header_list ')' { $$ = $3; /* ignore all but function name */ FreeValorLexico($4); FreeValorLexico($6); };
+    maybe_static type TK_IDENTIFICADOR '(' func_header_list ')' {
+        $$ = $3; /* ignore all but function name */ 
+        FreeValorLexico($4); FreeValorLexico($6);
+    };
 func_header_list:
     %empty                                                          { $$ = NULL; } |
-    maybe_const type TK_IDENTIFICADOR func_header_list_iterator     { $$ = NULL; };
+    maybe_const type TK_IDENTIFICADOR func_header_list_iterator     { $$ = NULL; FreeValorLexico($3); };
 func_header_list_iterator: 
-    ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator { $$ = NULL; FreeValorLexico($1); } |
+    ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator { $$ = NULL; FreeValorLexico($1); FreeValorLexico($4); } |
     %empty                                                          { $$ = NULL; };
 
 simple_command: 
@@ -212,7 +221,7 @@ sequence_simple_command:
     };
 
 local_var_declaration: 
-    maybe_static maybe_const type TK_IDENTIFICADOR { $$ = NULL; } |
+    maybe_static maybe_const type TK_IDENTIFICADOR { $$ = NULL; FreeValorLexico($4); } |
     maybe_static maybe_const type TK_IDENTIFICADOR TK_OC_LE literal {
         $$ = create_node_var_init(create_node_var_access($4), $6); FreeValorLexico($5);
     } |
@@ -240,8 +249,8 @@ func_parameters_list:
     func_parameters_list ',' expression  { last_command_of_chain($1)->sequenceNode = $3; $$ = $1; FreeValorLexico($2); };
 
 shift_command:
-    var_access TK_OC_SL TK_LIT_INT { $$ = create_node_shift_left($1, create_node_literal($3));  } |
-    var_access TK_OC_SR TK_LIT_INT { $$ = create_node_shift_right($1, create_node_literal($3)); };
+    var_access TK_OC_SL TK_LIT_INT { $$ = create_node_shift_left($1, create_node_literal($3));  FreeValorLexico($2); } |
+    var_access TK_OC_SR TK_LIT_INT { $$ = create_node_shift_right($1, create_node_literal($3)); FreeValorLexico($2); };
 
 return_command:
     TK_PR_RETURN expression { $$ = create_node_return($2); };
