@@ -1,0 +1,15 @@
+char subst(string s, char c1, char c2)
+{
+    int i;
+    for ( i = 0 : i < len(s) : i = i + 1 )
+    {
+        if ( s[i] != c1 )
+        {
+            continue;
+        }
+        else
+        {
+            s[i] = c2;
+        };
+    };
+}

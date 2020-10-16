@@ -1,0 +1,13 @@
+int main()
+{
+    int x <= 64;
+    while ( true ) do
+    {
+        x << 2;
+
+        if ( x < 20 )
+        {
+            break;
+        };
+    };
+}
