@@ -1,5 +1,5 @@
 
-#include "AST.h"
+#include "AST.hpp"
 
 Node* CreateGenericNode(NodeType type)
 {

@@ -1,8 +1,8 @@
-etapa3: parser.y scanner.l main.c AST.c
+etapa4: parser.y scanner.l main.c AST.cpp
 	bison -v -d parser.y 
 	flex -o lex.yy.c scanner.l
-	gcc -c lex.yy.c parser.tab.c AST.c
-	gcc lex.yy.c parser.tab.c AST.c main.c -o etapa3 -lfl
+	g++ -c lex.yy.c parser.tab.c AST.cpp
+	g++ lex.yy.c parser.tab.c AST.cpp main.c -o etapa4 -lfl
 
 clean:
-	rm -f *.tab.c *.tab.h *.yy.c *.o *.output etapa3
+	rm -f *.tab.c *.tab.h *.yy.c *.o *.output etapa4

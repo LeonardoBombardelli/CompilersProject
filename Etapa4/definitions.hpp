@@ -1,5 +1,5 @@
-#include <stdio.h>
-#include <stdbool.h>
+#include <cstdio>
+#include <cstdbool>
 
 typedef enum 
 {

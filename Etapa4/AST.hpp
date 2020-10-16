@@ -1,6 +1,7 @@
-#include "definitions.h"
-#include <stdlib.h>
-#include <string.h>
+#include "definitions.hpp"
+#include <cstdlib>
+#include <iostream>
+#include <cstring>
 
 struct node_function_declaration {
     ValorLexico* identifier;

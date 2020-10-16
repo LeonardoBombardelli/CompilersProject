@@ -1,7 +1,9 @@
 
 %{
     #include "parser.tab.h"
-    #include "definitions.h"
+    #include "definitions.hpp"
+
+    extern "C" int yylex();
 
     int numberLines = 1;
     void create_token_not_literal(TokenType token_type);

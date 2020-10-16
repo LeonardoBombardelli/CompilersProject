@@ -1,12 +1,14 @@
 %{
-    #include "stdio.h"
-    #include "AST.h"
+    #include <cstdio>
+    #include "AST.hpp"
 
-extern int yylineno;
-extern void *arvore;
-int yylex(void);
-Node* last_command_of_chain(Node* n);
-void yyerror (char const *s);
+    extern "C" int yylex();
+
+    extern int yylineno;
+    extern void *arvore;
+    int yylex(void);
+    Node* last_command_of_chain(Node* n);
+    void yyerror (char const *s);
 %}
 
 
