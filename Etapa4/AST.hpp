@@ -1,7 +1,43 @@
-#include "definitions.hpp"
+#include "lexicalvalue.hpp"
 #include <cstdlib>
 #include <iostream>
 #include <cstring>
+
+typedef enum 
+{
+    NODE_FUNCTION_DECLARATION    ,
+    NODE_VAR_ACCESS              ,
+    NODE_VECTOR_ACCESS           ,
+    NODE_VAR_ATTR                ,
+    NODE_VAR_INIT                ,
+    NODE_INPUT                   ,
+    NODE_OUTPUT                  ,
+    NODE_FUNCTION_CALL           ,
+    NODE_SHIFT_LEFT              ,
+    NODE_SHIFT_RIGHT             ,
+    NODE_BREAK                   ,
+    NODE_CONTINUE                ,
+    NODE_RETURN                  ,
+    NODE_IF                      ,
+    NODE_FOR_LOOP                ,
+    NODE_WHILE_LOOP              ,
+    NODE_UNARY_OPERATION         ,
+    NODE_BINARY_OPERATION        ,
+    NODE_TERNARY_OPERATION       ,
+    NODE_LITERAL
+
+} NodeCategory;
+
+typedef enum
+{
+    NODE_TYPE_INT    ,
+    NODE_TYPE_FLOAT  ,
+    NODE_TYPE_CHAR   ,
+    NODE_TYPE_BOOL   ,
+    NODE_TYPE_STRING ,
+    NODE_TYPE_INDEF  ,
+
+} NodeType;
 
 struct node_function_declaration {
     ValorLexico* identifier;
@@ -102,7 +138,8 @@ struct node_literal {
 };
 
 typedef struct node {
-    NodeType nodeType;
+    NodeCategory nodeCategory;
+    NodeType     nodeType;
     struct node* sequenceNode;
 
     union 
@@ -131,7 +168,7 @@ typedef struct node {
      
 } Node;
 
-Node* CreateGenericNode(NodeType type);
+Node* CreateGenericNode(NodeCategory category);
 
 Node* create_node_function_declaration (ValorLexico* identifier, Node* firstCommand);
 Node* create_node_var_access           (ValorLexico* identifier);

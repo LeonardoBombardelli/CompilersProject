@@ -1,11 +1,12 @@
 
 #include "AST.hpp"
 
-Node* CreateGenericNode(NodeType type)
+Node* CreateGenericNode(NodeCategory category)
 {
     Node* node = (Node *) malloc(sizeof(Node));
 
-    node->nodeType = type;
+    node->nodeCategory = category;
+    node->nodeType     = NODE_TYPE_INDEF;
     node->sequenceNode = NULL;
     return(node);
 }
@@ -240,7 +241,7 @@ void FreeNode(Node* node)
         FreeNode(node->sequenceNode);
     }
 
-    switch (node->nodeType)
+    switch (node->nodeCategory)
     {
     case NODE_FUNCTION_DECLARATION:
         FreeValorLexico(node->n_function_declaration.identifier);
@@ -363,7 +364,7 @@ void PrintNode(Node* node, Node* parent)
         printf("%p, %p\n", parent, node);
     }
 
-    switch (node->nodeType)
+    switch (node->nodeCategory)
     {
     case NODE_FUNCTION_DECLARATION:
         PrintNode(node->n_function_declaration.firstCommand, node);
@@ -474,7 +475,7 @@ void PrintLabel(Node* node)
         return;
     }
 
-    switch (node->nodeType)
+    switch (node->nodeCategory)
     {
     case NODE_FUNCTION_DECLARATION:
         printf("%p [label=\"%s\"]\n", node, node->n_function_declaration.identifier->tokenValue.string);
