@@ -12,7 +12,7 @@ Scope* CreateNewScope(char* scopeName)
     return scope;
 }
 
-SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableEntryNature entryNature, std::list<FuncArgument> *funcArguments, int vectorSize)
+SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableEntryNature entryNature, std::list<FuncArgument *> *funcArguments, int vectorSize)
 {
     SymbolTableEntry *symbolTableEntry = (SymbolTableEntry *)malloc(sizeof(SymbolTableEntry));
 
@@ -60,17 +60,40 @@ FuncArgument* CreateFuncArgument(char* argName, SymbolType type)
 
 void DestroyScope(Scope *scope)
 {
+    std::map<char *, SymbolTableEntry *>::iterator it;
+
+    for(it = scope->symbolTable.begin(); it != scope->symbolTable.end(); ++it)
+    {
+        free(it->first);
+        DestroySymbolTableEntry(it->second);
+    }
+
+    scope->symbolTable.clear();
     free(scope->scopeName);
+
+    free(scope);
     return;
 }
 
 void DestroySymbolTableEntry(SymbolTableEntry *symbolTableEntry)
 {
+
+    if(symbolTableEntry->funcArguments != NULL)
+    {    
+        while(!symbolTableEntry->funcArguments->empty())
+        {
+            DestroyFuncArgument(symbolTableEntry->funcArguments->back());
+            symbolTableEntry->funcArguments->pop_back();
+        }
+    }
+    free(symbolTableEntry);
     return;
 }
 
 void DestroyFuncArgument(FuncArgument *funcArgument)
 {
+    free(funcArgument->argName);
+    free(funcArgument);
     return;
 }
 

@@ -35,7 +35,7 @@ typedef struct symbolTableEntry
     TableEntryNature entryNature;
     SymbolType symbolType;
     int size;
-    std::list<FuncArgument> *funcArguments;
+    std::list<FuncArgument *> *funcArguments;
     int vectorSize;
 
 } SymbolTableEntry;
@@ -51,7 +51,7 @@ typedef struct scope
 // Create all structs
 
 Scope* CreateNewScope(char* scopeName);
-SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableEntryNature entryNature, std::list<FuncArgument> *funcArguments, int vectorSize);
+SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableEntryNature entryNature, std::list<FuncArgument *> *funcArguments, int vectorSize);
 FuncArgument* CreateFuncArgument(char* argName, SymbolType type);
 
 // Deletes all structs
