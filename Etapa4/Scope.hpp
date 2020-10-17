@@ -1,5 +1,9 @@
+#ifndef SCOPE_H
+#define SCOPE_H
+
 #include <cstring>
 #include "lexicalvalue.hpp"
+#include "errors.hpp"
 
 #include <map>
 #include <list>
@@ -48,11 +52,16 @@ typedef struct scope
 
 } Scope;
 
+// Global stack
+
+std::list<Scope *> *scopeStack;
+
 // Create all structs
 
 Scope* CreateNewScope(char* scopeName);
 SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableEntryNature entryNature, std::list<FuncArgument *> *funcArguments, int vectorSize);
 FuncArgument* CreateFuncArgument(char* argName, SymbolType type);
+
 
 // Deletes all structs
 
@@ -60,10 +69,15 @@ void DestroyScope(Scope *scope);
 void DestroySymbolTableEntry(SymbolTableEntry *symbolTableEntry);
 void DestroyFuncArgument(FuncArgument *funcArgument);
 
-// Access a symbolTableEntry
+// Stack management
 
-SymbolTableEntry* GetSymbolTableEntry(Scope *scope, char* symbol);
+void CreateStack();
+void DestroyStack();
+
 
 // Auxiliary functions
 
 bool SymbolIsInSymbolTable(char *symbol, Scope *scope);
+SymbolTableEntry* GetFirstOccourence(char *symbol);
+
+#endif

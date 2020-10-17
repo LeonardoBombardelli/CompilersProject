@@ -1,6 +1,5 @@
 #include "Scope.hpp"
 
-
 // Create all structs
 
 Scope* CreateNewScope(char* scopeName)
@@ -97,12 +96,22 @@ void DestroyFuncArgument(FuncArgument *funcArgument)
     return;
 }
 
-// Access a symbolTableEntry
+// Stack management
 
-SymbolTableEntry* GetSymbolTableEntry(Scope *scope, char* symbol)
+void CreateStack()
 {
-    return NULL;
+    scopeStack = new std::list<Scope *>;
 }
+
+void DestroyStack()
+{
+    while(!scopeStack->empty())
+    {
+        DestroyScope(scopeStack->back());
+        scopeStack->pop_back();
+    }
+}
+
 
 // Auxiliary functions
 
@@ -114,3 +123,20 @@ bool SymbolIsInSymbolTable(char *symbol, Scope *scope)
     return(it != scope->symbolTable.end());
 }
 
+SymbolTableEntry* GetFirstOccourence(char *symbol)
+{
+    bool found = false;
+    SymbolTableEntry* entryToReturn = NULL;
+    std::list<Scope *>::iterator it = scopeStack->end();
+    
+    while(it != scopeStack->begin() || found)
+    {
+        if(SymbolIsInSymbolTable(symbol, *it))
+        {
+            entryToReturn = *it[symbol];
+            found = true;
+        }
+    }
+
+    return entryToReturn;
+}
