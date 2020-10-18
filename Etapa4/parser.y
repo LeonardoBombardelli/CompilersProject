@@ -20,7 +20,7 @@
 {
     struct valorLexico* valor_lexico;
     struct node* node;
-    int symbol_type;
+    int symbol_type; /* int later converted to SymbolType */
 }
 
 %token<valor_lexico> TK_PR_INT
@@ -160,11 +160,11 @@ maybe_static:
     TK_PR_STATIC  { $$ = NULL; };
 
 type:
-    TK_PR_INT     { $$ = 1; } |
-    TK_PR_FLOAT   { $$ = 2; } |
-    TK_PR_CHAR    { $$ = 3; } |
-    TK_PR_BOOL    { $$ = 4; } |
-    TK_PR_STRING  { $$ = 5; };
+    TK_PR_INT     { $$ = 1; /* int later converted to SymbolType */ } |
+    TK_PR_FLOAT   { $$ = 2;                                         } |
+    TK_PR_CHAR    { $$ = 3;                                         } |
+    TK_PR_BOOL    { $$ = 4;                                         } |
+    TK_PR_STRING  { $$ = 5;                                         };
 literal: 
     TK_LIT_INT    { $$ = create_node_literal($1); } |
     TK_LIT_FLOAT  { $$ = create_node_literal($1); } |
@@ -181,7 +181,7 @@ global_var:
         FreeValorLexico($1);
     } |
     TK_IDENTIFICADOR '[' TK_LIT_INT ']' {
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, $3->tokenValue.integer);
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VEC, NULL, $3->tokenValue.integer);
         (*tempVarMap)[$1->tokenValue.string] = ste;
         $$ = NULL; 
         FreeValorLexico($1); FreeValorLexico($2); FreeValorLexico($3); FreeValorLexico($4);
@@ -252,13 +252,71 @@ sequence_simple_command:
         FreeValorLexico($2);
     };
 
-local_var_declaration: 
-    maybe_static maybe_const type TK_IDENTIFICADOR { $$ = NULL; FreeValorLexico($4); } |
-    maybe_static maybe_const type TK_IDENTIFICADOR TK_OC_LE literal {
-        $$ = create_node_var_init(create_node_var_access($4), $6); FreeValorLexico($5);
+local_var_declaration:
+    maybe_static maybe_const type local_var_list {
+
+        // set type to all vars of list, and insert them in table
+        std::map<char*, SymbolTableEntry*>::iterator it;
+        for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
+        {
+            it->second->symbolType = IntToSymbolType($3);
+            scopeStack->back()->symbolTable[it->first] = it->second;
+        }
+
+        // free temp var map
+        tempVarMap = new std::map<char*, SymbolTableEntry*>;
+
+        $$ = $4;
+    };
+
+local_var_list:
+    local_var local_var_list_iterator {
+        if ($1 != NULL)
+        {
+            $1->sequenceNode = $2;
+            $$ = $1;
+        }
+        else
+        {
+            $$ = $2;
+        }
+    };
+
+local_var_list_iterator:
+    %empty                                  { $$ = NULL; } |
+    ',' local_var local_var_list_iterator   { 
+        if ($2 != NULL)
+        {
+            $2->sequenceNode = $3;
+            $$ = $2;
+        }
+        else
+        {
+            $$ = $3;
+        }
+        FreeValorLexico($1);
+    } ;
+
+local_var: 
+    TK_IDENTIFICADOR {
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+        (*tempVarMap)[$1->tokenValue.string] = ste;
+        $$ = NULL;
+        FreeValorLexico($1);
     } |
-    maybe_static maybe_const type TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
-        $$ = create_node_var_init(create_node_var_access($4), create_node_literal($6)); FreeValorLexico($5);
+    TK_IDENTIFICADOR TK_OC_LE literal {
+        /* deal with vars of type string (need to update their size) */
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+        (*tempVarMap)[$1->tokenValue.string] = ste;
+        $$ = create_node_var_init(create_node_var_access($1), $3);
+        FreeValorLexico($2);
+    } |
+    TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
+        /* deal with vars of type string (need to update their size) */
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+        (*tempVarMap)[$1->tokenValue.string] = ste;
+        $$ = create_node_var_init(create_node_var_access($1), create_node_literal($3));
+        FreeValorLexico($2);
     };
 
 var_access:

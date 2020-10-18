@@ -18,8 +18,8 @@ SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableE
     SymbolTableEntry *symbolTableEntry = (SymbolTableEntry *)malloc(sizeof(SymbolTableEntry));
 
     symbolTableEntry->line = line;
-    symbolTableEntry->vectorSize = vectorSize;      // If vectorSize = 0, it's not a vector
-    symbolTableEntry->funcArguments = funcArguments;
+    symbolTableEntry->vectorSize = vectorSize;          // if not a vector, vectorSize == 0
+    symbolTableEntry->funcArguments = funcArguments;    // if not a function, funcArguments = NULL
     symbolTableEntry->entryNature = entryNature;
     symbolTableEntry->symbolType = symbolType;
     
@@ -43,7 +43,7 @@ SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableE
         break;
     }
 
-    if(vectorSize != 0) symbolTableEntry->size *= vectorSize;
+    if(entryNature == TABLE_NATURE_VEC) symbolTableEntry->size *= vectorSize;
 
     return symbolTableEntry;
 }

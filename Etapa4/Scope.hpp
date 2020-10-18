@@ -13,6 +13,7 @@ typedef enum
 {
     TABLE_NATURE_LIT    ,
     TABLE_NATURE_VAR    ,
+    TABLE_NATURE_VEC    ,
     TABLE_NATURE_FUNC   
 
 } TableEntryNature;
