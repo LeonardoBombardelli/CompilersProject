@@ -1,3 +1,6 @@
+#ifndef AST_HPP
+#define AST_HPP
+
 #include "lexicalvalue.hpp"
 #include <cstdlib>
 #include <iostream>
@@ -202,3 +205,5 @@ void FreeNode(Node* node);
 void PrintAll(Node* treeRoot);
 void PrintNode(Node* node, Node* parent);
 void PrintLabel(Node* node);
+
+#endif

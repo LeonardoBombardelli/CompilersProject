@@ -1,6 +1,8 @@
 %{
     #include <cstdio>
+    #include <map>
     #include "AST.hpp"
+    #include "Scope.hpp"
 
     extern "C" int yylex();
 
@@ -9,13 +11,16 @@
     int yylex(void);
     Node* last_command_of_chain(Node* n);
     void yyerror (char const *s);
-%}
 
+
+    std::map<char*, SymbolTableEntry*> *tempVarMap = new std::map<char*, SymbolTableEntry*>;    // reusable map of vars
+%}
 
 %union 
 {
     struct valorLexico* valor_lexico;
     struct node* node;
+    int symbol_type;
 }
 
 %token<valor_lexico> TK_PR_INT
@@ -93,7 +98,7 @@
 %type<node> program_list
 %type<node> maybe_const
 %type<node> maybe_static
-%type<node> type
+%type<symbol_type> type
 %type<node> literal
 %type<node> global_var
 %type<node> global_var_declaration
@@ -134,11 +139,17 @@
 
 %%
 programa: 
-    program_list { $$ = $1; arvore = $$; };
+    init_stack program_list destroy_stack { $$ = $2; arvore = $$; };
 program_list: 
     global_var_declaration program_list   { $$ = $2; /* ignore global vars */ } |
     func_definition program_list          { $1->sequenceNode = $2; $$ = $1; } |
     %empty                                { $$ = NULL; };
+
+init_stack:
+    %empty { CreateStack(); }
+
+destroy_stack:
+    %empty { DestroyStack(); }
 
 
 maybe_const: 
@@ -149,11 +160,11 @@ maybe_static:
     TK_PR_STATIC  { $$ = NULL; };
 
 type:
-    TK_PR_INT     { $$ = NULL; /* ignore types */ } |
-    TK_PR_FLOAT   { $$ = NULL;                    } |
-    TK_PR_CHAR    { $$ = NULL;                    } |
-    TK_PR_BOOL    { $$ = NULL;                    } |
-    TK_PR_STRING  { $$ = NULL;                    };
+    TK_PR_INT     { $$ = 1; } |
+    TK_PR_FLOAT   { $$ = 2; } |
+    TK_PR_CHAR    { $$ = 3; } |
+    TK_PR_BOOL    { $$ = 4; } |
+    TK_PR_STRING  { $$ = 5; };
 literal: 
     TK_LIT_INT    { $$ = create_node_literal($1); } |
     TK_LIT_FLOAT  { $$ = create_node_literal($1); } |
@@ -163,16 +174,35 @@ literal:
     TK_LIT_STRING { $$ = create_node_literal($1); };
 
 global_var: 
-    TK_IDENTIFICADOR {  /* ignore global vars */
+    TK_IDENTIFICADOR {
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+        (*tempVarMap)[$1->tokenValue.string] = ste;
         $$ = NULL; 
         FreeValorLexico($1);
     } |
     TK_IDENTIFICADOR '[' TK_LIT_INT ']' {
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, $3->tokenValue.integer);
+        (*tempVarMap)[$1->tokenValue.string] = ste;
         $$ = NULL; 
         FreeValorLexico($1); FreeValorLexico($2); FreeValorLexico($3); FreeValorLexico($4);
     };
 global_var_declaration: 
-    maybe_static type global_var_list ';' { $$ = NULL; FreeValorLexico($4); };
+    maybe_static type global_var_list ';' {
+
+        // set type to all vars of list, and insert them in table
+        std::map<char*, SymbolTableEntry*>::iterator it;
+        for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
+        {
+            it->second->symbolType = IntToSymbolType($2);
+            scopeStack->back()->symbolTable[it->first] = it->second;
+        }
+
+        // free temp var map
+        tempVarMap = new std::map<char*, SymbolTableEntry*>;
+
+        $$ = NULL; 
+        FreeValorLexico($4); 
+    };
 global_var_list: 
     global_var ',' global_var_list        { $$ = NULL; FreeValorLexico($2); } |
     global_var                            { $$ = NULL; };

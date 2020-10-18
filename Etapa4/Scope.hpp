@@ -2,6 +2,7 @@
 #define SCOPE_H
 
 #include <cstring>
+#include <cstdlib>
 #include "lexicalvalue.hpp"
 #include "errors.hpp"
 
@@ -54,7 +55,7 @@ typedef struct scope
 
 // Global stack
 
-std::list<Scope *> *scopeStack;
+extern std::list<Scope *> *scopeStack;
 
 // Create all structs
 
@@ -79,5 +80,10 @@ void DestroyStack();
 
 bool SymbolIsInSymbolTable(char *symbol, Scope *scope);
 SymbolTableEntry* GetFirstOccourence(char *symbol);
+
+
+// aux
+SymbolType LiteralTypeToSymbolType(LiteralType type);
+SymbolType IntToSymbolType(int type);
 
 #endif

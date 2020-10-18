@@ -1,5 +1,7 @@
 #include "Scope.hpp"
 
+std::list<Scope *> *scopeStack;
+
 // Create all structs
 
 Scope* CreateNewScope(char* scopeName)
@@ -133,10 +135,36 @@ SymbolTableEntry* GetFirstOccourence(char *symbol)
     {
         if(SymbolIsInSymbolTable(symbol, *it))
         {
-            entryToReturn = *it[symbol];
+            entryToReturn = (*it)->symbolTable[symbol];
             found = true;
         }
     }
 
     return entryToReturn;
+}
+
+SymbolType LiteralTypeToSymbolType(LiteralType type)
+{
+    switch(type)
+    {
+        case LITERAL_TYPE_INTEGER: return SYMBOL_TYPE_INTEGER;
+        case LITERAL_TYPE_FLOAT:   return SYMBOL_TYPE_FLOAT;
+        case LITERAL_TYPE_CHAR:    return SYMBOL_TYPE_CHAR;
+        case LITERAL_TYPE_BOOL:    return SYMBOL_TYPE_BOOL;
+        case LITERAL_TYPE_STRING:  return SYMBOL_TYPE_STRING;
+        default:                   return SYMBOL_TYPE_INDEF;
+    }
+}
+
+SymbolType IntToSymbolType(int type)
+{
+    switch(type)
+    {
+        case 1:     return SYMBOL_TYPE_INTEGER;
+        case 2:     return SYMBOL_TYPE_FLOAT;
+        case 3:     return SYMBOL_TYPE_CHAR;
+        case 4:     return SYMBOL_TYPE_BOOL;
+        case 5:     return SYMBOL_TYPE_STRING;
+        default:    return SYMBOL_TYPE_INDEF;
+    }
 }

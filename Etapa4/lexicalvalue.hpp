@@ -1,3 +1,6 @@
+#ifndef LEXICALVALUE_HPP
+#define LEXICALVALUE_HPP
+
 #include <cstdio>
 #include <cstdbool>
 
@@ -38,3 +41,5 @@ typedef struct valorLexico {
     TokenValue tokenValue;
 
 } ValorLexico;
+
+#endif
