@@ -13,7 +13,10 @@
     void yyerror (char const *s);
 
 
+    char* auxScopeName = NULL;
+
     std::map<char*, SymbolTableEntry*> *tempVarMap = new std::map<char*, SymbolTableEntry*>;    // reusable map of vars
+    std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;                 // reusable list of function arguments
 %}
 
 %union 
@@ -104,13 +107,16 @@
 %type<node> global_var_declaration
 %type<node> global_var_list
 %type<node> func_definition
-%type<valor_lexico> func_header
+%type<node> func_header
 %type<node> func_header_list
 %type<node> func_header_list_iterator
 %type<node> simple_command
 %type<node> command_block
 %type<node> sequence_simple_command
 %type<node> local_var_declaration
+%type<node> local_var_list
+%type<node> local_var_list_iterator
+%type<node> local_var
 %type<node> var_access
 %type<node> attribution_command
 %type<node> io_command
@@ -141,9 +147,9 @@
 programa: 
     init_stack program_list destroy_stack { $$ = $2; arvore = $$; };
 program_list: 
-    global_var_declaration program_list   { $$ = $2; /* ignore global vars */ } |
-    func_definition program_list          { $1->sequenceNode = $2; $$ = $1; } |
-    %empty                                { $$ = NULL; };
+    global_var_declaration program_list   { $$ = $2; /* ignore global vars in AST */    } |
+    func_definition program_list          { $1->sequenceNode = $2; $$ = $1;             } |
+    %empty                                { $$ = NULL;                                  };
 
 init_stack:
     %empty { CreateStack(); }
@@ -166,7 +172,7 @@ type:
     TK_PR_BOOL    { $$ = 4;                                         } |
     TK_PR_STRING  { $$ = 5;                                         };
 literal: 
-    TK_LIT_INT    { $$ = create_node_literal($1); } |
+    TK_LIT_INT    { $$ = create_node_literal($1); /* TODO: insert literals in symbol table */ } |
     TK_LIT_FLOAT  { $$ = create_node_literal($1); } |
     TK_LIT_FALSE  { $$ = create_node_literal($1); } |
     TK_LIT_TRUE   { $$ = create_node_literal($1); } |
@@ -209,19 +215,53 @@ global_var_list:
 
 
 func_definition:
-    func_header command_block { $$ = create_node_function_declaration($1, $2); };
+    func_header command_block {
+        // TODO: is it right????
+        // remove function scope from stack
+        scopeStack->pop_back();
+
+        $1->n_function_declaration.firstCommand = $2;
+        $$ = $1;
+    };
 
 func_header:
     maybe_static type TK_IDENTIFICADOR '(' func_header_list ')' {
-        $$ = $3; /* ignore all but function name */ 
+
+        // create entry and add it to scope
+        SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, tempFuncArgList, 0);
+        scopeStack->back()->symbolTable[$3->tokenValue.string] = ste;
+
+        // free temp func arg list
+        tempFuncArgList = new std::list<FuncArgument *>;
+
+        // update aux var with new scope name
+        auxScopeName = strdup($3->tokenValue.string);
+
+        $$ = create_node_function_declaration($3, NULL);
         FreeValorLexico($4); FreeValorLexico($6);
     };
 func_header_list:
     %empty                                                          { $$ = NULL; } |
-    maybe_const type TK_IDENTIFICADOR func_header_list_iterator     { $$ = NULL; FreeValorLexico($3); };
+    maybe_const type TK_IDENTIFICADOR func_header_list_iterator     {
+
+        // create funcargument and add it to global list
+        FuncArgument* fa = CreateFuncArgument($3->tokenValue.string, IntToSymbolType($2));
+        tempFuncArgList->push_back(fa);
+
+        $$ = NULL;
+        FreeValorLexico($3);
+    };
 func_header_list_iterator: 
-    ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator { $$ = NULL; FreeValorLexico($1); FreeValorLexico($4); } |
-    %empty                                                          { $$ = NULL; };
+    %empty                                                          { $$ = NULL; } |
+    ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator {
+
+        // create funcargument and add it to global list
+        FuncArgument* fa = CreateFuncArgument($4->tokenValue.string, IntToSymbolType($3));
+        tempFuncArgList->push_back(fa);
+
+        $$ = NULL;
+        FreeValorLexico($1); FreeValorLexico($4);
+    };
 
 simple_command: 
     command_block         { $$ = $1;                     } |
@@ -305,14 +345,14 @@ local_var:
         FreeValorLexico($1);
     } |
     TK_IDENTIFICADOR TK_OC_LE literal {
-        /* deal with vars of type string (need to update their size) */
+        /* TODO: deal with vars of type string (need to update their size) */
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
         (*tempVarMap)[$1->tokenValue.string] = ste;
         $$ = create_node_var_init(create_node_var_access($1), $3);
         FreeValorLexico($2);
     } |
     TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
-        /* deal with vars of type string (need to update their size) */
+        /* TODO: deal with vars of type string (need to update their size) */
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
         (*tempVarMap)[$1->tokenValue.string] = ste;
         $$ = create_node_var_init(create_node_var_access($1), create_node_literal($3));
