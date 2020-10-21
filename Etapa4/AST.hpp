@@ -180,7 +180,7 @@ Node* create_node_var_attr             (Node* identifier, Node* expression);
 Node* create_node_var_init             (Node* identifier, Node* expression);
 Node* create_node_input                (Node* input);
 Node* create_node_output               (Node* output);
-Node* create_node_function_call        (ValorLexico* identifier, Node* expressionList);
+Node* create_node_function_call        (ValorLexico* identifier, Node* expressionList, NodeType nodeType);
 Node* create_node_shift_left           (Node* identifier, Node* shiftNumber);
 Node* create_node_shift_right          (Node* identifier, Node* shiftNumber);
 Node* create_node_break                ();
@@ -189,10 +189,10 @@ Node* create_node_return               (Node* toReturn);
 Node* create_node_if                   (Node* expression, Node* ifTrue, Node* ifFalse);
 Node* create_node_for_loop             (Node* attr, Node* expression, Node* incOrDec, Node* firstCommand);
 Node* create_node_while_loop           (Node* expression, Node* firstCommand);
-Node* create_node_unary_operation      (ValorLexico* operation, Node* expression1);
-Node* create_node_binary_operation     (ValorLexico* operation, Node* expression1, Node* expression2);
-Node* create_node_ternary_operation    (Node* expression1, Node* expression2, Node* expression3);
-Node* create_node_literal              (ValorLexico* literal);
+Node* create_node_unary_operation      (ValorLexico* operation, Node* expression1, NodeType nodeType);
+Node* create_node_binary_operation     (ValorLexico* operation, Node* expression1, Node* expression2, NodeType nodeType);
+Node* create_node_ternary_operation    (Node* expression1, Node* expression2, Node* expression3, NodeType nodeType);
+Node* create_node_literal              (ValorLexico* literal, NodeType nodeType);
 
 /* Free operations */
 

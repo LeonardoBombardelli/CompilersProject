@@ -79,9 +79,10 @@ Node* create_node_output (Node* output)
     return newNode;
 }
 
-Node* create_node_function_call (ValorLexico* identifier, Node* expressionList)
+Node* create_node_function_call (ValorLexico* identifier, Node* expressionList, NodeType nodeType)
 {
     Node* newNode = CreateGenericNode(NODE_FUNCTION_CALL);
+    newNode->nodeType = nodeType;
 
     newNode->n_function_call.identifier = identifier;
     newNode->n_function_call.expressionList = expressionList;
@@ -163,9 +164,10 @@ Node* create_node_while_loop (Node* expression, Node* firstCommand)
     return newNode;
 }
 
-Node* create_node_unary_operation (ValorLexico* operation, Node* expression1)
+Node* create_node_unary_operation (ValorLexico* operation, Node* expression1, NodeType nodeType)
 {
     Node* newNode = CreateGenericNode(NODE_UNARY_OPERATION);
+    newNode->nodeType = nodeType;
 
     newNode->n_unary_operation.operation = operation;
     newNode->n_unary_operation.expression1 = expression1;
@@ -173,9 +175,10 @@ Node* create_node_unary_operation (ValorLexico* operation, Node* expression1)
     return newNode;
 }
 
-Node* create_node_binary_operation (ValorLexico* operation, Node* expression1, Node* expression2)
+Node* create_node_binary_operation (ValorLexico* operation, Node* expression1, Node* expression2, NodeType nodeType)
 {
     Node* newNode = CreateGenericNode(NODE_BINARY_OPERATION);
+    newNode->nodeType = nodeType;
 
     newNode->n_binary_operation.operation = operation;
     newNode->n_binary_operation.expression1 = expression1;
@@ -184,9 +187,10 @@ Node* create_node_binary_operation (ValorLexico* operation, Node* expression1, N
     return newNode;
 }
 
-Node* create_node_ternary_operation (Node* expression1, Node* expression2, Node* expression3)
+Node* create_node_ternary_operation (Node* expression1, Node* expression2, Node* expression3, NodeType nodeType)
 {
     Node* newNode = CreateGenericNode(NODE_TERNARY_OPERATION);
+    newNode->nodeType = nodeType;
 
     newNode->n_ternary_operation.expression1 = expression1;
     newNode->n_ternary_operation.expression2 = expression2;
@@ -195,9 +199,10 @@ Node* create_node_ternary_operation (Node* expression1, Node* expression2, Node*
     return newNode;
 }
 
-Node* create_node_literal (ValorLexico* literal)
+Node* create_node_literal (ValorLexico* literal, NodeType nodeType)
 {
     Node* newNode = CreateGenericNode(NODE_LITERAL);
+    newNode->nodeType = nodeType;
 
     newNode->n_literal.literal = literal;
 

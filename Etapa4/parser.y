@@ -14,6 +14,7 @@
 
 
     char* auxScopeName = NULL;
+    char* auxLiteral = (char*) malloc(sizeof(char)*500);
 
     std::map<char*, SymbolTableEntry*> *tempVarMap = new std::map<char*, SymbolTableEntry*>;    // reusable map of vars
     std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;                 // reusable list of function arguments
@@ -98,6 +99,8 @@
 %token<valor_lexico> '?'
 
 %type<node> programa
+%type<node> init_stack
+%type<node> destroy_stack
 %type<node> program_list
 %type<node> maybe_const
 %type<node> maybe_static
@@ -112,6 +115,9 @@
 %type<node> func_header_list_iterator
 %type<node> simple_command
 %type<node> command_block
+%type<node> real_command_block
+%type<node> cmd_block_init_scope
+%type<node> cmd_block_destroy_scope
 %type<node> sequence_simple_command
 %type<node> local_var_declaration
 %type<node> local_var_list
@@ -152,10 +158,10 @@ program_list:
     %empty                                { $$ = NULL;                                  };
 
 init_stack:
-    %empty { CreateStack(); }
+    %empty { CreateStack(); $$ = NULL; }
 
 destroy_stack:
-    %empty { DestroyStack(); }
+    %empty { DestroyStack(); $$ = NULL; free(auxLiteral); }
 
 
 maybe_const: 
@@ -172,12 +178,90 @@ type:
     TK_PR_BOOL    { $$ = 4;                                         } |
     TK_PR_STRING  { $$ = 5;                                         };
 literal: 
-    TK_LIT_INT    { $$ = create_node_literal($1); /* TODO: insert literals in symbol table */ } |
-    TK_LIT_FLOAT  { $$ = create_node_literal($1); } |
-    TK_LIT_FALSE  { $$ = create_node_literal($1); } |
-    TK_LIT_TRUE   { $$ = create_node_literal($1); } |
-    TK_LIT_CHAR   { $$ = create_node_literal($1); } |
-    TK_LIT_STRING { $$ = create_node_literal($1); };
+    TK_LIT_INT    {
+        $$ = create_node_literal($1, NODE_TYPE_INT);
+
+        // set auxLiteral to be the lexeme
+        memset(auxLiteral, 0, 500);
+        sprintf(auxLiteral, "%d", $1->tokenValue.integer);
+
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INTEGER, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+
+        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+
+        scopeStack->back()->symbolTable[auxLiteral] = ste;
+    } |
+    TK_LIT_FLOAT  {
+        $$ = create_node_literal($1, NODE_TYPE_FLOAT); 
+
+        // set auxLiteral to be the lexeme
+        memset(auxLiteral, 0, 500);
+        sprintf(auxLiteral, "%f", $1->tokenValue.float);
+
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_FLOAT, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+
+        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+
+        scopeStack->back()->symbolTable[auxLiteral] = ste;
+    } |
+    TK_LIT_FALSE  {
+        $$ = create_node_literal($1, NODE_TYPE_BOOL);  
+
+        // set auxLiteral to be the lexeme
+        memset(auxLiteral, 0, 500);
+        sprintf(auxLiteral, "false");
+
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+
+        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+
+        scopeStack->back()->symbolTable[auxLiteral] = ste;
+    } |
+    TK_LIT_TRUE   {
+        $$ = create_node_literal($1, NODE_TYPE_BOOL);  
+
+        // set auxLiteral to be the lexeme
+        memset(auxLiteral, 0, 500);
+        sprintf(auxLiteral, "true");
+
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+
+        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+
+        scopeStack->back()->symbolTable[auxLiteral] = ste;
+    } |
+    TK_LIT_CHAR   {
+        $$ = create_node_literal($1, NODE_TYPE_CHAR);  
+
+        // set auxLiteral to be the lexeme
+        memset(auxLiteral, 0, 500);
+        sprintf(auxLiteral, "\'%c\'", $1->tokenValue.character);
+
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_CHAR, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+
+        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+
+        scopeStack->back()->symbolTable[auxLiteral] = ste;
+    } |
+    TK_LIT_STRING {
+        $$ = create_node_literal($1, NODE_TYPE_STRING);
+
+        // set auxLiteral to be the lexeme
+        memset(auxLiteral, 0, 500);
+        sprintf(auxLiteral, "\"%s\"", $1->tokenValue.string);
+
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_STRING, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+
+        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+
+        scopeStack->back()->symbolTable[auxLiteral] = ste;
+    };
 
 global_var: 
     TK_IDENTIFICADOR {
@@ -276,6 +360,24 @@ simple_command:
     flux_control_command  { $$ = $1;                     };
 
 command_block: 
+    cmd_block_init_scope real_command_block cmd_block_destroy_scope { $$ = $2; }
+
+cmd_block_init_scope:
+    %empty {
+        /* create new scope and push it to scopeStack */
+        Scope* newScope = CreateNewScope(auxScopeName);
+        scopeStack.push_back(newScope);
+    }
+
+cmd_block_destroy_scope:
+    %empty {
+        /* pop current scope from scopeStack and free its memory */
+        Scope* currentScope = scopeStack.back();
+        DestroyScope(currentScope);
+        scopeStack.pop_back();
+    }
+
+real_command_block:
     '{' sequence_simple_command '}' { $$ = $2; FreeValorLexico($1); FreeValorLexico($3); };
 sequence_simple_command: 
     %empty { $$ = NULL; } |
@@ -372,8 +474,8 @@ io_command:
     TK_PR_OUTPUT literal            { $$ = create_node_output($2); } ;
 
 call_func_command:
-    TK_IDENTIFICADOR '(' func_parameters_list ')' { $$ = create_node_function_call($1, $3); FreeValorLexico($2); FreeValorLexico($4);   } | 
-    TK_IDENTIFICADOR '(' ')'                      { $$ = create_node_function_call($1, NULL); FreeValorLexico($2); FreeValorLexico($3); };
+    TK_IDENTIFICADOR '(' func_parameters_list ')' { /* take nodeType from symbol table */ $$ = create_node_function_call($1, $3); FreeValorLexico($2); FreeValorLexico($4);   } | 
+    TK_IDENTIFICADOR '(' ')'                      { /* take nodeType from symbol table */ $$ = create_node_function_call($1, NULL); FreeValorLexico($2); FreeValorLexico($3); };
 func_parameters_list: 
     expression                           { $$ = $1; } | 
     func_parameters_list ',' expression  { last_command_of_chain($1)->sequenceNode = $3; $$ = $1; FreeValorLexico($2); };
@@ -411,7 +513,7 @@ expression:
     exp_log_or '?' expression ':' expression    { $$ = create_node_ternary_operation($1, $3, $5); FreeValorLexico($2); FreeValorLexico($4); } | 
     exp_log_or                                  { $$ = $1; };
 exp_log_or: 
-    exp_log_or TK_OC_OR exp_log_and             { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_log_or TK_OC_OR exp_log_and             { /* TODO */ $$ = create_node_binary_operation($2, $1, $3); } | 
     exp_log_and                                 { $$ = $1; };
 exp_log_and: 
     exp_log_and TK_OC_AND exp_bit_or            { $$ = create_node_binary_operation($2, $1, $3); } | 
@@ -446,16 +548,16 @@ exp_pow:
     unary_exp                                   { $$ = $1; };
 
 unary_exp: 
-    unary_op unary_exp  { $$ = create_node_unary_operation($1, $2); } | 
+    unary_op unary_exp  { $$ = create_node_unary_operation($1, $2, $2->nodeType); } | 
     operand             { $$ = $1; };
 unary_op: 
     '+' { $$ = $1; } | 
     '-' { $$ = $1; } | 
     '!' { $$ = $1; } | 
-    '&' { $$ = $1; } | 
-    '*' { $$ = $1; } | 
-    '?' { $$ = $1; } | 
-    '#' { $$ = $1; }; 
+    '&' { $$ = $1; /* TODO: unused? */ } | 
+    '*' { $$ = $1; /* TODO: unused? */ } | 
+    '?' { $$ = $1; /* TODO: unused? */ } | 
+    '#' { $$ = $1; /* TODO: unused? */ }; 
 operand:
     '(' expression ')' { $$ = $2; FreeValorLexico($1); FreeValorLexico($3); } | 
     var_access         { $$ = $1; } | 
