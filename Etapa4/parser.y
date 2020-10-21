@@ -14,7 +14,7 @@
 
 
     char* auxScopeName = NULL;
-    char* auxLiteral = (char*) malloc(sizeof(char)*500);
+    char* auxLiteral = (char*) malloc(500);
 
     std::map<char*, SymbolTableEntry*> *tempVarMap = new std::map<char*, SymbolTableEntry*>;    // reusable map of vars
     std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;                 // reusable list of function arguments
@@ -265,16 +265,34 @@ literal:
 
 global_var: 
     TK_IDENTIFICADOR {
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
-        (*tempVarMap)[$1->tokenValue.string] = ste;
+        // add var to symbol table if not already there
+        // TODO: is it possible to have two vars of different types with the same name? Here I assume it's not possible
+        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        {
+            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+            (*tempVarMap)[$1->tokenValue.string] = ste;
+        }
+        else exit(ERR_DECLARED);
+
+        // ignore global vars in AST
         $$ = NULL; 
         FreeValorLexico($1);
+        // TODO: shall we keep freeing the lexical value? We're using it now to add the variable to the symbol table
     } |
     TK_IDENTIFICADOR '[' TK_LIT_INT ']' {
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VEC, NULL, $3->tokenValue.integer);
-        (*tempVarMap)[$1->tokenValue.string] = ste;
+        // add var to symbol table if not already there
+        // TODO: is it possible to have two vars of different types with the same name? Here I assume it's not possible
+        if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        {
+            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VEC, NULL, $3->tokenValue.integer);
+            (*tempVarMap)[$1->tokenValue.string] = ste;
+        }
+        else exit(ERR_DECLARED);
+
+        // ignore global vars in AST
         $$ = NULL; 
         FreeValorLexico($1); FreeValorLexico($2); FreeValorLexico($3); FreeValorLexico($4);
+        // TODO: shall we keep freeing the lexical value? We're using it now to add the variable to the symbol table
     };
 global_var_declaration: 
     maybe_static type global_var_list ';' {
@@ -441,22 +459,47 @@ local_var_list_iterator:
 
 local_var: 
     TK_IDENTIFICADOR {
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
-        (*tempVarMap)[$1->tokenValue.string] = ste;
+        // add var to symbol table if not already there
+        // TODO: is it possible to have two vars of different types with the same name? Here I assume it's not possible
+        // TODO: deal with vars of type string (need to update their size)
+        if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        {
+            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+            (*tempVarMap)[$1->tokenValue.string] = ste;
+        }
+        else exit(ERR_DECLARED);
+
+        // ignore unititialized var in AST
         $$ = NULL;
         FreeValorLexico($1);
     } |
     TK_IDENTIFICADOR TK_OC_LE literal {
-        /* TODO: deal with vars of type string (need to update their size) */
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
-        (*tempVarMap)[$1->tokenValue.string] = ste;
+        // add var to symbol table if not already there
+        // TODO: is it possible to have two vars of different types with the same name? Here I assume it's not possible
+        // TODO: deal with vars of type string (need to update their size)
+        if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        {
+            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+            (*tempVarMap)[$1->tokenValue.string] = ste;
+        }
+        else exit(ERR_DECLARED);
+
+        // add var_init node to AST
         $$ = create_node_var_init(create_node_var_access($1), $3);
         FreeValorLexico($2);
     } |
     TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
-        /* TODO: deal with vars of type string (need to update their size) */
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
-        (*tempVarMap)[$1->tokenValue.string] = ste;
+        // add var to symbol table if not already there
+        // TODO: is it possible to have two vars of different types with the same name? Here I assume it's not possible
+        // TODO: deal with vars of type string (need to update their size)
+        if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        {
+            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+            (*tempVarMap)[$1->tokenValue.string] = ste;
+        }
+        else exit(ERR_DECLARED);
+
+        // add var_init node to AST
         $$ = create_node_var_init(create_node_var_access($1), create_node_literal($3));
         FreeValorLexico($2);
     };
