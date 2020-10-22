@@ -161,7 +161,7 @@ init_stack:
     %empty { CreateStack(); $$ = NULL; }
 
 destroy_stack:
-    %empty { DestroyStack(); $$ = NULL; free(auxLiteral); }
+    %empty { DestroyStack(); free(auxLiteral); $$ = NULL; }
 
 
 maybe_const: 
@@ -266,13 +266,13 @@ literal:
 global_var: 
     TK_IDENTIFICADOR {
         // add var to symbol table if not already there
-        // TODO: is it possible to have two vars of different types with the same name? Here I assume it's not possible
         if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
-            (*tempVarMap)[$1->tokenValue.string] = ste;
+            char* id = strdup($1->tokenValue.string);
+            (*tempVarMap)[id] = ste;
         }
-        else exit(ERR_DECLARED);
+        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_VAR);
 
         // ignore global vars in AST
         $$ = NULL; 
@@ -281,13 +281,13 @@ global_var:
     } |
     TK_IDENTIFICADOR '[' TK_LIT_INT ']' {
         // add var to symbol table if not already there
-        // TODO: is it possible to have two vars of different types with the same name? Here I assume it's not possible
         if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VEC, NULL, $3->tokenValue.integer);
-            (*tempVarMap)[$1->tokenValue.string] = ste;
+            char* id = strdup($1->tokenValue.string);
+            (*tempVarMap)[id] = ste;
         }
-        else exit(ERR_DECLARED);
+        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_VAR);
 
         // ignore global vars in AST
         $$ = NULL; 
@@ -318,10 +318,6 @@ global_var_list:
 
 func_definition:
     func_header command_block {
-        // TODO: is it right????
-        // remove function scope from stack
-        scopeStack->pop_back();
-
         $1->n_function_declaration.firstCommand = $2;
         $$ = $1;
     };
@@ -329,9 +325,15 @@ func_definition:
 func_header:
     maybe_static type TK_IDENTIFICADOR '(' func_header_list ')' {
 
-        // create entry and add it to scope
-        SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, tempFuncArgList, 0);
-        scopeStack->back()->symbolTable[$3->tokenValue.string] = ste;
+        // add function to symbol table if not already there
+        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        {
+            // create entry and add it to scope
+            SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, tempFuncArgList, 0);
+            char* id = strdup($3->tokenValue.string);
+            scopeStack->back()->symbolTable[id] = ste;
+        }
+        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_FUNC);
 
         // free temp func arg list
         tempFuncArgList = new std::list<FuncArgument *>;
@@ -347,7 +349,8 @@ func_header_list:
     maybe_const type TK_IDENTIFICADOR func_header_list_iterator     {
 
         // create funcargument and add it to global list
-        FuncArgument* fa = CreateFuncArgument($3->tokenValue.string, IntToSymbolType($2));
+        char* id = strdup($3->tokenValue.string);
+        FuncArgument* fa = CreateFuncArgument(id, IntToSymbolType($2));
         tempFuncArgList->push_back(fa);
 
         $$ = NULL;
@@ -358,7 +361,8 @@ func_header_list_iterator:
     ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator {
 
         // create funcargument and add it to global list
-        FuncArgument* fa = CreateFuncArgument($4->tokenValue.string, IntToSymbolType($3));
+        char* id = strdup($4->tokenValue.string);
+        FuncArgument* fa = CreateFuncArgument(id, IntToSymbolType($3));
         tempFuncArgList->push_back(fa);
 
         $$ = NULL;
@@ -460,14 +464,14 @@ local_var_list_iterator:
 local_var: 
     TK_IDENTIFICADOR {
         // add var to symbol table if not already there
-        // TODO: is it possible to have two vars of different types with the same name? Here I assume it's not possible
         // TODO: deal with vars of type string (need to update their size)
         if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
-            (*tempVarMap)[$1->tokenValue.string] = ste;
+            char* id = strdup($1->tokenValue.string);
+            (*tempVarMap)[id] = ste;
         }
-        else exit(ERR_DECLARED);
+        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_VAR);
 
         // ignore unititialized var in AST
         $$ = NULL;
@@ -475,14 +479,14 @@ local_var:
     } |
     TK_IDENTIFICADOR TK_OC_LE literal {
         // add var to symbol table if not already there
-        // TODO: is it possible to have two vars of different types with the same name? Here I assume it's not possible
         // TODO: deal with vars of type string (need to update their size)
         if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
-            (*tempVarMap)[$1->tokenValue.string] = ste;
+            char* id = strdup($1->tokenValue.string);
+            (*tempVarMap)[id] = ste;
         }
-        else exit(ERR_DECLARED);
+        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_VAR);
 
         // add var_init node to AST
         $$ = create_node_var_init(create_node_var_access($1), $3);
@@ -490,14 +494,14 @@ local_var:
     } |
     TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
         // add var to symbol table if not already there
-        // TODO: is it possible to have two vars of different types with the same name? Here I assume it's not possible
         // TODO: deal with vars of type string (need to update their size)
         if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
-            (*tempVarMap)[$1->tokenValue.string] = ste;
+            char* id = strdup($1->tokenValue.string);
+            (*tempVarMap)[id] = ste;
         }
-        else exit(ERR_DECLARED);
+        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_VAR);
 
         // add var_init node to AST
         $$ = create_node_var_init(create_node_var_access($1), create_node_literal($3));
@@ -610,6 +614,27 @@ operand:
 %%
 // Referencia para precedencia e associatividade dos operadores nas expressoes: https://en.cppreference.com/w/cpp/language/operator_precedence
 
+void throw_error(int err_code, int line, char* identifier, TableEntryNature nature) {
+
+    printf("[ERROR, LINE %d] ", line);
+
+    switch(err_code) {
+        case ERR_DECLARED:
+
+            char* nat;
+            switch(nature) {
+                case TABLE_NATURE_VAR: nat = "Variable";
+                case TABLE_NATURE_VEC: nat = "Vector";
+                case TABLE_NATURE_FUNC: nat = "Function";
+                default: "";
+            }
+
+            printf("%s %s was already declared.\n", nat, identifier);
+        default:
+            printf("Unidentified error.");
+    }
+
+}
 
 Node* last_command_of_chain(Node* n) {
     Node* temp = n->sequenceNode;
