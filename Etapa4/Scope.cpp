@@ -168,3 +168,16 @@ SymbolType IntToSymbolType(int type)
         default:    return SYMBOL_TYPE_INDEF;
     }
 }
+
+SymbolType NodeTypeToSymbolType(NodeType type)
+{
+    switch(type)
+    {
+        case NODE_TYPE_INT:     return SYMBOL_TYPE_INTEGER;
+        case NODE_TYPE_FLOAT:   return SYMBOL_TYPE_FLOAT;
+        case NODE_TYPE_CHAR:    return SYMBOL_TYPE_CHAR;
+        case NODE_TYPE_BOOL:    return SYMBOL_TYPE_BOOL;
+        case NODE_TYPE_STRING:  return SYMBOL_TYPE_STRING;
+        default:                return SYMBOL_TYPE_INDEF;
+    }
+}

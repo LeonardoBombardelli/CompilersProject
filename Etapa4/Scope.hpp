@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include "lexicalvalue.hpp"
 #include "errors.hpp"
+#include "AST.hpp"
 
 #include <map>
 #include <list>
@@ -86,5 +87,6 @@ SymbolTableEntry* GetFirstOccourence(char *symbol);
 // aux
 SymbolType LiteralTypeToSymbolType(LiteralType type);
 SymbolType IntToSymbolType(int type);
+SymbolType NodeTypeToSymbolType(NodeType type);
 
 #endif

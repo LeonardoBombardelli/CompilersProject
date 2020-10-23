@@ -16,8 +16,10 @@
     char* auxScopeName = NULL;
     char* auxLiteral = (char*) malloc(500);
 
-    std::map<char*, SymbolTableEntry*> *tempVarMap = new std::map<char*, SymbolTableEntry*>;    // reusable map of vars
-    std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;                 // reusable list of function arguments
+    std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>; // aux map to check type when initializing vars on declaration
+
+    std::map<char*, SymbolTableEntry*> *tempVarMap = new std::map<char*, SymbolTableEntry*>;     // reusable map of vars
+    std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;                  // reusable list of function arguments
 %}
 
 %union 
@@ -386,7 +388,7 @@ command_block:
 
 cmd_block_init_scope:
     %empty {
-        /* create new scope and push it to scopeStack */
+        /* create new scope with current function's name and push it to scopeStack */
         Scope* newScope = CreateNewScope(auxScopeName);
         scopeStack.push_back(newScope);
     }
@@ -419,6 +421,14 @@ sequence_simple_command:
 local_var_declaration:
     maybe_static maybe_const type local_var_list {
 
+        // check if all inits obey the declared type
+        std::map<ValorLexico*, SymbolType>::iterator it2;
+        for(it2 = auxInitTypeMap->begin(); it2 != auxInitTypeMap->end(); ++it2)
+        {
+            if (it2->second != IntToSymbolType($3))
+                throw_error(ERR_WRONG_TYPE, it2->first->line_number, it2->first->tokenValue.string, TABLE_NATURE_VAR);
+        }
+
         // set type to all vars of list, and insert them in table
         std::map<char*, SymbolTableEntry*>::iterator it;
         for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
@@ -427,8 +437,9 @@ local_var_declaration:
             scopeStack->back()->symbolTable[it->first] = it->second;
         }
 
-        // free temp var map
+        // free temp var map and aux init type map
         tempVarMap = new std::map<char*, SymbolTableEntry*>;
+        auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;
 
         $$ = $4;
     };
@@ -464,7 +475,6 @@ local_var_list_iterator:
 local_var: 
     TK_IDENTIFICADOR {
         // add var to symbol table if not already there
-        // TODO: deal with vars of type string (need to update their size)
         if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
@@ -479,10 +489,17 @@ local_var:
     } |
     TK_IDENTIFICADOR TK_OC_LE literal {
         // add var to symbol table if not already there
-        // TODO: deal with vars of type string (need to update their size)
         if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+            
+            // if literal is of type string, update ste's size accordingly
+            if ($3->nodeType == NODE_TYPE_STRING)
+                ste->size = (int) strlen($3->node_literal->literal->tokenValue.string);
+
+            // add entry in aux map to check type of initialized vars
+            (*auxInitTypeMap)[$1] = NodeTypeToSymbolType($3->nodeType);
+
             char* id = strdup($1->tokenValue.string);
             (*tempVarMap)[id] = ste;
         }
@@ -494,10 +511,29 @@ local_var:
     } |
     TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
         // add var to symbol table if not already there
-        // TODO: deal with vars of type string (need to update their size)
         if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+            
+            char* s3_name = $3->tokenValue.string;
+
+            SymbolTableEntry* ste2 = GetFirstOcurrence(s3_name);
+            // if var s3_name doesn't exist, throw ERR_UNDECLARED
+            if (ste2 == NULL) 
+                throw_error(ERR_UNDECLARED, $3->line_number, s3_name, TABLE_NATURE_VAR);
+            // if s3_name is a function or a vector, throw ERR_FUNCTION or ERR_VECTOR
+            if (ste2->entryNature == TABLE_NATURE_FUNC)
+                throw_error(ERR_FUNCTION, $3->line_number, s3_name, TABLE_NATURE_FUNC);
+            if (ste2->entryNature == TABLE_NATURE_VEC)
+                throw_error(ERR_VECTOR, $3->line_number, s3_name, TABLE_NATURE_VEC);
+
+            // if $3 is of type string, update ste's size accordingly
+            if (ste2->symbolType == SYMBOL_TYPE_STRING)
+                ste->size = ste2->size;
+
+            // add entry in aux map to check type of initialized vars
+            (*auxInitTypeMap)[$1] = LiteralTypeToSymbolType($3->literalType);
+            
             char* id = strdup($1->tokenValue.string);
             (*tempVarMap)[id] = ste;
         }
@@ -509,16 +545,106 @@ local_var:
     };
 
 var_access:
-    TK_IDENTIFICADOR                    { $$ = create_node_var_access($1); } | 
-    TK_IDENTIFICADOR '[' expression ']' { $$ = create_node_vector_access(create_node_var_access($1), $3); FreeValorLexico($2); FreeValorLexico($4); };
+    TK_IDENTIFICADOR {
+    
+        char* id = $1->tokenValue.string;
+        SymbolTableEntry* ste = GetFirstOccourence(id);
+
+        // check if var was declared
+        if (ste == NULL)
+            throw_error(ERR_UNDECLARED, $1->line_number, id, TABLE_NATURE_VAR);
+        // check if symbol's nature is not function or vector
+        if (ste->entryNature == TABLE_NATURE_FUNC)
+            throw_error(ERR_FUNCTION, $1->line_number, id, TABLE_NATURE_FUNC);
+        if (ste->entryNature == TABLE_NATURE_VEC)
+            throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
+
+        $$ = create_node_var_access($1);
+    } | 
+    TK_IDENTIFICADOR '[' expression ']' {
+
+        char* id = $1->tokenValue.string;
+        SymbolTableEntry* ste = GetFirstOccourence(id);
+
+        // check if var was declared
+        if (ste == NULL)
+            throw_error(ERR_UNDECLARED, $1->line_number, id, TABLE_NATURE_VEC);
+        // check if symbol's nature is not function or vector
+        if (ste->entryNature == TABLE_NATURE_FUNC)
+            throw_error(ERR_FUNCTION, $1->line_number, id, TABLE_NATURE_FUNC);
+        if (ste->entryNature == TABLE_NATURE_VAR)
+            throw_error(ERR_VARIABLE, $1->line_number, id, TABLE_NATURE_VAR);
+
+        // check if expression is not of type string or char
+        if ($3->nodeType == NODE_TYPE_STRING)
+            throw_error(ERR_STRING_TO_X, $1->line_number, id, TABLE_NATURE_VEC);
+        if ($3->nodeType == NODE_TYPE_CHAR)
+            throw_error(ERR_CHAR_TO_X, $1->line_number, id, TABLE_NATURE_VEC);
+
+        $$ = create_node_vector_access(create_node_var_access($1), $3);
+        FreeValorLexico($2); FreeValorLexico($4);
+    };
 
 attribution_command:
-    var_access '=' expression { $$ = create_node_var_attr($1, $3); FreeValorLexico($2); };
+    var_access '=' expression {
+
+        // TODO: test strings. If expression is sum of strings or sum of sum of ......
+        // TODO: deal with implicit conversion
+
+        if ($1->nodeCategory == NODE_VAR_ACCESS)
+        {
+            char* id = $1->n_var_access.identifier;
+            SymbolTableEntry* ste = GetFirstOccourence(id);
+
+            // check if expression and var/vector have the same type
+            if (ste->symbolType != NodeTypeToSymbolType($3->nodeType))
+                throw_error(ERR_WRONG_TYPE, $1->line_number, id, TABLE_NATURE_VAR);
+        }
+        else if ($1->nodeCategory == NODE_VECTOR_ACCESS)
+        {
+            char* id = $1->n_vector_access->var->n_var_access.identifier;
+            SymbolTableEntry* ste = GetFirstOccourence(id);
+
+            // check if expression and var/vector have the same type
+            if (ste->symbolType != NodeTypeToSymbolType($3->nodeType))
+                throw_error(ERR_WRONG_TYPE, $1->line_number, id, TABLE_NATURE_VEC);
+        }
+
+        $$ = create_node_var_attr($1, $3);
+        FreeValorLexico($2);
+    };
 
 io_command: 
-    TK_PR_INPUT TK_IDENTIFICADOR    { $$ = create_node_input(create_node_var_access($2));  } | 
-    TK_PR_OUTPUT TK_IDENTIFICADOR   { $$ = create_node_output(create_node_var_access($2)); } | 
-    TK_PR_OUTPUT literal            { $$ = create_node_output($2); } ;
+    TK_PR_INPUT TK_IDENTIFICADOR {
+
+        char* id = $2->tokenValue.string;
+        SymbolTableEntry* ste = GetFirstOccourence(id);
+
+        // check if id is of type int or float
+        if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
+            throw_error(ERR_WRONG_PAR_INPUT, $2->line_number, id, TABLE_NATURE_VAR);
+
+        $$ = create_node_input(create_node_var_access($2));
+    } | 
+    TK_PR_OUTPUT TK_IDENTIFICADOR {
+
+        char* id = $2->tokenValue.string;
+        SymbolTableEntry* ste = GetFirstOccourence(id);
+
+        // check if id is of type int or float
+        if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
+            throw_error(ERR_WRONG_PAR_OUTPUT, $2->line_number, id, TABLE_NATURE_VAR);
+
+        $$ = create_node_output(create_node_var_access($2));
+    } | 
+    TK_PR_OUTPUT literal {
+
+        // check if id is of type int or float
+        if ($2->nodeType != NODE_TYPE_INT && $2->nodeType != NODE_TYPE_FLOAT)
+            throw_error(ERR_WRONG_PAR_OUTPUT, $2->line_number, NULL, TABLE_NATURE_VAR);
+
+        $$ = create_node_output($2);
+    } ;
 
 call_func_command:
     TK_IDENTIFICADOR '(' func_parameters_list ')' { /* take nodeType from symbol table */ $$ = create_node_function_call($1, $3); FreeValorLexico($2); FreeValorLexico($4);   } | 
@@ -528,8 +654,24 @@ func_parameters_list:
     func_parameters_list ',' expression  { last_command_of_chain($1)->sequenceNode = $3; $$ = $1; FreeValorLexico($2); };
 
 shift_command:
-    var_access TK_OC_SL TK_LIT_INT { $$ = create_node_shift_left($1, create_node_literal($3));  FreeValorLexico($2); } |
-    var_access TK_OC_SR TK_LIT_INT { $$ = create_node_shift_right($1, create_node_literal($3)); FreeValorLexico($2); };
+    var_access TK_OC_SL TK_LIT_INT {
+
+        // check if shift number greater than 16
+        if ($3->tokenValue.int > 16)
+            throw_error(ERR_WRONG_PAR_SHIFT, $2->line_number, NULL, TABLE_NATURE_LIT);
+
+        $$ = create_node_shift_left($1, create_node_literal($3));
+        FreeValorLexico($2);
+    } |
+    var_access TK_OC_SR TK_LIT_INT {
+
+        // check if shift number greater than 16
+        if ($3->tokenValue.int > 16)
+            throw_error(ERR_WRONG_PAR_SHIFT, $2->line_number, NULL, TABLE_NATURE_LIT);
+
+        $$ = create_node_shift_right($1, create_node_literal($3));
+        FreeValorLexico($2);
+    };
 
 return_command:
     TK_PR_RETURN expression { $$ = create_node_return($2); };
@@ -620,7 +762,6 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
 
     switch(err_code) {
         case ERR_DECLARED:
-
             char* nat;
             switch(nature) {
                 case TABLE_NATURE_VAR: nat = "Variable";
@@ -628,8 +769,12 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
                 case TABLE_NATURE_FUNC: nat = "Function";
                 default: "";
             }
-
             printf("%s %s was already declared.\n", nat, identifier);
+            free(nat);
+
+        case ERR_UNDECLARED:
+            // TODO
+
         default:
             printf("Unidentified error.");
     }
