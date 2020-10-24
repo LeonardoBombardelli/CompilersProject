@@ -675,21 +675,18 @@ shift_command:
 
 return_command:
     TK_PR_RETURN expression { 
-        // TODO: Verificar se a função, definida no escopo anterior, retorna o mesmo tipo
+        // TODO: maybe use a global var to store current function's type -> avoid need to access second-to-top element of scopeStack
+
         std::list<Scope *>::iterator it = scopeStack->begin();
         SymbolTableEntry *ste;
 
-        std::advance(it, scopeStack->size() - 1); // TODO: Debug to check if it's right later
+        // TODO: Debug to check if it's right later
+        std::advance(it, scopeStack->size() - 1);
 
         ste = it->symbolTable[auxScopeName];
 
-        if( !ImplicitConversionPossible(
-            NodeTypeToSymbolType($2->nodeType),
-            ste->symbolType
-            )
-        )
+        if ( !ImplicitConversionPossible( NodeTypeToSymbolType($2->nodeType), ste->symbolType) )
             throw_error(ERR_WRONG_PAR_RETURN, $1->line_number, auxScopeName, TABLE_NATURE_FUNC);
-
 
         $$ = create_node_return($2); 
     
@@ -705,9 +702,14 @@ conditional_flux_control:
         
         SymbolType st = NodeTypeToSymbolType($3->nodeType);
 
+        // if expression is not of type compatible with bool, throw error
         if( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
-            if(st == SYMBOL_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
-            if(st == SYMBOL_TYPE_STRING) throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
+        {
+            if(st == SYMBOL_TYPE_CHAR)
+                throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
+            if(st == SYMBOL_TYPE_STRING)
+                throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
+        }
 
         $$ = create_node_if($3, $5, $6); 
         FreeValorLexico($2); FreeValorLexico($4); 
@@ -721,9 +723,14 @@ for_flux_control:
 
         SymbolType st = NodeTypeToSymbolType($5->nodeType);
 
-        if( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
-            if(st == SYMBOL_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
-            if(st == SYMBOL_TYPE_STRING) throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
+        // if expression is not of type compatible with bool, throw error
+        if ( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
+        {
+            if (st == SYMBOL_TYPE_CHAR)
+                throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
+            if (st == SYMBOL_TYPE_STRING)
+                throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
+        }
 
         $$ = create_node_for_loop($3, $5, $7, $9);
         FreeValorLexico($2); FreeValorLexico($4); FreeValorLexico($6); FreeValorLexico($8);
@@ -733,10 +740,14 @@ while_flux_control:
 
         SymbolType st = NodeTypeToSymbolType($3->nodeType);
 
-        if( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
-            if(st == SYMBOL_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
-            if(st == SYMBOL_TYPE_STRING) throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
-
+        // if expression is not of type compatible with bool, throw error
+        if ( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
+        {
+            if(st == SYMBOL_TYPE_CHAR)
+                throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
+            if(st == SYMBOL_TYPE_STRING)
+                throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
+        }
 
         $$ = create_node_while_loop($3, $6);
         FreeValorLexico($2); FreeValorLexico($4);
@@ -819,8 +830,12 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
         case ERR_VARIABLE:          printf("ERR_VARIABLE: Variable %s has been used as vector or function.\n", identifier);
         case ERR_VECTOR:            printf("ERR_VECTOR: Vector %s has been used as variable or function.\n", identifier);
         case ERR_FUNCTION:          printf("ERR_FUNCTION: Function %s has been used as variable or vector.\n", identifier);
-        case ERR_STRING_TO_X:       printf("ERR_STRING_TO_X: String %s can not be implicitly converted.\n", identifier);
-        case ERR_CHAR_TO_X:         printf("ERR_CHAR_TO_X: Char %s can not be implicitly converted.\n");
+        case ERR_STRING_TO_X:
+            if (identifier == NULL) printf("ERR_STRING_TO_X: String can not be implicitly converted.\n");
+            else                    printf("ERR_STRING_TO_X: String %s can not be implicitly converted.\n", identifier);
+        case ERR_CHAR_TO_X:
+            if (identifier == NULL) printf("ERR_CHAR_TO_X: Char can not be implicitly converted.\n");
+            else                    printf("ERR_CHAR_TO_X: Char %s can not be implicitly converted.\n", identifier);
         case ERR_WRONG_PAR_INPUT:   printf("ERR_WRONG_PAR_INPUT: Input command can only receive an integer or float variable.\n");
         case ERR_WRONG_PAR_OUTPUT:  printf("ERR_WRONG_PAR_OUTPUT: Output command can only receive an int/float literals or variables.\n");
         case ERR_WRONG_PAR_SHIFT:   printf("ERR_WRONG_PAR_SHIFT: Shift command can only receive an integer less than 16.\n");
