@@ -674,7 +674,26 @@ shift_command:
     };
 
 return_command:
-    TK_PR_RETURN expression { $$ = create_node_return($2); };
+    TK_PR_RETURN expression { 
+        // TODO: Verificar se a função, definida no escopo anterior, retorna o mesmo tipo
+        std::list<Scope *>::iterator it = scopeStack->begin();
+        SymbolTableEntry *ste;
+
+        std::advance(it, scopeStack->size() - 1); // TODO: Debug to check if it's right later
+
+        ste = it->symbolTable[auxScopeName];
+
+        if( !ImplicitConversionPossible(
+            NodeTypeToSymbolType($2->nodeType),
+            ste->symbolType
+            )
+        )
+            throw_error(ERR_WRONG_PAR_RETURN, $1->line_number, auxScopeName, TABLE_NATURE_FUNC);
+
+
+        $$ = create_node_return($2); 
+    
+    };
 
 flux_control_command: 
     conditional_flux_control { $$ = $1; } | 
@@ -682,20 +701,29 @@ flux_control_command:
     while_flux_control       { $$ = $1; };
 
 conditional_flux_control: 
-    TK_PR_IF '(' expression ')' command_block maybe_else { $$ = create_node_if($3, $5, $6); FreeValorLexico($2); FreeValorLexico($4); };
+    TK_PR_IF '(' expression ')' command_block maybe_else { 
+        
+        // TODO: Expression must result in a Int-compatible result
+        $$ = create_node_if($3, $5, $6); 
+        FreeValorLexico($2); FreeValorLexico($4); 
+        };
 maybe_else: 
     TK_PR_ELSE command_block { $$ = $2;   } | 
     %empty                   { $$ = NULL; };
 
 for_flux_control: 
     TK_PR_FOR '(' attribution_command ':' expression ':' attribution_command ')' command_block {
+
+        // TODO: Expression must result in a Int-compatible result
         $$ = create_node_for_loop($3, $5, $7, $9);
         FreeValorLexico($2); FreeValorLexico($4); FreeValorLexico($6); FreeValorLexico($8);
     };
 while_flux_control:
     TK_PR_WHILE '(' expression ')' TK_PR_DO command_block {
+
+        // TODO: Expression must result in a Int-compatible result
         $$ = create_node_while_loop($3, $6);
-         FreeValorLexico($2); FreeValorLexico($4);
+        FreeValorLexico($2); FreeValorLexico($4);
     };
 
 expression: 

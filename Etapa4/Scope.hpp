@@ -88,5 +88,6 @@ SymbolTableEntry* GetFirstOccourence(char *symbol);
 SymbolType LiteralTypeToSymbolType(LiteralType type);
 SymbolType IntToSymbolType(int type);
 SymbolType NodeTypeToSymbolType(NodeType type);
+bool ImplicitConversionPossible(SymbolType symbolType, SymbolType symbolType2);
 
 #endif

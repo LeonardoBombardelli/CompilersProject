@@ -181,3 +181,24 @@ SymbolType NodeTypeToSymbolType(NodeType type)
         default:                return SYMBOL_TYPE_INDEF;
     }
 }
+
+bool ImplicitConversionPossible(SymbolType symbolType, SymbolType symbolType2)
+{
+    switch (symbolType)
+    {
+    case (SYMBOL_TYPE_INTEGER):
+    case (SYMBOL_TYPE_FLOAT):
+    case (SYMBOL_TYPE_BOOL):
+        if(symbolType2 == SYMBOL_TYPE_INTEGER || 
+        symbolType2 == SYMBOL_TYPE_FLOAT ||
+        symbolType2 == SYMBOL_TYPE_BOOL)
+            return true;
+
+        else return false;
+        break;
+
+    default:
+        return false;
+        break;
+    }
+}
