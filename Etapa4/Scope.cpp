@@ -138,6 +138,7 @@ SymbolTableEntry* GetFirstOccurrence(char *symbol)
             entryToReturn = (*it)->symbolTable[symbol];
             found = true;
         }
+        --it;
     }
 
     return entryToReturn;
@@ -179,6 +180,19 @@ SymbolType NodeTypeToSymbolType(NodeType type)
         case NODE_TYPE_BOOL:    return SYMBOL_TYPE_BOOL;
         case NODE_TYPE_STRING:  return SYMBOL_TYPE_STRING;
         default:                return SYMBOL_TYPE_INDEF;
+    }
+}
+
+NodeType SymbolTypeToNodeType(SymbolType type)
+{
+    switch(type)
+    {
+        case SYMBOL_TYPE_INTEGER: return NODE_TYPE_INT;
+        case SYMBOL_TYPE_FLOAT:   return NODE_TYPE_FLOAT;
+        case SYMBOL_TYPE_CHAR:    return NODE_TYPE_CHAR;
+        case SYMBOL_TYPE_BOOL:    return NODE_TYPE_BOOL;
+        case SYMBOL_TYPE_STRING:  return NODE_TYPE_STRING;
+        default:                  return NODE_TYPE_INDEF;
     }
 }
 
