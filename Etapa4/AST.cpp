@@ -22,18 +22,20 @@ Node* create_node_function_declaration (ValorLexico* identifier, Node* firstComm
     return newNode;
 }
 
-Node* create_node_var_access (ValorLexico* identifier)
+Node* create_node_var_access (ValorLexico* identifier, NodeType nodeType)
 {
     Node* newNode = CreateGenericNode(NODE_VAR_ACCESS);
+    newNode->nodeType = nodeType;
 
     newNode->n_var_access.identifier = identifier;
 
     return newNode;
 }
 
-Node* create_node_vector_access (Node* var, Node* index)
+Node* create_node_vector_access (Node* var, Node* index, NodeType nodeType)
 {
     Node* newNode = CreateGenericNode(NODE_VECTOR_ACCESS);
+    newNode->nodeType = nodeType;
 
     newNode->n_vector_access.var = var;
     newNode->n_vector_access.index = index;

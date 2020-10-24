@@ -174,8 +174,8 @@ typedef struct node {
 Node* CreateGenericNode(NodeCategory category);
 
 Node* create_node_function_declaration (ValorLexico* identifier, Node* firstCommand);
-Node* create_node_var_access           (ValorLexico* identifier);
-Node* create_node_vector_access        (Node* var, Node* index);
+Node* create_node_var_access           (ValorLexico* identifier, NodeType nodeType);
+Node* create_node_vector_access        (Node* var, Node* index, NodeType nodeType);
 Node* create_node_var_attr             (Node* identifier, Node* expression);
 Node* create_node_var_init             (Node* identifier, Node* expression);
 Node* create_node_input                (Node* input);

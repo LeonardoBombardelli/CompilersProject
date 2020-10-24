@@ -14,6 +14,7 @@
 
 
     char* auxScopeName = NULL;
+    SymbolType auxCurrentFuncType = SYMBOL_TYPE_INDEF;
     char* auxLiteral = (char*) malloc(500);
 
     std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>; // aux map to check type when initializing vars on declaration
@@ -340,8 +341,9 @@ func_header:
         // free temp func arg list
         tempFuncArgList = new std::list<FuncArgument *>;
 
-        // update aux var with new scope name
+        // update aux vars with new scope name and current function's type
         auxScopeName = strdup($3->tokenValue.string);
+        auxCurrentFuncType = IntToSymbolType($2);
 
         $$ = create_node_function_declaration($3, NULL);
         FreeValorLexico($4); FreeValorLexico($6);
@@ -559,7 +561,7 @@ var_access:
         if (ste->entryNature == TABLE_NATURE_VEC)
             throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
 
-        $$ = create_node_var_access($1);
+        $$ = create_node_var_access($1, SymbolTypeToNodeType(ste->symbolType));
     } | 
     TK_IDENTIFICADOR '[' expression ']' {
 
@@ -581,7 +583,7 @@ var_access:
         if ($3->nodeType == NODE_TYPE_CHAR)
             throw_error(ERR_CHAR_TO_X, $1->line_number, id, TABLE_NATURE_VEC);
 
-        $$ = create_node_vector_access(create_node_var_access($1), $3);
+        $$ = create_node_vector_access(create_node_var_access($1), $3, SymbolTypeToNodeType(ste->symbolType));
         FreeValorLexico($2); FreeValorLexico($4);
     };
 
@@ -589,15 +591,14 @@ attribution_command:
     var_access '=' expression {
 
         // TODO: test strings. If expression is sum of strings or sum of sum of ......
-        // TODO: deal with implicit conversion
 
         if ($1->nodeCategory == NODE_VAR_ACCESS)
         {
             char* id = $1->n_var_access.identifier;
             SymbolTableEntry* ste = GetFirstOccurrence(id);
 
-            // check if expression and var/vector have the same type
-            if (ste->symbolType != NodeTypeToSymbolType($3->nodeType))
+            // check if expression and var/vector have compatible types
+            if ( !ImplicitConversionPossible(ste->symbolType, NodeTypeToSymbolType($3->nodeType)) )
                 throw_error(ERR_WRONG_TYPE, $1->line_number, id, TABLE_NATURE_VAR);
         }
         else if ($1->nodeCategory == NODE_VECTOR_ACCESS)
@@ -605,8 +606,8 @@ attribution_command:
             char* id = $1->n_vector_access->var->n_var_access.identifier;
             SymbolTableEntry* ste = GetFirstOccurrence(id);
 
-            // check if expression and var/vector have the same type
-            if (ste->symbolType != NodeTypeToSymbolType($3->nodeType))
+            // check if expression and var/vector have compatible types
+            if ( !ImplicitConversionPossible(ste->symbolType, NodeTypeToSymbolType($3->nodeType)) )
                 throw_error(ERR_WRONG_TYPE, $1->line_number, id, TABLE_NATURE_VEC);
         }
 
@@ -738,17 +739,9 @@ shift_command:
 
 return_command:
     TK_PR_RETURN expression { 
-        // TODO: maybe use a global var to store current function's type -> avoid need to access second-to-top element of scopeStack
 
-        std::list<Scope *>::iterator it = scopeStack->begin();
-        SymbolTableEntry *ste;
-
-        // TODO: Debug to check if it's right later
-        std::advance(it, scopeStack->size() - 1);
-
-        ste = it->symbolTable[auxScopeName];
-
-        if ( !ImplicitConversionPossible( NodeTypeToSymbolType($2->nodeType), ste->symbolType) )
+        // check if expression has type different than current function's
+        if ( !ImplicitConversionPossible( NodeTypeToSymbolType($2->nodeType), auxCurrentFuncType) )
             throw_error(ERR_WRONG_PAR_RETURN, $1->line_number, auxScopeName, TABLE_NATURE_FUNC);
 
         $$ = create_node_return($2); 
@@ -817,54 +810,67 @@ while_flux_control:
     };
 
 expression: 
-    exp_log_or '?' expression ':' expression    { $$ = create_node_ternary_operation($1, $3, $5); FreeValorLexico($2); FreeValorLexico($4); } | 
+    exp_log_or '?' expression ':' expression    {
+
+        // check if first expression is not string or char
+        if ($1->nodeType == NODE_TYPE_STRING)
+            throw_error(ERR_STRING_TO_X, $2->line_number, NULL, TABLE_NATURE_VAR);
+        if ($1->nodeType == NODE_TYPE_CHAR)
+            throw_error(ERR_CHAR_TO_X, $2->line_number, NULL, TABLE_NATURE_VAR);
+
+        $$ = create_node_ternary_operation($1, $3, $5, InferType($3->nodeType, $5->nodeType, $2->line_number));
+        FreeValorLexico($2); FreeValorLexico($4);
+    } | 
     exp_log_or                                  { $$ = $1; };
 exp_log_or: 
-    exp_log_or TK_OC_OR exp_log_and             { /* TODO */ $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_log_or TK_OC_OR exp_log_and             { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_log_and                                 { $$ = $1; };
 exp_log_and: 
-    exp_log_and TK_OC_AND exp_bit_or            { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_log_and TK_OC_AND exp_bit_or            { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_bit_or                                  { $$ = $1; };
 exp_bit_or: 
-    exp_bit_or '|' exp_bit_and                  { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_bit_or '|' exp_bit_and                  { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_bit_and                                 { $$ = $1; };
 exp_bit_and: 
-    exp_bit_and '&' exp_relat_1                 { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_bit_and '&' exp_relat_1                 { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_relat_1                                 { $$ = $1; };
 exp_relat_1: 
-    exp_relat_1 TK_OC_EQ exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3); } | 
-    exp_relat_1 TK_OC_NE exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_relat_1 TK_OC_EQ exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_relat_1 TK_OC_NE exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_relat_2                                 { $$ = $1; };
 exp_relat_2: 
-    exp_relat_2 TK_OC_LE exp_sum                { $$ = create_node_binary_operation($2, $1, $3); } | 
-    exp_relat_2 TK_OC_GE exp_sum                { $$ = create_node_binary_operation($2, $1, $3); } | 
-    exp_relat_2 '<' exp_sum                     { $$ = create_node_binary_operation($2, $1, $3); } | 
-    exp_relat_2 '>' exp_sum                     { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_relat_2 TK_OC_LE exp_sum                { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_relat_2 TK_OC_GE exp_sum                { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_relat_2 '<' exp_sum                     { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_relat_2 '>' exp_sum                     { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_sum                                     { $$ = $1; };
 exp_sum:
-    exp_sum '+' exp_mult                        { $$ = create_node_binary_operation($2, $1, $3); } | 
-    exp_sum '-' exp_mult                        { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_sum '+' exp_mult                        { $$ = create_node_binary_operation($2, $1, $3, InferTypePlus($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_sum '-' exp_mult                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_mult                                    { $$ = $1; };
 exp_mult: 
-    exp_mult '*' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3); } | 
-    exp_mult '/' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3); } | 
-    exp_mult '%' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_mult '*' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_mult '/' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_mult '%' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_pow                                     { $$ = $1; };
 exp_pow: 
-    exp_pow '^' unary_exp                       { $$ = create_node_binary_operation($2, $1, $3); } | 
+    exp_pow '^' unary_exp                       { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     unary_exp                                   { $$ = $1; };
 
 unary_exp: 
-    unary_op unary_exp  { $$ = create_node_unary_operation($1, $2, $2->nodeType); } | 
+    unary_op unary_exp  { $$ = create_node_unary_operation($1, $2, InferType($2->nodeType, NODE_TYPE_BOOL, $1->line_number)); } | 
     operand             { $$ = $1; };
 unary_op: 
     '+' { $$ = $1; } | 
     '-' { $$ = $1; } | 
-    '!' { $$ = $1; } | 
-    '&' { $$ = $1; /* TODO: unused? */ } | 
-    '*' { $$ = $1; /* TODO: unused? */ } | 
-    '?' { $$ = $1; /* TODO: unused? */ } | 
-    '#' { $$ = $1; /* TODO: unused? */ }; 
+    '!' { $$ = $1; 
+    /* these unary operations will not be used in the language
+    '&' { $$ = $1; } | 
+    '*' { $$ = $1; } | 
+    '?' { $$ = $1; } | 
+    '#' { $$ = $1; }; */
+    }; 
+
 operand:
     '(' expression ')' { $$ = $2; FreeValorLexico($1); FreeValorLexico($3); } | 
     var_access         { $$ = $1; } | 
@@ -906,7 +912,31 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
     }
 
     free(nat);
+    exit(err_code);
 
+}
+
+NodeType InferTypePlus(NodeType t1, NodeType t2, int line)
+{
+    if (t1 == NODE_TYPE_STRING && t2 == NODE_TYPE_STRING)
+        return NODE_TYPE_STRING;
+
+    return InferType(t1, t2, line);
+}
+
+NodeType InferType(NodeType t1, NodeType t2, int line)
+{
+    // if any of the types is not int/float/bool
+    if (t1 == NODE_TYPE_STRING || t2 == NODE_TYPE_STRING)
+        throw_error(ERR_STRING_TO_X, line, NULL, TABLE_NATURE_VAR);
+    if (t1 == NODE_TYPE_CHAR || t2 == NODE_TYPE_CHAR)
+        throw_error(ERR_CHAR_TO_X, line, NULL, TABLE_NATURE_VAR);
+    
+    if (t1 == NODE_TYPE_FLOAT || t2 == NODE_TYPE_FLOAT)
+        return NODE_TYPE_FLOAT;
+    if (t1 == NODE_TYPE_INT || t2 == NODE_TYPE_INT)
+        return NODE_TYPE_INT;
+    else return NODE_TYPE_BOOL;
 }
 
 Node* last_command_of_chain(Node* n) {
