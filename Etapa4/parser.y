@@ -703,7 +703,12 @@ flux_control_command:
 conditional_flux_control: 
     TK_PR_IF '(' expression ')' command_block maybe_else { 
         
-        // TODO: Expression must result in a Int-compatible result
+        SymbolType st = NodeTypeToSymbolType($3->nodeType);
+
+        if( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
+            if(st == SYMBOL_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
+            if(st == SYMBOL_TYPE_STRING) throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
+
         $$ = create_node_if($3, $5, $6); 
         FreeValorLexico($2); FreeValorLexico($4); 
         };
@@ -714,14 +719,25 @@ maybe_else:
 for_flux_control: 
     TK_PR_FOR '(' attribution_command ':' expression ':' attribution_command ')' command_block {
 
-        // TODO: Expression must result in a Int-compatible result
+        SymbolType st = NodeTypeToSymbolType($5->nodeType);
+
+        if( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
+            if(st == SYMBOL_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
+            if(st == SYMBOL_TYPE_STRING) throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
+
         $$ = create_node_for_loop($3, $5, $7, $9);
         FreeValorLexico($2); FreeValorLexico($4); FreeValorLexico($6); FreeValorLexico($8);
     };
 while_flux_control:
     TK_PR_WHILE '(' expression ')' TK_PR_DO command_block {
 
-        // TODO: Expression must result in a Int-compatible result
+        SymbolType st = NodeTypeToSymbolType($3->nodeType);
+
+        if( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
+            if(st == SYMBOL_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
+            if(st == SYMBOL_TYPE_STRING) throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC); // TODO: Decide identifier to return here
+
+
         $$ = create_node_while_loop($3, $6);
         FreeValorLexico($2); FreeValorLexico($4);
     };
