@@ -186,9 +186,9 @@ bool ImplicitConversionPossible(SymbolType symbolType, SymbolType symbolType2)
 {
     switch (symbolType)
     {
-    case (SYMBOL_TYPE_INTEGER):
-    case (SYMBOL_TYPE_FLOAT):
-    case (SYMBOL_TYPE_BOOL):
+    case SYMBOL_TYPE_INTEGER:
+    case SYMBOL_TYPE_FLOAT:
+    case SYMBOL_TYPE_BOOL:
         if(symbolType2 == SYMBOL_TYPE_INTEGER || 
         symbolType2 == SYMBOL_TYPE_FLOAT ||
         symbolType2 == SYMBOL_TYPE_BOOL)
@@ -196,6 +196,13 @@ bool ImplicitConversionPossible(SymbolType symbolType, SymbolType symbolType2)
 
         else return false;
         break;
+    case SYMBOL_TYPE_CHAR:
+        if(symbolType2 == SYMBOL_TYPE_CHAR) return true;
+        else return false;
+    
+    case SYMBOL_TYPE_STRING:
+        if(symbolType2 == SYMBOL_TYPE_STRING) return true;
+        else return false;
 
     default:
         return false;
