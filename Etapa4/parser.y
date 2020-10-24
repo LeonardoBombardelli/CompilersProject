@@ -9,9 +9,12 @@
     extern int yylineno;
     extern void *arvore;
     int yylex(void);
-    Node* last_command_of_chain(Node* n);
     void yyerror (char const *s);
 
+    void throw_error(int err_code, int line, char* identifier, TableEntryNature nature);
+    NodeType InferTypePlus(NodeType t1, NodeType t2, int line);
+    NodeType InferType(NodeType t1, NodeType t2, int line);
+    Node* last_command_of_chain(Node* n);
 
     char* auxScopeName = NULL;
     SymbolType auxCurrentFuncType = SYMBOL_TYPE_INDEF;
@@ -200,7 +203,7 @@ literal:
 
         // set auxLiteral to be the lexeme
         memset(auxLiteral, 0, 500);
-        sprintf(auxLiteral, "%f", $1->tokenValue.float);
+        sprintf(auxLiteral, "%f", $1->tokenValue.floating);
 
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_FLOAT, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
@@ -275,7 +278,7 @@ global_var:
             char* id = strdup($1->tokenValue.string);
             (*tempVarMap)[id] = ste;
         }
-        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_VAR);
+        else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
 
         // ignore global vars in AST
         $$ = NULL; 
@@ -290,7 +293,7 @@ global_var:
             char* id = strdup($1->tokenValue.string);
             (*tempVarMap)[id] = ste;
         }
-        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_VAR);
+        else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
 
         // ignore global vars in AST
         $$ = NULL; 
@@ -329,14 +332,14 @@ func_header:
     maybe_static type TK_IDENTIFICADOR '(' func_header_list ')' {
 
         // add function to symbol table if not already there
-        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        if (!SymbolIsInSymbolTable($3->tokenValue.string, scopeStack->back()))
         {
             // create entry and add it to scope
             SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, tempFuncArgList, 0);
             char* id = strdup($3->tokenValue.string);
             scopeStack->back()->symbolTable[id] = ste;
         }
-        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_FUNC);
+        else throw_error(ERR_DECLARED, $3->line_number, $3->tokenValue.string, TABLE_NATURE_FUNC);
 
         // free temp func arg list
         tempFuncArgList = new std::list<FuncArgument *>;
@@ -392,15 +395,15 @@ cmd_block_init_scope:
     %empty {
         /* create new scope with current function's name and push it to scopeStack */
         Scope* newScope = CreateNewScope(auxScopeName);
-        scopeStack.push_back(newScope);
+        scopeStack->push_back(newScope);
     }
 
 cmd_block_destroy_scope:
     %empty {
         /* pop current scope from scopeStack and free its memory */
-        Scope* currentScope = scopeStack.back();
+        Scope* currentScope = scopeStack->back();
         DestroyScope(currentScope);
-        scopeStack.pop_back();
+        scopeStack->pop_back();
     }
 
 real_command_block:
@@ -483,7 +486,7 @@ local_var:
             char* id = strdup($1->tokenValue.string);
             (*tempVarMap)[id] = ste;
         }
-        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_VAR);
+        else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
 
         // ignore unititialized var in AST
         $$ = NULL;
@@ -497,7 +500,7 @@ local_var:
             
             // if literal is of type string, update ste's size accordingly
             if ($3->nodeType == NODE_TYPE_STRING)
-                ste->size = (int) strlen($3->node_literal->literal->tokenValue.string);
+                ste->size = (int) strlen($3->n_literal.literal->tokenValue.string);
 
             // add entry in aux map to check type of initialized vars
             (*auxInitTypeMap)[$1] = NodeTypeToSymbolType($3->nodeType);
@@ -505,10 +508,10 @@ local_var:
             char* id = strdup($1->tokenValue.string);
             (*tempVarMap)[id] = ste;
         }
-        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_VAR);
+        else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
 
         // add var_init node to AST
-        $$ = create_node_var_init(create_node_var_access($1), $3);
+        $$ = create_node_var_init(create_node_var_access($1, $3->nodeType), $3);
         FreeValorLexico($2);
     } |
     TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
@@ -538,12 +541,14 @@ local_var:
             
             char* id = strdup($1->tokenValue.string);
             (*tempVarMap)[id] = ste;
-        }
-        else throw_error(ERR_DECLARED, $1->line_number, TABLE_NATURE_VAR);
 
-        // add var_init node to AST
-        $$ = create_node_var_init(create_node_var_access($1), create_node_literal($3));
-        FreeValorLexico($2);
+            // add var_init node to AST
+            $$ = create_node_var_init(create_node_var_access($1, SymbolTypeToNodeType(ste2->symbolType)),
+                                      create_node_var_access($3, SymbolTypeToNodeType(ste2->symbolType)));
+            FreeValorLexico($2);
+        }
+        else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
+
     };
 
 var_access:
@@ -583,7 +588,8 @@ var_access:
         if ($3->nodeType == NODE_TYPE_CHAR)
             throw_error(ERR_CHAR_TO_X, $1->line_number, id, TABLE_NATURE_VEC);
 
-        $$ = create_node_vector_access(create_node_var_access($1), $3, SymbolTypeToNodeType(ste->symbolType));
+        NodeType nt = SymbolTypeToNodeType(ste->symbolType);
+        $$ = create_node_vector_access(create_node_var_access($1, nt), $3, nt);
         FreeValorLexico($2); FreeValorLexico($4);
     };
 
@@ -594,21 +600,21 @@ attribution_command:
 
         if ($1->nodeCategory == NODE_VAR_ACCESS)
         {
-            char* id = $1->n_var_access.identifier;
+            char* id = $1->n_var_access.identifier->tokenValue.string;
             SymbolTableEntry* ste = GetFirstOccurrence(id);
 
             // check if expression and var/vector have compatible types
             if ( !ImplicitConversionPossible(ste->symbolType, NodeTypeToSymbolType($3->nodeType)) )
-                throw_error(ERR_WRONG_TYPE, $1->line_number, id, TABLE_NATURE_VAR);
+                throw_error(ERR_WRONG_TYPE, $2->line_number, id, TABLE_NATURE_VAR);
         }
         else if ($1->nodeCategory == NODE_VECTOR_ACCESS)
         {
-            char* id = $1->n_vector_access->var->n_var_access.identifier;
+            char* id = $1->n_vector_access.var->n_var_access.identifier->tokenValue.string;
             SymbolTableEntry* ste = GetFirstOccurrence(id);
 
             // check if expression and var/vector have compatible types
             if ( !ImplicitConversionPossible(ste->symbolType, NodeTypeToSymbolType($3->nodeType)) )
-                throw_error(ERR_WRONG_TYPE, $1->line_number, id, TABLE_NATURE_VEC);
+                throw_error(ERR_WRONG_TYPE, $2->line_number, id, TABLE_NATURE_VEC);
         }
 
         $$ = create_node_var_attr($1, $3);
@@ -623,9 +629,9 @@ io_command:
 
         // check if id is of type int or float
         if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
-            throw_error(ERR_WRONG_PAR_INPUT, $2->line_number, id, TABLE_NATURE_VAR);
+            throw_error(ERR_WRONG_PAR_INPUT, $1->line_number, id, TABLE_NATURE_VAR);
 
-        $$ = create_node_input(create_node_var_access($2));
+        $$ = create_node_input(create_node_var_access($2, SymbolTypeToNodeType(ste->symbolType)));
     } | 
     TK_PR_OUTPUT TK_IDENTIFICADOR {
 
@@ -634,15 +640,15 @@ io_command:
 
         // check if id is of type int or float
         if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
-            throw_error(ERR_WRONG_PAR_OUTPUT, $2->line_number, id, TABLE_NATURE_VAR);
+            throw_error(ERR_WRONG_PAR_OUTPUT, $1->line_number, id, TABLE_NATURE_VAR);
 
-        $$ = create_node_output(create_node_var_access($2));
+        $$ = create_node_output(create_node_var_access($2, SymbolTypeToNodeType(ste->symbolType)));
     } | 
     TK_PR_OUTPUT literal {
 
         // check if id is of type int or float
         if ($2->nodeType != NODE_TYPE_INT && $2->nodeType != NODE_TYPE_FLOAT)
-            throw_error(ERR_WRONG_PAR_OUTPUT, $2->line_number, NULL, TABLE_NATURE_VAR);
+            throw_error(ERR_WRONG_PAR_OUTPUT, $1->line_number, NULL, TABLE_NATURE_VAR);
 
         $$ = create_node_output($2);
     } ;
@@ -672,7 +678,7 @@ call_func_command:
         std::list<FuncArgument*>::iterator it_real_args = tempFuncArgList->begin();
         while (it_formal_args != ste->funcArguments->end() && it_real_args != tempFuncArgList->end())
         {
-            if ( !ImplicitConversionPossible(it_formal_args->type, it_real_args->type) )
+            if ( !ImplicitConversionPossible((*it_formal_args)->type, (*it_real_args)->type) )
                 throw_error(ERR_WRONG_TYPE_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
             
             ++it_formal_args; ++it_real_args;
@@ -711,7 +717,7 @@ func_parameters_list:
 
         // add parameter to temp list
         FuncArgument* fa = CreateFuncArgument(NULL, NodeTypeToSymbolType($1->nodeType));
-        tempFuncArgList->append(fa);
+        tempFuncArgList->push_back(fa);
 
         $$ = $1;
     } | 
@@ -721,19 +727,19 @@ shift_command:
     var_access TK_OC_SL TK_LIT_INT {
 
         // check if shift number greater than 16
-        if ($3->tokenValue.int > 16)
+        if ($3->tokenValue.integer > 16)
             throw_error(ERR_WRONG_PAR_SHIFT, $2->line_number, NULL, TABLE_NATURE_LIT);
 
-        $$ = create_node_shift_left($1, create_node_literal($3));
+        $$ = create_node_shift_left($1, create_node_literal($3, NODE_TYPE_INT));
         FreeValorLexico($2);
     } |
     var_access TK_OC_SR TK_LIT_INT {
 
         // check if shift number greater than 16
-        if ($3->tokenValue.int > 16)
+        if ($3->tokenValue.integer > 16)
             throw_error(ERR_WRONG_PAR_SHIFT, $2->line_number, NULL, TABLE_NATURE_LIT);
 
-        $$ = create_node_shift_right($1, create_node_literal($3));
+        $$ = create_node_shift_right($1, create_node_literal($3, NODE_TYPE_INT));
         FreeValorLexico($2);
     };
 
@@ -886,9 +892,9 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
 
     char* nat = NULL;
     switch(nature) {
-        case TABLE_NATURE_VAR:  nat = "Variable";
-        case TABLE_NATURE_VEC:  nat = "Vector";
-        case TABLE_NATURE_FUNC: nat = "Function";
+        case TABLE_NATURE_VAR:  nat = (char*) "Variable";
+        case TABLE_NATURE_VEC:  nat = (char*) "Vector";
+        case TABLE_NATURE_FUNC: nat = (char*) "Function";
         default: "";
     }
 
