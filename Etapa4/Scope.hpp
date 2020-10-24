@@ -81,7 +81,7 @@ void DestroyStack();
 // Auxiliary functions
 
 bool SymbolIsInSymbolTable(char *symbol, Scope *scope);
-SymbolTableEntry* GetFirstOccourence(char *symbol);
+SymbolTableEntry* GetFirstOccurrence(char *symbol);
 
 
 // aux

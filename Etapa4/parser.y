@@ -517,7 +517,7 @@ local_var:
             
             char* s3_name = $3->tokenValue.string;
 
-            SymbolTableEntry* ste2 = GetFirstOcurrence(s3_name);
+            SymbolTableEntry* ste2 = GetFirstOccurrence(s3_name);
             // if var s3_name doesn't exist, throw ERR_UNDECLARED
             if (ste2 == NULL) 
                 throw_error(ERR_UNDECLARED, $3->line_number, s3_name, TABLE_NATURE_VAR);
@@ -548,7 +548,7 @@ var_access:
     TK_IDENTIFICADOR {
     
         char* id = $1->tokenValue.string;
-        SymbolTableEntry* ste = GetFirstOccourence(id);
+        SymbolTableEntry* ste = GetFirstOccurrence(id);
 
         // check if var was declared
         if (ste == NULL)
@@ -564,7 +564,7 @@ var_access:
     TK_IDENTIFICADOR '[' expression ']' {
 
         char* id = $1->tokenValue.string;
-        SymbolTableEntry* ste = GetFirstOccourence(id);
+        SymbolTableEntry* ste = GetFirstOccurrence(id);
 
         // check if var was declared
         if (ste == NULL)
@@ -594,7 +594,7 @@ attribution_command:
         if ($1->nodeCategory == NODE_VAR_ACCESS)
         {
             char* id = $1->n_var_access.identifier;
-            SymbolTableEntry* ste = GetFirstOccourence(id);
+            SymbolTableEntry* ste = GetFirstOccurrence(id);
 
             // check if expression and var/vector have the same type
             if (ste->symbolType != NodeTypeToSymbolType($3->nodeType))
@@ -603,7 +603,7 @@ attribution_command:
         else if ($1->nodeCategory == NODE_VECTOR_ACCESS)
         {
             char* id = $1->n_vector_access->var->n_var_access.identifier;
-            SymbolTableEntry* ste = GetFirstOccourence(id);
+            SymbolTableEntry* ste = GetFirstOccurrence(id);
 
             // check if expression and var/vector have the same type
             if (ste->symbolType != NodeTypeToSymbolType($3->nodeType))
@@ -618,7 +618,7 @@ io_command:
     TK_PR_INPUT TK_IDENTIFICADOR {
 
         char* id = $2->tokenValue.string;
-        SymbolTableEntry* ste = GetFirstOccourence(id);
+        SymbolTableEntry* ste = GetFirstOccurrence(id);
 
         // check if id is of type int or float
         if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
@@ -629,7 +629,7 @@ io_command:
     TK_PR_OUTPUT TK_IDENTIFICADOR {
 
         char* id = $2->tokenValue.string;
-        SymbolTableEntry* ste = GetFirstOccourence(id);
+        SymbolTableEntry* ste = GetFirstOccurrence(id);
 
         // check if id is of type int or float
         if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)

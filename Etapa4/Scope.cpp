@@ -125,7 +125,7 @@ bool SymbolIsInSymbolTable(char *symbol, Scope *scope)
     return(it != scope->symbolTable.end());
 }
 
-SymbolTableEntry* GetFirstOccourence(char *symbol)
+SymbolTableEntry* GetFirstOccurrence(char *symbol)
 {
     bool found = false;
     SymbolTableEntry* entryToReturn = NULL;
