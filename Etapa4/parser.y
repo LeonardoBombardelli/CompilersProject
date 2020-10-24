@@ -760,24 +760,30 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
 
     printf("[ERROR, LINE %d] ", line);
 
-    switch(err_code) {
-        case ERR_DECLARED:
-            char* nat;
-            switch(nature) {
-                case TABLE_NATURE_VAR: nat = "Variable";
-                case TABLE_NATURE_VEC: nat = "Vector";
-                case TABLE_NATURE_FUNC: nat = "Function";
-                default: "";
-            }
-            printf("%s %s was already declared.\n", nat, identifier);
-            free(nat);
-
-        case ERR_UNDECLARED:
-            // TODO
-
-        default:
-            printf("Unidentified error.");
+    char* nat = NULL;
+    switch(nature) {
+        case TABLE_NATURE_VAR:  nat = "Variable";
+        case TABLE_NATURE_VEC:  nat = "Vector";
+        case TABLE_NATURE_FUNC: nat = "Function";
+        default: "";
     }
+
+    switch(err_code) {
+        case ERR_DECLARED:          printf("ERR_DECLARED: %s %s has already been declared.\n", nat, identifier);
+        case ERR_UNDECLARED:        printf("ERR_UNDECLARED: %s %s has not been declared.\n", nat, identifier);
+        case ERR_WRONG_TYPE:        printf("ERR_WRONG_TYPE: %s %s has been attributed a value of the wrong type.\n", nat, identifier); // TODO: more descriptive?
+        case ERR_VARIABLE:          printf("ERR_VARIABLE: Variable %s has been used as vector or function.\n", identifier);
+        case ERR_VECTOR:            printf("ERR_VECTOR: Vector %s has been used as variable or function.\n", identifier);
+        case ERR_FUNCTION:          printf("ERR_FUNCTION: Function %s has been used as variable or vector.\n", identifier);
+        case ERR_STRING_TO_X:       printf("ERR_STRING_TO_X: String %s can not be implicitly converted.\n", identifier);
+        case ERR_CHAR_TO_X:         printf("ERR_CHAR_TO_X: Char %s can not be implicitly converted.\n");
+        case ERR_WRONG_PAR_INPUT:   printf("ERR_WRONG_PAR_INPUT: Input command can only receive an integer or float variable.\n");
+        case ERR_WRONG_PAR_OUTPUT:  printf("ERR_WRONG_PAR_OUTPUT: Output command can only receive an int/float literals or variables.\n");
+        case ERR_WRONG_PAR_SHIFT:   printf("ERR_WRONG_PAR_SHIFT: Shift command can only receive an integer less than 16.\n");
+        default:                    printf("Unidentified error.");
+    }
+
+    free(nat);
 
 }
 
