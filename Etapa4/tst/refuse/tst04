@@ -1,0 +1,29 @@
+float f(string s)
+{
+    int x;
+    return x;
+}
+
+int main()
+{
+    int x;
+
+    input x;
+    output x;
+    output 4;
+
+    f("aaaa");
+
+    // string s;
+    // output s;
+
+    if ( 2+2 )
+    {
+        int u;
+        u = 2+2;
+    };
+
+    //int x;
+
+    return x;
+}

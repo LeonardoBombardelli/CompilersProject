@@ -1,0 +1,13 @@
+int main()
+{
+    int x;
+    x = 2+2;
+
+    int y;
+    y = 2+2;
+
+    if (true)
+    {
+    };
+
+}
