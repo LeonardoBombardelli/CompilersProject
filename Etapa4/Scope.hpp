@@ -50,7 +50,7 @@ typedef struct symbolTableEntry
 
 typedef struct scope
 {
-    std::map<char *, SymbolTableEntry *> symbolTable;
+    std::map<std::string, SymbolTableEntry *> symbolTable;
     char* scopeName;
 
 } Scope;

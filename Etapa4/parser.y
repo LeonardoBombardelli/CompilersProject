@@ -22,7 +22,7 @@
 
     std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>; // aux map to check type when initializing vars on declaration
 
-    std::map<char*, SymbolTableEntry*> *tempVarMap = new std::map<char*, SymbolTableEntry*>;     // reusable map of vars
+    std::map<std::string, SymbolTableEntry*> *tempVarMap = new std::map<std::string, SymbolTableEntry*>;     // reusable map of vars
     std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;                  // reusable list of function arguments
 %}
 
@@ -194,9 +194,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INTEGER, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[auxLiteral] = ste;
+        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
     } |
     TK_LIT_FLOAT  {
         $$ = create_node_literal($1, NODE_TYPE_FLOAT); 
@@ -208,9 +208,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_FLOAT, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[auxLiteral] = ste;
+        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
     } |
     TK_LIT_FALSE  {
         $$ = create_node_literal($1, NODE_TYPE_BOOL);  
@@ -222,9 +222,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[auxLiteral] = ste;
+        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
     } |
     TK_LIT_TRUE   {
         $$ = create_node_literal($1, NODE_TYPE_BOOL);  
@@ -236,9 +236,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[auxLiteral] = ste;
+        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
     } |
     TK_LIT_CHAR   {
         $$ = create_node_literal($1, NODE_TYPE_CHAR);  
@@ -250,9 +250,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_CHAR, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[auxLiteral] = ste;
+        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
     } |
     TK_LIT_STRING {
         $$ = create_node_literal($1, NODE_TYPE_STRING);
@@ -264,9 +264,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_STRING, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[auxLiteral]);
+            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[auxLiteral] = ste;
+        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
     };
 
 global_var: 
@@ -304,7 +304,7 @@ global_var_declaration:
     maybe_static type global_var_list ';' {
 
         // set type to all vars of list, and insert them in table
-        std::map<char*, SymbolTableEntry*>::iterator it;
+        std::map<std::string, SymbolTableEntry*>::iterator it;
         for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
         {
             it->second->symbolType = IntToSymbolType($2);
@@ -312,7 +312,7 @@ global_var_declaration:
         }
 
         // free temp var map
-        tempVarMap = new std::map<char*, SymbolTableEntry*>;
+        tempVarMap = new std::map<std::string, SymbolTableEntry*>;
 
         $$ = NULL; 
         FreeValorLexico($4); 
@@ -337,7 +337,7 @@ func_header:
             // create entry and add it to scope
             SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, tempFuncArgList, 0);
             char* id = strdup($3->tokenValue.string);
-            scopeStack->back()->symbolTable[id] = ste;
+            scopeStack->back()->symbolTable[std::string(id)] = ste;
         }
         else throw_error(ERR_DECLARED, $3->line_number, $3->tokenValue.string, TABLE_NATURE_FUNC);
 
@@ -435,7 +435,7 @@ local_var_declaration:
         }
 
         // set type to all vars of list, and insert them in table
-        std::map<char*, SymbolTableEntry*>::iterator it;
+        std::map<std::string, SymbolTableEntry*>::iterator it;
         for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
         {
             it->second->symbolType = IntToSymbolType($3);
@@ -443,7 +443,7 @@ local_var_declaration:
         }
 
         // free temp var map and aux init type map
-        tempVarMap = new std::map<char*, SymbolTableEntry*>;
+        tempVarMap = new std::map<std::string, SymbolTableEntry*>;
         auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;
 
         $$ = $4;
