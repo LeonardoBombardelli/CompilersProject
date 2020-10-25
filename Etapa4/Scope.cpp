@@ -136,16 +136,16 @@ SymbolTableEntry* GetFirstOccurrence(char *symbol)
 {
     bool found = false;
     SymbolTableEntry* entryToReturn = NULL;
-    std::list<Scope *>::iterator it = scopeStack->end();
+    std::list<Scope *>::reverse_iterator it = scopeStack->rbegin();
     
-    while(it != scopeStack->begin() || found)
+    while(it != scopeStack->rend() && !found)
     {
         if(SymbolIsInSymbolTable(symbol, *it))
         {
             entryToReturn = (*it)->symbolTable[symbol];
             found = true;
         }
-        --it;
+        ++it;
     }
 
     return entryToReturn;
