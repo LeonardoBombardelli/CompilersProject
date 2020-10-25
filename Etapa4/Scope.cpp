@@ -120,10 +120,16 @@ void DestroyStack()
 
 bool SymbolIsInSymbolTable(char *symbol, Scope *scope)
 {
-    std::map<char *, SymbolTableEntry *>::iterator it;
+    std::map<char *, SymbolTableEntry *>::iterator it = scope->symbolTable.begin();
 
-    it = scope->symbolTable.find(symbol);
-    return(it != scope->symbolTable.end());
+    while(it != scope->symbolTable.end())
+    {
+        if(strcmp(symbol, it->first) == 0)
+            return true;
+        ++it;
+    }
+
+    return false;
 }
 
 SymbolTableEntry* GetFirstOccurrence(char *symbol)
