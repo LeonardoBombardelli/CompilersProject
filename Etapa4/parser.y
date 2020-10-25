@@ -137,6 +137,7 @@
 %type<node> io_command
 %type<node> call_func_command
 %type<node> func_parameters_list
+%type<node> func_parameters_list_iterator
 %type<node> shift_command
 %type<node> return_command
 %type<node> flux_control_command
@@ -686,60 +687,60 @@ call_func_command:
         if (ste->entryNature == TABLE_NATURE_VEC)
             throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
 
-        if (tempFuncArgList->size() > ste->funcArguments->size())
-            throw_error(ERR_EXCESS_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
-
-        if (tempFuncArgList->size() < ste->funcArguments->size())
-            throw_error(ERR_MISSING_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
-
-        std::list<FuncArgument*>::iterator it_formal_args = ste->funcArguments->begin();
-        std::list<FuncArgument*>::iterator it_real_args = tempFuncArgList->begin();
-        while (it_formal_args != ste->funcArguments->end() && it_real_args != tempFuncArgList->end())
+        // if function is called with arguments
+        if ($3 != NULL)
         {
-            if ( !ImplicitConversionPossible((*it_formal_args)->type, (*it_real_args)->type) )
-                throw_error(ERR_WRONG_TYPE_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
-            
-            ++it_formal_args; ++it_real_args;
-        }
+            if (tempFuncArgList->size() > ste->funcArguments->size())
+                throw_error(ERR_EXCESS_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
 
-        // free temp function argument list
-        tempFuncArgList = new std::list<FuncArgument*>;
+            if (tempFuncArgList->size() < ste->funcArguments->size())
+                throw_error(ERR_MISSING_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
+
+            // iterate through both lists comparing each argument's type
+            std::list<FuncArgument*>::iterator it_formal_args = ste->funcArguments->begin();
+            std::list<FuncArgument*>::iterator it_real_args = tempFuncArgList->begin();
+            while (it_formal_args != ste->funcArguments->end() && it_real_args != tempFuncArgList->end())
+            {
+                if ( !ImplicitConversionPossible((*it_formal_args)->type, (*it_real_args)->type) )
+                    throw_error(ERR_WRONG_TYPE_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
+                
+                ++it_formal_args; ++it_real_args;
+            }
+
+            // free temp function argument list
+            tempFuncArgList = new std::list<FuncArgument*>;
+        }
+        // if function is called without arguments, check if it has formal params
+        else if (!ste->funcArguments->empty())
+            throw_error(ERR_MISSING_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
 
         // get nodeType from function return type
         $$ = create_node_function_call($1, $3, SymbolTypeToNodeType(ste->symbolType));
         FreeValorLexico($2); FreeValorLexico($4);
-    } | 
-    TK_IDENTIFICADOR '(' ')' {
-
-        char* id = $1->tokenValue.string;
-        SymbolTableEntry* ste = GetFirstOccurrence($1->tokenValue.string);
-
-        if (ste == NULL)
-            throw_error(ERR_UNDECLARED, $1->line_number, id, TABLE_NATURE_FUNC);
-
-        if (ste->entryNature == TABLE_NATURE_VAR)
-            throw_error(ERR_VARIABLE, $1->line_number, id, TABLE_NATURE_VAR);
-
-        if (ste->entryNature == TABLE_NATURE_VEC)
-            throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
-
-        if (!ste->funcArguments->empty())
-            throw_error(ERR_MISSING_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
-
-        // get nodeType from function return type
-        $$ = create_node_function_call($1, NULL, SymbolTypeToNodeType(ste->symbolType));
-        FreeValorLexico($2); FreeValorLexico($3);
     };
 func_parameters_list: 
-    expression {
+    %empty                                   { $$ = NULL; } |
+    expression func_parameters_list_iterator {
 
         // add parameter to temp list
         FuncArgument* fa = CreateFuncArgument(NULL, NodeTypeToSymbolType($1->nodeType));
         tempFuncArgList->push_back(fa);
 
+        $1->sequenceNode = $2;
         $$ = $1;
-    } | 
-    func_parameters_list ',' expression  { last_command_of_chain($1)->sequenceNode = $3; $$ = $1; FreeValorLexico($2); };
+    };
+func_parameters_list_iterator:
+    %empty                                       { $$ = NULL; } |
+    ',' expression func_parameters_list_iterator {
+
+        // add parameter to temp list
+        FuncArgument* fa = CreateFuncArgument(NULL, NodeTypeToSymbolType($2->nodeType));
+        tempFuncArgList->push_back(fa);
+
+        $2->sequenceNode = $3;
+        $$ = $2;
+        FreeValorLexico($1);
+    };
 
 shift_command:
     var_access TK_OC_SL TK_LIT_INT {
