@@ -88,6 +88,7 @@ void DestroySymbolTableEntry(SymbolTableEntry *symbolTableEntry)
             DestroyFuncArgument(symbolTableEntry->funcArguments->back());
             symbolTableEntry->funcArguments->pop_back();
         }
+        delete symbolTableEntry->funcArguments;
     }
     free(symbolTableEntry);
     return;

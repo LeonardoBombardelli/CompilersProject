@@ -346,8 +346,17 @@ func_header:
         // add function to symbol table if not already there
         if (!SymbolIsInSymbolTable($3->tokenValue.string, scopeStack->back()))
         {
+            std::list<FuncArgument*> *deepCopy = new std::list<FuncArgument*>;
+            std::list<FuncArgument*>::iterator it = tempFuncArgList->begin();
+
+            while(it != tempFuncArgList->end())
+            {
+                deepCopy->push_back(*it);
+                ++it;
+            }
+
             // create entry and add it to scope
-            SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, tempFuncArgList, 0);
+            SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, deepCopy, 0);
             char* id = $3->tokenValue.string;
             (*scopeStack->back()->symbolTable)[std::string(id)] = ste;
         }
@@ -742,7 +751,7 @@ call_func_command:
             tempFuncArgList = new std::list<FuncArgument*>;
         }
         // if function is called without arguments, check if it has formal params
-        else if (!ste->funcArguments->empty())
+        else if (ste->funcArguments != NULL) if(!ste->funcArguments->empty())
             throw_error(ERR_MISSING_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
 
         // get nodeType from function return type
