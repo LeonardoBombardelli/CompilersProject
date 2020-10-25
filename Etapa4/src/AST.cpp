@@ -46,6 +46,7 @@ Node* create_node_vector_access (Node* var, Node* index, NodeType nodeType)
 Node* create_node_var_attr (Node* identifier, Node* expression)
 {
     Node* newNode = CreateGenericNode(NODE_VAR_ATTR);
+    newNode->nodeType = identifier->nodeType;
 
     newNode->n_var_attr.identifier = identifier;
     newNode->n_var_attr.expression = expression;
@@ -56,6 +57,7 @@ Node* create_node_var_attr (Node* identifier, Node* expression)
 Node* create_node_var_init (Node* identifier, Node* expression)
 {
     Node* newNode = CreateGenericNode(NODE_VAR_INIT);
+    newNode->nodeType = identifier->nodeType;
 
     newNode->n_var_init.identifier = identifier;
     newNode->n_var_init.expression = expression;

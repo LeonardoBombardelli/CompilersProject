@@ -36,7 +36,7 @@ SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableE
         symbolTableEntry->size = 1;
         break;
     case SYMBOL_TYPE_STRING:
-        symbolTableEntry->size = 0;
+        symbolTableEntry->size = -1;
         break;
     default:
         symbolTableEntry->size = 0;

@@ -652,14 +652,14 @@ attribution_command:
                 if($3->nodeCategory == NODE_LITERAL)
                 {
                     int literalSize = strlen($3->n_literal.literal->tokenValue.string);
-                    if(ste->size == 0) ste->size = literalSize;
+                    if(ste->size == -1) ste->size = literalSize;
                     else if(ste->size < literalSize) throw_error(ERR_STRING_SIZE, $2->line_number, id, TABLE_NATURE_VAR);
                 }
             
                 if($3->nodeCategory == NODE_VAR_ACCESS)
                 {
                     SymbolTableEntry* ste2 = GetFirstOccurrence($3->n_var_access.identifier->tokenValue.string);
-                    if(ste->size == 0) ste->size = ste2->size;
+                    if(ste->size == -1) ste->size = ste2->size;
                     else if(ste->size < ste2->size) throw_error(ERR_STRING_SIZE, $2->line_number, id, TABLE_NATURE_VAR);
                 }
             }
@@ -684,6 +684,15 @@ io_command:
         char* id = $2->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(id);
 
+        // check if var was declared
+        if (ste == NULL)
+            throw_error(ERR_UNDECLARED, $1->line_number, id, TABLE_NATURE_VAR);
+        // check if symbol's nature is not function or vector
+        if (ste->entryNature == TABLE_NATURE_FUNC)
+            throw_error(ERR_FUNCTION, $1->line_number, id, TABLE_NATURE_FUNC);
+        if (ste->entryNature == TABLE_NATURE_VEC)
+            throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
+
         // check if id is of type int or float
         if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
             throw_error(ERR_WRONG_PAR_INPUT, $1->line_number, id, TABLE_NATURE_VAR);
@@ -694,6 +703,15 @@ io_command:
 
         char* id = $2->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(id);
+
+        // check if var was declared
+        if (ste == NULL)
+            throw_error(ERR_UNDECLARED, $1->line_number, id, TABLE_NATURE_VAR);
+        // check if symbol's nature is not function or vector
+        if (ste->entryNature == TABLE_NATURE_FUNC)
+            throw_error(ERR_FUNCTION, $1->line_number, id, TABLE_NATURE_FUNC);
+        if (ste->entryNature == TABLE_NATURE_VEC)
+            throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
 
         // check if id is of type int or float
         if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
