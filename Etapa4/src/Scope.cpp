@@ -69,7 +69,9 @@ void DestroyScope(Scope *scope)
     }
 
     scope->symbolTable.clear();
-    free(scope->scopeName);
+
+    if(scope->scopeName != NULL)
+        free(scope->scopeName);
 
     free(scope);
     return;

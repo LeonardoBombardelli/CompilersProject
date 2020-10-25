@@ -396,7 +396,7 @@ command_block:
 cmd_block_init_scope:
     %empty {
         /* create new scope with current function's name and push it to scopeStack */
-        Scope* newScope = CreateNewScope(auxScopeName);
+        Scope* newScope = CreateNewScope(strdup(auxScopeName));
         scopeStack->push_back(newScope);
 
         // add formal parameters to function's scope
@@ -625,6 +625,23 @@ attribution_command:
             // check if expression and var/vector have compatible types
             if ( !ImplicitConversionPossible(ste->symbolType, NodeTypeToSymbolType($3->nodeType)) )
                 throw_error(ERR_WRONG_TYPE, $2->line_number, id, TABLE_NATURE_VAR);
+
+            if(ste->symbolType == SYMBOL_TYPE_STRING)
+            {
+                if($3->nodeCategory == NODE_LITERAL)
+                {
+                    int literalSize = strlen($3->n_literal.literal->tokenValue.string);
+                    if(ste->size == 0) ste->size = literalSize;
+                    else if(ste->size < literalSize) throw_error(ERR_STRING_SIZE, $2->line_number, id, TABLE_NATURE_VAR);
+                }
+            
+                if($3->nodeCategory == NODE_VAR_ACCESS)
+                {
+                    SymbolTableEntry* ste2 = GetFirstOccurrence($3->n_var_access.identifier->tokenValue.string);
+                    if(ste->size == 0) ste->size = ste2->size;
+                    else if(ste->size < ste2->size) throw_error(ERR_STRING_SIZE, $2->line_number, id, TABLE_NATURE_VAR);
+                }
+            }
         }
         else if ($1->nodeCategory == NODE_VECTOR_ACCESS)
         {
