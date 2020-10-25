@@ -287,7 +287,7 @@ global_var:
     } |
     TK_IDENTIFICADOR '[' TK_LIT_INT ']' {
         // add var to symbol table if not already there
-        if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VEC, NULL, $3->tokenValue.integer);
             char* id = strdup($1->tokenValue.string);
@@ -480,7 +480,7 @@ local_var_list_iterator:
 local_var: 
     TK_IDENTIFICADOR {
         // add var to symbol table if not already there
-        if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
             char* id = strdup($1->tokenValue.string);
@@ -494,7 +494,7 @@ local_var:
     } |
     TK_IDENTIFICADOR TK_OC_LE literal {
         // add var to symbol table if not already there
-        if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
             
@@ -516,7 +516,7 @@ local_var:
     } |
     TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
         // add var to symbol table if not already there
-        if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
             
