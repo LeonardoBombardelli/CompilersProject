@@ -1,13 +1,13 @@
 int y[2];
 
-bool foo(int a, float b, float c)
+bool foo(int a, float b, char c)
 {
     int x;
     int z <= 5;
-    x = a<8 ? b : c;
+    // x = a<8 ? b : c;
 }
 
 float bar(char d, char e, char f)
 {
-    foo(1,2,3);
+    foo(1,2,'3');
 }

@@ -1,0 +1,23 @@
+// ok this program is not valid in this language...
+int main()
+{
+    int x;
+    output "Digite um numero...";
+    input x;
+
+    if ( x > 999 )
+    {
+        output "Esse numero eh muito grande!";
+        return 0;
+    };
+    if ( x <= 0 )
+    {
+        output "Esqueci de dizer... tem que ser positivo!";
+        return 0;
+    };
+    
+    output "Esse eh um otimo numero! Voce digitou: ";
+    output x;
+    
+    return 0;
+}
