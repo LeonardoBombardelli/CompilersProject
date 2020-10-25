@@ -1,5 +1,5 @@
 
-#include "AST.hpp"
+#include "../include/AST.hpp"
 
 Node* CreateGenericNode(NodeCategory category)
 {

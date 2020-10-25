@@ -1,8 +1,8 @@
 %{
     #include <cstdio>
     #include <map>
-    #include "AST.hpp"
-    #include "Scope.hpp"
+    #include "../include/AST.hpp"
+    #include "../include/Scope.hpp"
 
     extern "C" int yylex();
 

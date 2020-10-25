@@ -1,8 +1,9 @@
-etapa4: parser.y scanner.l main.c AST.cpp Scope.cpp
-	bison -v -d parser.y 
-	flex -o lex.yy.c scanner.l
-	g++ -c lex.yy.c parser.tab.c AST.cpp Scope.cpp
-	g++ lex.yy.c parser.tab.c AST.cpp Scope.cpp main.c -o etapa4 -lfl
+etapa4: parser.y scanner.l main.c src/AST.cpp src/Scope.cpp
+	rm -r build
+	mkdir build
+	bison -v -d parser.y -b build/parser
+	flex -o build/lex.yy.c scanner.l
+	g++ build/*.c src/*.cpp main.c -o etapa4 -lfl
 
 clean:
-	rm -f *.tab.c *.tab.h *.yy.c *.o *.output etapa4
+	rm -rf build etapa4

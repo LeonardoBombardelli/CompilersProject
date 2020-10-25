@@ -1,4 +1,4 @@
-#include "Scope.hpp"
+#include "../include/Scope.hpp"
 
 std::list<Scope *> *scopeStack;
 

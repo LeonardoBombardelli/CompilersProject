@@ -1,7 +1,7 @@
 
 %{
     #include "parser.tab.h"
-    #include "lexicalvalue.hpp"
+    #include "../include/lexicalvalue.hpp"
 
     extern "C" int yylex();
 
