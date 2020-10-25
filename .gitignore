@@ -15,3 +15,5 @@ Etapa3/parser.tab.h
 Etapa3/parser.tab.o
 Etapa3/parser.output
 Etapa3/AST.o
+Etapa4/build
+Etapa4/etapa4
