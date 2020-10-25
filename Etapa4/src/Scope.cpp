@@ -114,6 +114,7 @@ void DestroyStack()
         DestroyScope(scopeStack->back());
         scopeStack->pop_back();
     }
+    delete scopeStack;
 }
 
 

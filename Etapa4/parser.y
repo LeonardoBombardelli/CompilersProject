@@ -173,6 +173,7 @@ init_stack:
 destroy_stack:
     %empty { DestroyStack(); 
     free(auxLiteral); 
+    free(auxScopeName);
     delete auxInitTypeMap;
     delete tempVarMap;
     delete tempFuncArgList;
