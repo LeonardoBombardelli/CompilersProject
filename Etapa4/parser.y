@@ -899,22 +899,22 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
     }
 
     switch(err_code) {
-        case ERR_DECLARED:          printf("ERR_DECLARED: %s %s has already been declared.\n", nat, identifier);
-        case ERR_UNDECLARED:        printf("ERR_UNDECLARED: %s %s has not been declared.\n", nat, identifier);
-        case ERR_WRONG_TYPE:        printf("ERR_WRONG_TYPE: %s %s has been attributed a value of the wrong type.\n", nat, identifier); // TODO: more descriptive?
-        case ERR_VARIABLE:          printf("ERR_VARIABLE: Variable %s has been used as vector or function.\n", identifier);
-        case ERR_VECTOR:            printf("ERR_VECTOR: Vector %s has been used as variable or function.\n", identifier);
-        case ERR_FUNCTION:          printf("ERR_FUNCTION: Function %s has been used as variable or vector.\n", identifier);
+        case ERR_DECLARED:          printf("ERR_DECLARED: %s %s has already been declared.\n", nat, identifier); break;
+        case ERR_UNDECLARED:        printf("ERR_UNDECLARED: %s %s has not been declared.\n", nat, identifier); break;
+        case ERR_WRONG_TYPE:        printf("ERR_WRONG_TYPE: %s %s has been attributed a value of the wrong type.\n", nat, identifier); break; // TODO: more descriptive?
+        case ERR_VARIABLE:          printf("ERR_VARIABLE: Variable %s has been used as vector or function.\n", identifier); break;
+        case ERR_VECTOR:            printf("ERR_VECTOR: Vector %s has been used as variable or function.\n", identifier); break;
+        case ERR_FUNCTION:          printf("ERR_FUNCTION: Function %s has been used as variable or vector.\n", identifier); break;
         case ERR_STRING_TO_X:
-            if (identifier == NULL) printf("ERR_STRING_TO_X: String can not be implicitly converted.\n");
-            else                    printf("ERR_STRING_TO_X: String %s can not be implicitly converted.\n", identifier);
+            if (identifier == NULL) printf("ERR_STRING_TO_X: String can not be implicitly converted.\n"); break;
+            else                    printf("ERR_STRING_TO_X: String %s can not be implicitly converted.\n", identifier); break;
         case ERR_CHAR_TO_X:
-            if (identifier == NULL) printf("ERR_CHAR_TO_X: Char can not be implicitly converted.\n");
-            else                    printf("ERR_CHAR_TO_X: Char %s can not be implicitly converted.\n", identifier);
-        case ERR_WRONG_PAR_INPUT:   printf("ERR_WRONG_PAR_INPUT: Input command can only receive an integer or float variable.\n");
-        case ERR_WRONG_PAR_OUTPUT:  printf("ERR_WRONG_PAR_OUTPUT: Output command can only receive an int/float literals or variables.\n");
-        case ERR_WRONG_PAR_SHIFT:   printf("ERR_WRONG_PAR_SHIFT: Shift command can only receive an integer less than 16.\n");
-        default:                    printf("Unidentified error.");
+            if (identifier == NULL) printf("ERR_CHAR_TO_X: Char can not be implicitly converted.\n"); break;
+            else                    printf("ERR_CHAR_TO_X: Char %s can not be implicitly converted.\n", identifier); break;
+        case ERR_WRONG_PAR_INPUT:   printf("ERR_WRONG_PAR_INPUT: Input command can only receive an integer or float variable.\n"); break;
+        case ERR_WRONG_PAR_OUTPUT:  printf("ERR_WRONG_PAR_OUTPUT: Output command can only receive an int/float literals or variables.\n"); break;
+        case ERR_WRONG_PAR_SHIFT:   printf("ERR_WRONG_PAR_SHIFT: Shift command can only receive an integer less than 16.\n"); break;
+        default:                    printf("Unidentified error."); break;
     }
 
     free(nat);
