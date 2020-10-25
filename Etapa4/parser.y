@@ -171,7 +171,13 @@ init_stack:
     %empty { CreateStack(); $$ = NULL; }
 
 destroy_stack:
-    %empty { DestroyStack(); free(auxLiteral); $$ = NULL; }
+    %empty { DestroyStack(); 
+    free(auxLiteral); 
+    delete auxInitTypeMap;
+    delete tempVarMap;
+    delete tempFuncArgList;
+    
+    $$ = NULL; }
 
 
 maybe_const: 
@@ -279,8 +285,8 @@ global_var:
         if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
-            char* id = strdup($1->tokenValue.string);
-            (*tempVarMap)[id] = ste;
+            char* id = $1->tokenValue.string;
+            (*tempVarMap)[std::string(id)] = ste;
         }
         else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
 
@@ -294,8 +300,8 @@ global_var:
         if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VEC, NULL, $3->tokenValue.integer);
-            char* id = strdup($1->tokenValue.string);
-            (*tempVarMap)[id] = ste;
+            char* id = $1->tokenValue.string;
+            (*tempVarMap)[std::string(id)] = ste;
         }
         else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
 
@@ -316,6 +322,7 @@ global_var_declaration:
         }
 
         // free temp var map
+        delete tempVarMap;
         tempVarMap = new std::map<std::string, SymbolTableEntry*>;
 
         $$ = NULL; 
@@ -340,12 +347,13 @@ func_header:
         {
             // create entry and add it to scope
             SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, tempFuncArgList, 0);
-            char* id = strdup($3->tokenValue.string);
+            char* id = $3->tokenValue.string;
             scopeStack->back()->symbolTable[std::string(id)] = ste;
         }
         else throw_error(ERR_DECLARED, $3->line_number, $3->tokenValue.string, TABLE_NATURE_FUNC);
 
         // update aux vars with new scope name, current function's type and current function's line
+        if(auxScopeName != NULL) free(auxScopeName);
         auxScopeName = strdup($3->tokenValue.string);
         auxCurrentFuncType = IntToSymbolType($2);
         auxCurrentFuncLine = $3->line_number;
@@ -413,6 +421,7 @@ cmd_block_init_scope:
         }
 
         // free temp func arg list
+        delete tempFuncArgList;
         tempFuncArgList = new std::list<FuncArgument *>;
 
     }
@@ -462,7 +471,9 @@ local_var_declaration:
         }
 
         // free temp var map and aux init type map
+        delete tempVarMap;
         tempVarMap = new std::map<std::string, SymbolTableEntry*>;
+        delete auxInitTypeMap;
         auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;
 
         $$ = $4;
@@ -502,8 +513,8 @@ local_var:
         if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
             SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
-            char* id = strdup($1->tokenValue.string);
-            (*tempVarMap)[id] = ste;
+            char* id = $1->tokenValue.string;
+            (*tempVarMap)[std::string(id)] = ste;
         }
         else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
 
@@ -524,8 +535,8 @@ local_var:
             // add entry in aux map to check type of initialized vars
             (*auxInitTypeMap)[$1] = NodeTypeToSymbolType($3->nodeType);
 
-            char* id = strdup($1->tokenValue.string);
-            (*tempVarMap)[id] = ste;
+            char* id = $1->tokenValue.string;
+            (*tempVarMap)[std::string(id)] = ste;
         }
         else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
 
@@ -558,8 +569,8 @@ local_var:
             // add entry in aux map to check type of initialized vars
             (*auxInitTypeMap)[$1] = ste2->symbolType;
             
-            char* id = strdup($1->tokenValue.string);
-            (*tempVarMap)[id] = ste;
+            char* id = $1->tokenValue.string;
+            (*tempVarMap)[std::string(id)] = ste;
 
             // add var_init node to AST
             $$ = create_node_var_init(create_node_var_access($1, SymbolTypeToNodeType(ste2->symbolType)),
@@ -725,6 +736,7 @@ call_func_command:
             }
 
             // free temp function argument list
+            delete tempFuncArgList;
             tempFuncArgList = new std::list<FuncArgument*>;
         }
         // if function is called without arguments, check if it has formal params

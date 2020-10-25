@@ -94,7 +94,7 @@ void DestroySymbolTableEntry(SymbolTableEntry *symbolTableEntry)
 
 void DestroyFuncArgument(FuncArgument *funcArgument)
 {
-    free(funcArgument->argName);
+    if (funcArgument->argName != NULL) free(funcArgument->argName);
     free(funcArgument);
     return;
 }
