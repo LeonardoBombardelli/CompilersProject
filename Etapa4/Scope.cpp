@@ -103,6 +103,7 @@ void DestroyFuncArgument(FuncArgument *funcArgument)
 void CreateStack()
 {
     scopeStack = new std::list<Scope *>;
+    scopeStack->push_back(CreateNewScope(NULL));
 }
 
 void DestroyStack()
