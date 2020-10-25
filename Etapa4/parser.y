@@ -723,7 +723,7 @@ call_func_command:
         if (ste->entryNature == TABLE_NATURE_VEC)
             throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
 
-        if (ste->funcArguments != NULL)
+        if (!ste->funcArguments->empty())
             throw_error(ERR_MISSING_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
 
         // get nodeType from function return type
