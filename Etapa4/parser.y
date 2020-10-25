@@ -13,12 +13,14 @@
 
     void throw_error(int err_code, int line, char* identifier, TableEntryNature nature);
     NodeType InferTypePlus(NodeType t1, NodeType t2, int line);
+    NodeType InferTypeTernary(NodeType t1, NodeType t2, int line);
     NodeType InferType(NodeType t1, NodeType t2, int line);
     Node* last_command_of_chain(Node* n);
 
     char* auxScopeName = NULL;
     SymbolType auxCurrentFuncType = SYMBOL_TYPE_INDEF;
     char* auxLiteral = (char*) malloc(500);
+    int auxCurrentFuncLine = 0;
 
     std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>; // aux map to check type when initializing vars on declaration
 
@@ -341,12 +343,10 @@ func_header:
         }
         else throw_error(ERR_DECLARED, $3->line_number, $3->tokenValue.string, TABLE_NATURE_FUNC);
 
-        // free temp func arg list
-        tempFuncArgList = new std::list<FuncArgument *>;
-
-        // update aux vars with new scope name and current function's type
+        // update aux vars with new scope name, current function's type and current function's line
         auxScopeName = strdup($3->tokenValue.string);
         auxCurrentFuncType = IntToSymbolType($2);
+        auxCurrentFuncLine = $3->line_number;
 
         $$ = create_node_function_declaration($3, NULL);
         FreeValorLexico($4); FreeValorLexico($6);
@@ -396,6 +396,23 @@ cmd_block_init_scope:
         /* create new scope with current function's name and push it to scopeStack */
         Scope* newScope = CreateNewScope(auxScopeName);
         scopeStack->push_back(newScope);
+
+        // add formal parameters to function's scope
+        if (!tempFuncArgList->empty())
+        {
+            std::list<FuncArgument *>::iterator it = tempFuncArgList->begin();
+
+            while (it != tempFuncArgList->end())
+            {
+                SymbolTableEntry* ste = CreateSymbolTableEntry((*it)->type, auxCurrentFuncLine, TABLE_NATURE_VAR, NULL, 0);
+                scopeStack->back()->symbolTable[std::string((*it)->argName)] = ste;
+                ++it;
+            }
+        }
+
+        // free temp func arg list
+        tempFuncArgList = new std::list<FuncArgument *>;
+
     }
 
 cmd_block_destroy_scope:
@@ -824,7 +841,7 @@ expression:
         if ($1->nodeType == NODE_TYPE_CHAR)
             throw_error(ERR_CHAR_TO_X, $2->line_number, NULL, TABLE_NATURE_VAR);
 
-        $$ = create_node_ternary_operation($1, $3, $5, InferType($3->nodeType, $5->nodeType, $2->line_number));
+        $$ = create_node_ternary_operation($1, $3, $5, InferTypeTernary($3->nodeType, $5->nodeType, $2->line_number));
         FreeValorLexico($2); FreeValorLexico($4);
     } | 
     exp_log_or                                  { $$ = $1; };
@@ -841,7 +858,7 @@ exp_bit_and:
     exp_bit_and '&' exp_relat_1                 { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_relat_1                                 { $$ = $1; };
 exp_relat_1: 
-    exp_relat_1 TK_OC_EQ exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_relat_1 TK_OC_EQ exp_relat_2            { /* TODO: cant compare chars, strings... */ $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_relat_1 TK_OC_NE exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_relat_2                                 { $$ = $1; };
 exp_relat_2: 
@@ -926,6 +943,16 @@ NodeType InferTypePlus(NodeType t1, NodeType t2, int line)
 {
     if (t1 == NODE_TYPE_STRING && t2 == NODE_TYPE_STRING)
         return NODE_TYPE_STRING;
+
+    return InferType(t1, t2, line);
+}
+
+NodeType InferTypeTernary(NodeType t1, NodeType t2, int line)
+{
+    if (t1 == NODE_TYPE_STRING && t2 == NODE_TYPE_STRING)
+        return NODE_TYPE_STRING;
+    if (t1 == NODE_TYPE_CHAR && t2 == NODE_TYPE_CHAR)
+        return NODE_TYPE_CHAR;
 
     return InferType(t1, t2, line);
 }
