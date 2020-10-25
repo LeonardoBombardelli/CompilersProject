@@ -906,11 +906,11 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
         case ERR_VECTOR:            printf("ERR_VECTOR: Vector %s has been used as variable or function.\n", identifier); break;
         case ERR_FUNCTION:          printf("ERR_FUNCTION: Function %s has been used as variable or vector.\n", identifier); break;
         case ERR_STRING_TO_X:
-            if (identifier == NULL) printf("ERR_STRING_TO_X: String can not be implicitly converted.\n"); break;
-            else                    printf("ERR_STRING_TO_X: String %s can not be implicitly converted.\n", identifier); break;
+            if (identifier == NULL) { printf("ERR_STRING_TO_X: String can not be implicitly converted.\n"); break; }
+            else                    { printf("ERR_STRING_TO_X: String %s can not be implicitly converted.\n", identifier); break; }
         case ERR_CHAR_TO_X:
-            if (identifier == NULL) printf("ERR_CHAR_TO_X: Char can not be implicitly converted.\n"); break;
-            else                    printf("ERR_CHAR_TO_X: Char %s can not be implicitly converted.\n", identifier); break;
+            if (identifier == NULL) { printf("ERR_CHAR_TO_X: Char can not be implicitly converted.\n"); break; }
+            else                    { printf("ERR_CHAR_TO_X: Char %s can not be implicitly converted.\n", identifier); break; }
         case ERR_WRONG_PAR_INPUT:   printf("ERR_WRONG_PAR_INPUT: Input command can only receive an integer or float variable.\n"); break;
         case ERR_WRONG_PAR_OUTPUT:  printf("ERR_WRONG_PAR_OUTPUT: Output command can only receive an int/float literals or variables.\n"); break;
         case ERR_WRONG_PAR_SHIFT:   printf("ERR_WRONG_PAR_SHIFT: Shift command can only receive an integer less than 16.\n"); break;
