@@ -13,7 +13,8 @@
 
     void throw_error(int err_code, int line, char* identifier, TableEntryNature nature);
     NodeType InferTypePlus(NodeType t1, NodeType t2, int line);
-    NodeType InferTypeAcceptStringOrChar(NodeType t1, NodeType t2, int line);
+    NodeType InferTypeTernary(NodeType t1, NodeType t2, int line);
+    NodeType InferTypeEqNeq(NodeType t1, NodeType t2, int line);
     NodeType InferType(NodeType t1, NodeType t2, int line);
     Node* last_command_of_chain(Node* n);
 
@@ -447,7 +448,7 @@ local_var_declaration:
         std::map<ValorLexico*, SymbolType>::iterator it2;
         for(it2 = auxInitTypeMap->begin(); it2 != auxInitTypeMap->end(); ++it2)
         {
-            if (it2->second != IntToSymbolType($3))
+            if (!ImplicitConversionPossible(it2->second, IntToSymbolType($3)))
                 throw_error(ERR_WRONG_TYPE, it2->first->line_number, it2->first->tokenValue.string, TABLE_NATURE_VAR);
         }
 
@@ -554,7 +555,7 @@ local_var:
                 ste->size = ste2->size;
 
             // add entry in aux map to check type of initialized vars
-            (*auxInitTypeMap)[$1] = LiteralTypeToSymbolType($3->literalType);
+            (*auxInitTypeMap)[$1] = ste2->symbolType;
             
             char* id = strdup($1->tokenValue.string);
             (*tempVarMap)[id] = ste;
@@ -841,7 +842,7 @@ expression:
         if ($1->nodeType == NODE_TYPE_CHAR)
             throw_error(ERR_CHAR_TO_X, $2->line_number, NULL, TABLE_NATURE_VAR);
 
-        $$ = create_node_ternary_operation($1, $3, $5, InferTypeAcceptStringOrChar($3->nodeType, $5->nodeType, $2->line_number));
+        $$ = create_node_ternary_operation($1, $3, $5, InferTypeTernary($3->nodeType, $5->nodeType, $2->line_number));
         FreeValorLexico($2); FreeValorLexico($4);
     } | 
     exp_log_or                                  { $$ = $1; };
@@ -858,8 +859,8 @@ exp_bit_and:
     exp_bit_and '&' exp_relat_1                 { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_relat_1                                 { $$ = $1; };
 exp_relat_1: 
-    exp_relat_1 TK_OC_EQ exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferTypeAcceptStringOrChar($1->nodeType, $3->nodeType, $2->line_number)); } | 
-    exp_relat_1 TK_OC_NE exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferTypeAcceptStringOrChar($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_relat_1 TK_OC_EQ exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferTypeEqNeq($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_relat_1 TK_OC_NE exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferTypeEqNeq($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_relat_2                                 { $$ = $1; };
 exp_relat_2: 
     exp_relat_2 TK_OC_LE exp_sum                { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
@@ -931,10 +932,9 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
         case ERR_WRONG_PAR_INPUT:   printf("ERR_WRONG_PAR_INPUT: Input command can only receive an integer or float variable.\n"); break;
         case ERR_WRONG_PAR_OUTPUT:  printf("ERR_WRONG_PAR_OUTPUT: Output command can only receive an int/float literals or variables.\n"); break;
         case ERR_WRONG_PAR_SHIFT:   printf("ERR_WRONG_PAR_SHIFT: Shift command can only receive an integer less than 16.\n"); break;
-        default:                    printf("Unidentified error."); break;
+        default:                    printf("Unidentified error.\n"); break;
     }
 
-    free(nat);
     exit(err_code);
 
 }
@@ -947,12 +947,22 @@ NodeType InferTypePlus(NodeType t1, NodeType t2, int line)
     return InferType(t1, t2, line);
 }
 
-NodeType InferTypeAcceptStringOrChar(NodeType t1, NodeType t2, int line)
+NodeType InferTypeTernary(NodeType t1, NodeType t2, int line)
 {
     if (t1 == NODE_TYPE_STRING && t2 == NODE_TYPE_STRING)
         return NODE_TYPE_STRING;
     if (t1 == NODE_TYPE_CHAR && t2 == NODE_TYPE_CHAR)
         return NODE_TYPE_CHAR;
+
+    return InferType(t1, t2, line);
+}
+
+NodeType InferTypeEqNeq(NodeType t1, NodeType t2, int line)
+{
+    if (t1 == NODE_TYPE_STRING && t2 == NODE_TYPE_STRING)
+        return NODE_TYPE_BOOL;
+    if (t1 == NODE_TYPE_CHAR && t2 == NODE_TYPE_CHAR)
+        return NODE_TYPE_BOOL;
 
     return InferType(t1, t2, line);
 }

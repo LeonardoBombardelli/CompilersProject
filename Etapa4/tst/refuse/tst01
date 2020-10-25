@@ -1,0 +1,11 @@
+int x(int a, int b, char c)
+{
+    a = b;
+    b = a + 3;
+    float d <= a;
+}
+
+int main()
+{
+    x(5, 3, 1);
+}
