@@ -1,15 +1,18 @@
+int len(string s) { return 0;}
+
 char subst(string s, char c1, char c2)
 {
     int i;
     for ( i = 0 : i < len(s) : i = i + 1 )
     {
-        if ( s[i] != c1 )
+        // this program doesnt work anymore :(
+        if ( c1 != c1 )
         {
             continue;
         }
         else
         {
-            s[i] = c2;
+            c2 = c2;
         };
     };
 }

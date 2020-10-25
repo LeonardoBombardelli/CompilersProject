@@ -2,6 +2,7 @@ int foo(char c, bool b)
 {
     while (b) do
     {
+        int x;
         c = x>7 ? 'a' : 'c';
     };
 }

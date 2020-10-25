@@ -1,3 +1,5 @@
+int foo(){}
+
 int main(int x)
 {
     if (true)
