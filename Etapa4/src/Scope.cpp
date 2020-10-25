@@ -8,7 +8,7 @@ Scope* CreateNewScope(char* scopeName)
 {
     Scope *scope = (Scope *)malloc(sizeof(Scope));
     scope->scopeName = scopeName;
-    scope->symbolTable = std::map<std::string, SymbolTableEntry *>();
+    scope->symbolTable = new std::map<std::string, SymbolTableEntry *>;
      
     return scope;
 }
@@ -63,12 +63,13 @@ void DestroyScope(Scope *scope)
 {
     std::map<std::string, SymbolTableEntry *>::iterator it;
 
-    for(it = scope->symbolTable.begin(); it != scope->symbolTable.end(); ++it)
+    for(it = scope->symbolTable->begin(); it != scope->symbolTable->end(); ++it)
     {
         DestroySymbolTableEntry(it->second);
     }
 
-    scope->symbolTable.clear();
+    scope->symbolTable->clear();
+    delete scope->symbolTable;
 
     if(scope->scopeName != NULL)
         free(scope->scopeName);
@@ -122,9 +123,9 @@ void DestroyStack()
 
 bool SymbolIsInSymbolTable(char *symbol, Scope *scope)
 {
-    std::map<std::string, SymbolTableEntry *>::iterator it = scope->symbolTable.begin();
+    std::map<std::string, SymbolTableEntry *>::iterator it = scope->symbolTable->begin();
 
-    while(it != scope->symbolTable.end())
+    while(it != scope->symbolTable->end())
     {
         if(std::string(symbol) == it->first)
             return true;
@@ -144,7 +145,7 @@ SymbolTableEntry* GetFirstOccurrence(char *symbol)
     {
         if(SymbolIsInSymbolTable(symbol, *it))
         {
-            entryToReturn = (*it)->symbolTable[std::string(symbol)];
+            entryToReturn = (*(*it)->symbolTable)[std::string(symbol)];
             found = true;
         }
         ++it;

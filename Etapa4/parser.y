@@ -205,9 +205,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INTEGER, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
+            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
+        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
     } |
     TK_LIT_FLOAT  {
         $$ = create_node_literal($1, NODE_TYPE_FLOAT); 
@@ -219,9 +219,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_FLOAT, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
+            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
+        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
     } |
     TK_LIT_FALSE  {
         $$ = create_node_literal($1, NODE_TYPE_BOOL);  
@@ -233,9 +233,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
+            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
+        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
     } |
     TK_LIT_TRUE   {
         $$ = create_node_literal($1, NODE_TYPE_BOOL);  
@@ -247,9 +247,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
+            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
+        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
     } |
     TK_LIT_CHAR   {
         $$ = create_node_literal($1, NODE_TYPE_CHAR);  
@@ -261,9 +261,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_CHAR, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
+            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
+        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
     } |
     TK_LIT_STRING {
         $$ = create_node_literal($1, NODE_TYPE_STRING);
@@ -275,9 +275,9 @@ literal:
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_STRING, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry(scopeStack->back()->symbolTable[std::string(auxLiteral)]);
+            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
 
-        scopeStack->back()->symbolTable[std::string(auxLiteral)] = ste;
+        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
     };
 
 global_var: 
@@ -319,7 +319,7 @@ global_var_declaration:
         for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
         {
             it->second->symbolType = IntToSymbolType($2);
-            scopeStack->back()->symbolTable[it->first] = it->second;
+            (*scopeStack->back()->symbolTable)[it->first] = it->second;
         }
 
         // free temp var map
@@ -349,7 +349,7 @@ func_header:
             // create entry and add it to scope
             SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, tempFuncArgList, 0);
             char* id = $3->tokenValue.string;
-            scopeStack->back()->symbolTable[std::string(id)] = ste;
+            (*scopeStack->back()->symbolTable)[std::string(id)] = ste;
         }
         else throw_error(ERR_DECLARED, $3->line_number, $3->tokenValue.string, TABLE_NATURE_FUNC);
 
@@ -416,7 +416,7 @@ cmd_block_init_scope:
             while (it != tempFuncArgList->end())
             {
                 SymbolTableEntry* ste = CreateSymbolTableEntry((*it)->type, auxCurrentFuncLine, TABLE_NATURE_VAR, NULL, 0);
-                scopeStack->back()->symbolTable[std::string((*it)->argName)] = ste;
+                (*scopeStack->back()->symbolTable)[std::string((*it)->argName)] = ste;
                 ++it;
             }
         }
@@ -468,7 +468,7 @@ local_var_declaration:
         for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
         {
             it->second->symbolType = IntToSymbolType($3);
-            scopeStack->back()->symbolTable[it->first] = it->second;
+            (*scopeStack->back()->symbolTable)[it->first] = it->second;
         }
 
         // free temp var map and aux init type map
@@ -732,7 +732,8 @@ call_func_command:
             {
                 if ( !ImplicitConversionPossible((*it_formal_args)->type, (*it_real_args)->type) )
                     throw_error(ERR_WRONG_TYPE_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
-                
+
+                DestroyFuncArgument(*it_real_args);   
                 ++it_formal_args; ++it_real_args;
             }
 
