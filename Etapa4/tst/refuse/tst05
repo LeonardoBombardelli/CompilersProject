@@ -6,8 +6,11 @@ int main()
     int y;
     y = 2+2;
 
-    if (true)
+    if ( x + y < 3)
     {
+        int x;  // this is possible because of the new scope
+        int w;
+        input u;
     };
 
 }

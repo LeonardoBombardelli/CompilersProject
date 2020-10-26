@@ -712,19 +712,20 @@ io_command:
 
         char* id = $2->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(id);
+        int line = $2->line_number;
 
         // check if var was declared
         if (ste == NULL)
-            throw_error(ERR_UNDECLARED, $1->line_number, id, TABLE_NATURE_VAR);
+            throw_error(ERR_UNDECLARED, line, id, TABLE_NATURE_VAR);
         // check if symbol's nature is not function or vector
         if (ste->entryNature == TABLE_NATURE_FUNC)
-            throw_error(ERR_FUNCTION, $1->line_number, id, TABLE_NATURE_FUNC);
+            throw_error(ERR_FUNCTION, line, id, TABLE_NATURE_FUNC);
         if (ste->entryNature == TABLE_NATURE_VEC)
-            throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
+            throw_error(ERR_VECTOR, line, id, TABLE_NATURE_VEC);
 
         // check if id is of type int or float
         if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
-            throw_error(ERR_WRONG_PAR_INPUT, $1->line_number, id, TABLE_NATURE_VAR);
+            throw_error(ERR_WRONG_PAR_INPUT, line, id, TABLE_NATURE_VAR);
 
         $$ = create_node_input(create_node_var_access($2, SymbolTypeToNodeType(ste->symbolType)));
     } | 
@@ -732,27 +733,29 @@ io_command:
 
         char* id = $2->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(id);
+        int line = $2->line_number;
 
         // check if var was declared
         if (ste == NULL)
-            throw_error(ERR_UNDECLARED, $1->line_number, id, TABLE_NATURE_VAR);
+            throw_error(ERR_UNDECLARED, line, id, TABLE_NATURE_VAR);
         // check if symbol's nature is not function or vector
         if (ste->entryNature == TABLE_NATURE_FUNC)
-            throw_error(ERR_FUNCTION, $1->line_number, id, TABLE_NATURE_FUNC);
+            throw_error(ERR_FUNCTION, line, id, TABLE_NATURE_FUNC);
         if (ste->entryNature == TABLE_NATURE_VEC)
-            throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
+            throw_error(ERR_VECTOR, line, id, TABLE_NATURE_VEC);
 
         // check if id is of type int or float
         if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
-            throw_error(ERR_WRONG_PAR_OUTPUT, $1->line_number, id, TABLE_NATURE_VAR);
+            throw_error(ERR_WRONG_PAR_OUTPUT, line, id, TABLE_NATURE_VAR);
 
         $$ = create_node_output(create_node_var_access($2, SymbolTypeToNodeType(ste->symbolType)));
     } | 
     TK_PR_OUTPUT literal {
+        int line = $2->n_literal.literal->line_number;
 
         // check if id is of type int or float
         if ($2->nodeType != NODE_TYPE_INT && $2->nodeType != NODE_TYPE_FLOAT)
-            throw_error(ERR_WRONG_PAR_OUTPUT, $1->line_number, NULL, TABLE_NATURE_VAR);
+            throw_error(ERR_WRONG_PAR_OUTPUT, line, NULL, TABLE_NATURE_VAR);
 
         $$ = create_node_output($2);
     } ;

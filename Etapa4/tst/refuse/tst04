@@ -14,8 +14,10 @@ int main()
 
     f("aaaa");
 
-    // string s;
-    // output s;
+    // output "aa";
+
+    //string s;
+    output s;
 
     if ( 2+2 )
     {
