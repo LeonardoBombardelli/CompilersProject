@@ -18,17 +18,15 @@
     NodeType InferType(NodeType t1, NodeType t2, int line);
     Node* last_command_of_chain(Node* n);
 
-    char* auxScopeName = NULL;
-    SymbolType auxCurrentFuncType = SYMBOL_TYPE_INDEF;
     char* auxLiteral = (char*) malloc(500);
-    int auxCurrentFuncLine = 0;
+    char* auxScopeName = NULL;                              // save current function's name (used when creating new scopes)
+    SymbolType auxCurrentFuncType = SYMBOL_TYPE_INDEF;      // save current function's return type (used when verifying return command)
+    int auxCurrentFuncLine = 0;                             // save current func's decl. line (used when creating STEs for function's args)
+    int stringConcatSize = 0;                               // used to calculate the final size when concating strings
 
-    int stringConcatSize = 0;
-
-    std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>; // aux map to check type when initializing vars on declaration
-
-    std::map<std::string, SymbolTableEntry*> *tempVarMap = new std::map<std::string, SymbolTableEntry*>;     // reusable map of vars
-    std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;                  // reusable list of function arguments
+    std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;            // aux map to check type when initializing vars on declaration
+    std::map<std::string, SymbolTableEntry*> *tempVarMap = new std::map<std::string, SymbolTableEntry*>;    // reusable map of vars
+    std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;                             // reusable list of function arguments
 %}
 
 %union 
@@ -296,7 +294,6 @@ global_var:
         // ignore global vars in AST
         $$ = NULL; 
         FreeValorLexico($1);
-        // TODO: shall we keep freeing the lexical value? We're using it now to add the variable to the symbol table
     } |
     TK_IDENTIFICADOR '[' TK_LIT_INT ']' {
         // add var to symbol table if not already there
@@ -311,7 +308,6 @@ global_var:
         // ignore global vars in AST
         $$ = NULL; 
         FreeValorLexico($1); FreeValorLexico($2); FreeValorLexico($3); FreeValorLexico($4);
-        // TODO: shall we keep freeing the lexical value? We're using it now to add the variable to the symbol table
     };
 global_var_declaration: 
     maybe_static type global_var_list ';' {
@@ -753,7 +749,7 @@ io_command:
     TK_PR_OUTPUT literal {
         int line = $2->n_literal.literal->line_number;
 
-        // check if id is of type int or float
+        // check if literal is of type int or float
         if ($2->nodeType != NODE_TYPE_INT && $2->nodeType != NODE_TYPE_FLOAT)
             throw_error(ERR_WRONG_PAR_OUTPUT, line, NULL, TABLE_NATURE_VAR);
 

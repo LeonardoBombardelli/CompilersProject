@@ -467,7 +467,6 @@ void PrintNode(Node* node, Node* parent)
 
     default:
         printf("Erro ao printar!!!");
-        //TODO: CRIAR UM DEFAULT
     }
 
     if(node->sequenceNode != NULL)
