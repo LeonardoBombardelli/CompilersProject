@@ -1025,28 +1025,27 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
     }
 
     switch(err_code) {
-        // TODO: maybe write more descriptive messages???
-        case ERR_UNDECLARED:        printf("ERR_UNDECLARED: %s %s has not been declared.\n", nat, identifier); break;
-        case ERR_DECLARED:          printf("ERR_DECLARED: %s %s cannot be declared. Name has already been used in this scope.\n", nat, identifier); break;
-        case ERR_VARIABLE:          printf("ERR_VARIABLE: Variable %s has been used as vector or function.\n", identifier); break;
-        case ERR_VECTOR:            printf("ERR_VECTOR: Vector %s has been used as variable or function.\n", identifier); break;
-        case ERR_FUNCTION:          printf("ERR_FUNCTION: Function %s has been used as variable or vector.\n", identifier); break;
-        case ERR_WRONG_TYPE:        printf("ERR_WRONG_TYPE: %s %s cannot be attributed a value of a different type.\n", nat, identifier); break;
+        case ERR_UNDECLARED:                    printf("ERR_UNDECLARED: %s \"%s\" has not been declared.\n", nat, identifier); break;
+        case ERR_DECLARED:                      printf("ERR_DECLARED: %s \"%s\" cannot be declared. Name has already been used in this scope.\n", nat, identifier); break;
+        case ERR_VARIABLE:                      printf("ERR_VARIABLE: Variable \"%s\" has been used as vector or function.\n", identifier); break;
+        case ERR_VECTOR:                        printf("ERR_VECTOR: Vector \"%s\" has been used as variable or function.\n", identifier); break;
+        case ERR_FUNCTION:                      printf("ERR_FUNCTION: Function \"%s\" has been used as variable or vector.\n", identifier); break;
+        case ERR_WRONG_TYPE:                    printf("ERR_WRONG_TYPE: %s \"%s\" cannot be attributed a value of a different type.\n", nat, identifier); break;
         case ERR_STRING_TO_X:
-            if (identifier == NULL) { printf("ERR_STRING_TO_X: String cannot be implicitly converted.\n"); break; }
-            else                    { printf("ERR_STRING_TO_X: String %s cannot be implicitly converted.\n", identifier); break; }
+            if (identifier == NULL)           { printf("ERR_STRING_TO_X: String cannot be implicitly converted.\n"); break; }
+            else                              { printf("ERR_STRING_TO_X: String \"%s\" cannot be implicitly converted.\n", identifier); break; }
         case ERR_CHAR_TO_X:
-            if (identifier == NULL) { printf("ERR_CHAR_TO_X: Char cannot be implicitly converted.\n"); break; }
-            else                    { printf("ERR_CHAR_TO_X: Char %s cannot be implicitly converted.\n", identifier); break; }
-        case ERR_STRING_SIZE:       printf("ERR_STRING_SIZE: String %s cannot be attributed a string of different size.\n", identifier); break;
-        case ERR_MISSING_ARGS:      printf("ERR_MISSING_ARGS: Function %s cannot be called with less arguments than declared.\n", identifier); break;
-        case ERR_EXCESS_ARGS:       printf("ERR_EXCESS_ARGS: Function %s cannot be called with more arguments than declared.\n", identifier); break;
-        case ERR_WRONG_TYPE_ARGS:   printf("ERR_WRONG_TYPE_ARGS: Function %s is called with arguments of different types than declared.\n", identifier); break;
-        case ERR_WRONG_PAR_INPUT:   printf("ERR_WRONG_PAR_INPUT: Input command can only receive an integer or float variable.\n"); break;
-        case ERR_WRONG_PAR_OUTPUT:  printf("ERR_WRONG_PAR_OUTPUT: Output command can only receive an int/float literals or variables.\n"); break;
-        case ERR_WRONG_PAR_RETURN:  printf("ERR_WRONG_PAR_RETURN: Cannot return different type than declared for function %s.\n", identifier); break;
-        case ERR_WRONG_PAR_SHIFT:   printf("ERR_WRONG_PAR_SHIFT: Shift command can only receive an integer less than 16.\n"); break;
-        default:                    printf("Unidentified error.\n"); break;
+            if (identifier == NULL)           { printf("ERR_CHAR_TO_X: Char cannot be implicitly converted.\n"); break; }
+            else                              { printf("ERR_CHAR_TO_X: Char \"%s\" cannot be implicitly converted.\n", identifier); break; }
+        case ERR_STRING_SIZE:                   printf("ERR_STRING_SIZE: String \"%s\" cannot be attributed a string of different size.\n", identifier); break;
+        case ERR_MISSING_ARGS:                  printf("ERR_MISSING_ARGS: Function \"%s\" cannot be called with less arguments than declared.\n", identifier); break;
+        case ERR_EXCESS_ARGS:                   printf("ERR_EXCESS_ARGS: Function \"%s\" cannot be called with more arguments than declared.\n", identifier); break;
+        case ERR_WRONG_TYPE_ARGS:               printf("ERR_WRONG_TYPE_ARGS: Function \"%s\" is called with arguments of different types than declared.\n", identifier); break;
+        case ERR_WRONG_PAR_INPUT:               printf("ERR_WRONG_PAR_INPUT: Input command can only receive an integer or float variable.\n"); break;
+        case ERR_WRONG_PAR_OUTPUT:              printf("ERR_WRONG_PAR_OUTPUT: Output command can only receive an integer or float variable/literal.\n"); break;
+        case ERR_WRONG_PAR_RETURN:              printf("ERR_WRONG_PAR_RETURN: Cannot return different type than declared for function \"%s\".\n", identifier); break;
+        case ERR_WRONG_PAR_SHIFT:               printf("ERR_WRONG_PAR_SHIFT: Shift command can only receive an integer less than 16.\n"); break;
+        default:                                printf("Unidentified error.\n"); break;
     }
 
     exit(err_code);
