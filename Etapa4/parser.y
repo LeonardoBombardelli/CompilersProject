@@ -23,6 +23,8 @@
     char* auxLiteral = (char*) malloc(500);
     int auxCurrentFuncLine = 0;
 
+    int stringConcatSize = 0;
+
     std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>; // aux map to check type when initializing vars on declaration
 
     std::map<std::string, SymbolTableEntry*> *tempVarMap = new std::map<std::string, SymbolTableEntry*>;     // reusable map of vars
@@ -477,6 +479,27 @@ local_var_declaration:
         for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
         {
             it->second->symbolType = IntToSymbolType($3);
+
+            switch (it->second->symbolType)
+            {
+            case SYMBOL_TYPE_INTEGER:
+                it->second->size = 4;
+                break;
+            case SYMBOL_TYPE_FLOAT:
+                it->second->size = 8;
+                break;
+            case SYMBOL_TYPE_CHAR:
+            case SYMBOL_TYPE_BOOL:
+                it->second->size = 1;
+                break;
+            case SYMBOL_TYPE_STRING:
+                it->second->size = -1;
+                break;
+            default:
+                it->second->size = 0;
+                break;
+            }
+
             (*scopeStack->back()->symbolTable)[it->first] = it->second;
         }
 
@@ -636,8 +659,6 @@ var_access:
 attribution_command:
     var_access '=' expression {
 
-        // TODO: test strings. If expression is sum of strings or sum of sum of ......
-
         if ($1->nodeCategory == NODE_VAR_ACCESS)
         {
             char* id = $1->n_var_access.identifier->tokenValue.string;
@@ -661,6 +682,14 @@ attribution_command:
                     SymbolTableEntry* ste2 = GetFirstOccurrence($3->n_var_access.identifier->tokenValue.string);
                     if(ste->size == -1) ste->size = ste2->size;
                     else if(ste->size < ste2->size) throw_error(ERR_STRING_SIZE, $2->line_number, id, TABLE_NATURE_VAR);
+                }
+
+                if($3->nodeCategory == NODE_BINARY_OPERATION)
+                {
+                    if(ste->size == -1) ste->size = stringConcatSize;
+                    else if (ste->size < stringConcatSize) throw_error(ERR_STRING_SIZE, $2->line_number, id, TABLE_NATURE_VAR);
+
+                    stringConcatSize = 0;
                 }
             }
         }
@@ -928,7 +957,27 @@ exp_relat_2:
     exp_relat_2 '>' exp_sum                     { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_sum                                     { $$ = $1; };
 exp_sum:
-    exp_sum '+' exp_mult                        { $$ = create_node_binary_operation($2, $1, $3, InferTypePlus($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_sum '+' exp_mult                        {
+        NodeType inferredType = InferTypePlus($1->nodeType, $3->nodeType, $2->line_number);
+
+        // add string length to stringConcatSize for every leaf node
+        if (inferredType == NODE_TYPE_STRING)
+        {
+            if ($1->nodeCategory == NODE_LITERAL)
+                stringConcatSize += strlen($1->n_literal.literal->tokenValue.string);
+            
+            if ($1->nodeCategory == NODE_VAR_ACCESS)
+                stringConcatSize += GetFirstOccurrence($1->n_var_access.identifier->tokenValue.string)->size;
+            
+            if ($3->nodeCategory == NODE_LITERAL)
+                stringConcatSize += strlen($3->n_literal.literal->tokenValue.string);
+
+            if ($3->nodeCategory == NODE_VAR_ACCESS)
+                stringConcatSize += GetFirstOccurrence($3->n_var_access.identifier->tokenValue.string)->size;
+        }
+
+        $$ = create_node_binary_operation($2, $1, $3, inferredType);
+        } | 
     exp_sum '-' exp_mult                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_mult                                    { $$ = $1; };
 exp_mult: 
