@@ -3,6 +3,7 @@
     #include <map>
     #include "../include/AST.hpp"
     #include "../include/Scope.hpp"
+    #include "../include/ILOC.hpp"
 
     extern "C" int yylex();
 
@@ -168,7 +169,12 @@ program_list:
     %empty                                { $$ = NULL;                                  };
 
 init_stack:
-    %empty { CreateStack(); $$ = NULL; }
+    %empty {
+        CreateStack();
+        labelIndex = 0;
+        registerIndex = 0;
+        $$ = NULL;
+    }
 
 destroy_stack:
     %empty { DestroyStack(); 
@@ -208,6 +214,10 @@ literal:
             DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
 
         (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
+
+        std::string newRegister = createRegister();
+        $$->local = newRegister;
+        $$->code->push_back(IlocCode(LOADI, auxLiteral, "", newRegister));
     } |
     TK_LIT_FLOAT  {
         $$ = create_node_literal($1, NODE_TYPE_FLOAT); 
@@ -976,12 +986,54 @@ exp_sum:
         }
 
         $$ = create_node_binary_operation($2, $1, $3, inferredType);
+
+        std::string newRegister = createRegister();
+        $$->local = newRegister;
+        $$->code = $1->code;
+        for (IlocCode c : *($3->code)) {
+            $$->code->push_back(c);
+        }
+        $$->code->push_back(IlocCode(ADD, $1->local, $3->local, newRegister));
+
         } | 
-    exp_sum '-' exp_mult                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_sum '-' exp_mult                        {
+        $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
+
+        std::string newRegister = createRegister();
+        $$->local = newRegister;
+        $$->code = $1->code;
+        for (IlocCode c : *($3->code)) {
+            $$->code->push_back(c);
+        }
+        $$->code->push_back(IlocCode(SUB, $1->local, $3->local, newRegister));
+
+    } | 
     exp_mult                                    { $$ = $1; };
 exp_mult: 
-    exp_mult '*' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
-    exp_mult '/' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_mult '*' exp_pow {
+        $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
+
+        std::string newRegister = createRegister();
+        $$->local = newRegister;
+        $$->code = $1->code;
+        for (IlocCode c : *($3->code)) {
+            $$->code->push_back(c);
+        }
+        $$->code->push_back(IlocCode(MULT, $1->local, $3->local, newRegister));
+
+    } | 
+    exp_mult '/' exp_pow {
+        $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
+
+        std::string newRegister = createRegister();
+        $$->local = newRegister;
+        $$->code = $1->code;
+        for (IlocCode c : *($3->code)) {
+            $$->code->push_back(c);
+        }
+        $$->code->push_back(IlocCode(DIV, $1->local, $3->local, newRegister));
+
+    } | 
     exp_mult '%' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_pow                                     { $$ = $1; };
 exp_pow: 
@@ -1051,16 +1103,14 @@ void throw_error(int err_code, int line, char* identifier, TableEntryNature natu
 
 }
 
-NodeType InferTypePlus(NodeType t1, NodeType t2, int line)
-{
+NodeType InferTypePlus(NodeType t1, NodeType t2, int line) {
     if (t1 == NODE_TYPE_STRING && t2 == NODE_TYPE_STRING)
         return NODE_TYPE_STRING;
 
     return InferType(t1, t2, line);
 }
 
-NodeType InferTypeTernary(NodeType t1, NodeType t2, int line)
-{
+NodeType InferTypeTernary(NodeType t1, NodeType t2, int line) {
     if (t1 == NODE_TYPE_STRING && t2 == NODE_TYPE_STRING)
         return NODE_TYPE_STRING;
     if (t1 == NODE_TYPE_CHAR && t2 == NODE_TYPE_CHAR)
@@ -1069,8 +1119,7 @@ NodeType InferTypeTernary(NodeType t1, NodeType t2, int line)
     return InferType(t1, t2, line);
 }
 
-NodeType InferTypeEqNeq(NodeType t1, NodeType t2, int line)
-{
+NodeType InferTypeEqNeq(NodeType t1, NodeType t2, int line) {
     if (t1 == NODE_TYPE_STRING && t2 == NODE_TYPE_STRING)
         return NODE_TYPE_BOOL;
     if (t1 == NODE_TYPE_CHAR && t2 == NODE_TYPE_CHAR)
@@ -1079,8 +1128,7 @@ NodeType InferTypeEqNeq(NodeType t1, NodeType t2, int line)
     return InferType(t1, t2, line);
 }
 
-NodeType InferType(NodeType t1, NodeType t2, int line)
-{
+NodeType InferType(NodeType t1, NodeType t2, int line) {
     // if any of the types is not int/float/bool
     if (t1 == NODE_TYPE_STRING || t2 == NODE_TYPE_STRING)
         throw_error(ERR_STRING_TO_X, line, NULL, TABLE_NATURE_VAR);

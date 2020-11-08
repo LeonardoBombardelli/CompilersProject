@@ -2,7 +2,9 @@
 #define AST_HPP
 
 #include "lexicalvalue.hpp"
+#include "ILOC.hpp"
 #include <cstdlib>
+#include <list>
 #include <iostream>
 #include <cstring>
 
@@ -144,6 +146,11 @@ typedef struct node {
     NodeCategory nodeCategory;
     NodeType     nodeType;
     struct node* sequenceNode;
+
+    std::string local;
+    std::list<IlocCode> *code;
+    std::list<std::string*> *tl;
+    std::list<std::string*> *fl;
 
     union 
     {
