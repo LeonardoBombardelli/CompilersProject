@@ -1,4 +1,4 @@
-Etapa*/etapa*
+Etapa*/etapa[0-9]
 Etapa*/lex.yy.c
 Etapa*/lex.yy.o
 Etapa*/parser.tab.c
