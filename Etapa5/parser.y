@@ -312,24 +312,25 @@ global_var_declaration:
     maybe_static type global_var_list ';' {
 
         Scope* scopeStackTop = scopeStack->back();
+        SymbolType type = IntToSymbolType($2);
 
         // set type to all vars of list, and insert them in table
-        std::map<std::string, SymbolTableEntry*>::iterator it;
-        for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
+        for (std::pair<std::string, SymbolTableEntry*> item : *tempVarMap)
         {
-            SymbolType type = IntToSymbolType($2);
-            it->second->symbolType = type;
+            SymbolTableEntry* ste = item.second;
+
+            ste->symbolType = type;
 
             // update STE size
             int size = SizeFromSymbolType(type);
-            if(it->second->entryNature == TABLE_NATURE_VEC) size *= it->second->vectorSize;
-            it->second->size = size;
+            if(ste->entryNature == TABLE_NATURE_VEC) size *= ste->vectorSize;
+            ste->size = size;
 
             // update offset info
-            it->second->desloc = scopeStackTop->currentDesloc;
+            ste->desloc = scopeStackTop->currentDesloc;
             scopeStackTop->currentDesloc += size;
 
-            (*scopeStackTop->symbolTable)[it->first] = it->second;
+            (*scopeStackTop->symbolTable)[item.first] = ste;
         }
 
         // free temp var map
@@ -361,11 +362,7 @@ func_header:
 
         // make a deep copy of func args list
         std::list<FuncArgument*> *deepCopy = new std::list<FuncArgument*>;
-        std::list<FuncArgument*>::iterator it = tempFuncArgList->begin();
-        while(it != tempFuncArgList->end()) {
-            deepCopy->push_back(*it);
-            ++it;
-        }
+        for (FuncArgument* arg : *tempFuncArgList) deepCopy->push_back(arg);
 
         // add function to symbol table
         SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, deepCopy, 0, 0);
@@ -420,16 +417,10 @@ cmd_block_init_scope:
         scopeStack->push_back(newScope);
 
         // add formal parameters to function's scope
-        if (!tempFuncArgList->empty())
+        for (FuncArgument* arg : *tempFuncArgList)
         {
-            std::list<FuncArgument *>::iterator it = tempFuncArgList->begin();
-
-            while (it != tempFuncArgList->end())
-            {
-                SymbolTableEntry* ste = CreateSymbolTableEntry((*it)->type, auxCurrentFuncLine, TABLE_NATURE_VAR, NULL, 0, 0);
-                (*scopeStack->back()->symbolTable)[std::string((*it)->argName)] = ste;
-                ++it;
-            }
+            SymbolTableEntry* ste = CreateSymbolTableEntry(arg->type, auxCurrentFuncLine, TABLE_NATURE_VAR, NULL, 0, 0);
+            (*scopeStack->back()->symbolTable)[std::string(arg->argName)] = ste;
         }
 
         // free temp func arg list
@@ -468,32 +459,31 @@ local_var_declaration:
     maybe_static maybe_const type local_var_list {
 
         // check if all inits obey the declared type
-        std::map<ValorLexico*, SymbolType>::iterator it2;
-        for(it2 = auxInitTypeMap->begin(); it2 != auxInitTypeMap->end(); ++it2)
+        for (std::pair<ValorLexico*, SymbolType> item : *auxInitTypeMap)
         {
-            if (!ImplicitConversionPossible(it2->second, IntToSymbolType($3)))
-                throw_error(ERR_WRONG_TYPE, it2->first->line_number, it2->first->tokenValue.string, TABLE_NATURE_VAR);
+            if (!ImplicitConversionPossible(item.second, IntToSymbolType($3)))
+                throw_error(ERR_WRONG_TYPE, item.first->line_number, item.first->tokenValue.string, TABLE_NATURE_VAR);
         }
 
         Scope* scopeStackTop = scopeStack->back();
 
         // set type to all vars of list, and insert them in table
-        std::map<std::string, SymbolTableEntry*>::iterator it;
-        for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
+        for (std::pair<std::string, SymbolTableEntry*> item : *tempVarMap)
         {
+            SymbolTableEntry* ste = item.second;
             SymbolType type = IntToSymbolType($3);
-            it->second->symbolType = type;
+            ste->symbolType = type;
 
             // update STE size
             int size = SizeFromSymbolType(type);
-            if(it->second->entryNature == TABLE_NATURE_VEC) size *= it->second->vectorSize;
-            it->second->size = size;
+            if(ste->entryNature == TABLE_NATURE_VEC) size *= ste->vectorSize;
+            ste->size = size;
 
             // update offset info
-            it->second->desloc = scopeStackTop->currentDesloc;
+            ste->desloc = scopeStackTop->currentDesloc;
             scopeStackTop->currentDesloc += size;
 
-            (*scopeStack->back()->symbolTable)[it->first] = it->second;
+            (*scopeStack->back()->symbolTable)[item.first] = ste;
         }
 
         // free temp var map and aux init type map
@@ -768,11 +758,8 @@ call_func_command:
         // if function is called with arguments
         if ($3 != NULL)
         {
-            if (tempFuncArgList->size() > ste->funcArguments->size())
-                throw_error(ERR_EXCESS_ARGS, line, id, TABLE_NATURE_FUNC);
-
-            if (tempFuncArgList->size() < ste->funcArguments->size())
-                throw_error(ERR_MISSING_ARGS, line, id, TABLE_NATURE_FUNC);
+            if (tempFuncArgList->size() > ste->funcArguments->size()) throw_error(ERR_EXCESS_ARGS, line, id, TABLE_NATURE_FUNC);
+            if (tempFuncArgList->size() < ste->funcArguments->size()) throw_error(ERR_MISSING_ARGS, line, id, TABLE_NATURE_FUNC);
 
             // iterate through both lists comparing each argument's type
             std::list<FuncArgument*>::iterator it_formal_args = ste->funcArguments->begin();
