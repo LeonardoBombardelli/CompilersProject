@@ -55,10 +55,10 @@
        Here we use an int which is later converted to SymbolType                */
     int symbol_type;
 
-    /* This field is used solely in the nonterminal 'io_command' to
-       differentiate between the input and the output reserved words */
-    int input_or_output;
-    int shift_left_or_right;
+    /* The following fields are used solely to differentiate between grammar symbols in
+       cases where the rules (if made separate) would be almost but not completely the same */
+    int input_or_output;     /* Used in nonterminal 'io_command'    */
+    int shift_left_or_right; /* Used in nonterminal 'shift_command' */
 }
 
 %token<valor_lexico> TK_PR_INT
@@ -303,10 +303,11 @@ global_var:
         // ignore global vars in AST
         $$ = NULL; 
         FreeValorLexico($1);
+        if ($2 != NULL) FreeValorLexico($2);
     };
 global_var_maybe_vector:
-    %empty             { $$ = NULL;                                                              } |
-    '[' TK_LIT_INT ']' { $$ = $2; FreeValorLexico($1); FreeValorLexico($2); FreeValorLexico($3); };
+    %empty             { $$ = NULL;                                         } |
+    '[' TK_LIT_INT ']' { $$ = $2; FreeValorLexico($1); FreeValorLexico($3); };
 global_var_declaration: 
     maybe_static type global_var_list ';' {
 
@@ -621,10 +622,6 @@ var_access:
 
     } | 
     TK_IDENTIFICADOR '[' expression ']' {
-
-        /* we'll only need to address this if vectors are 
-           included back in the language in the next phases */
-
         char* id = $1->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(id);
         int line = $1->line_number;
@@ -644,6 +641,10 @@ var_access:
         NodeType nt = SymbolTypeToNodeType(ste->symbolType);
         $$ = create_node_vector_access(create_node_var_access($1, nt), $3, nt);
         FreeValorLexico($2); FreeValorLexico($4);
+
+        /* we'll only need to create intermediate code here if vectors 
+           are included back in the language in the next phases */
+
     };
 
 attribution_command:
@@ -702,9 +703,6 @@ attribution_command:
         }
         else if ($1->nodeCategory == NODE_VECTOR_ACCESS)
         {
-            /* we'll only need to address this if vectors are 
-            included back in the language in the next phases */
-
             char* id = $1->n_vector_access.var->n_var_access.identifier->tokenValue.string;
             SymbolTableEntry* ste = GetFirstOccurrence(id);
 
@@ -714,6 +712,10 @@ attribution_command:
                 
             $$ = create_node_var_attr($1, $3);
             FreeValorLexico($2);
+
+            /* we'll only need to create intermediate code here if vectors 
+               are included back in the language in the next phases */
+
         }
 
     };
@@ -749,7 +751,7 @@ io_command:
     } ;
 input_or_output:
     TK_PR_INPUT  { $$ = 0; } |
-    TK_PR_OUTPUT { $$ = 1; /* TODO : FreeValorLexico?? */};
+    TK_PR_OUTPUT { $$ = 1; };
 
 call_func_command:
     TK_IDENTIFICADOR '(' func_parameters_list ')' {
@@ -827,7 +829,7 @@ shift_command:
 
         // check if shift number greater than 16
         if ($3->tokenValue.integer > 16)
-            throw_error(ERR_WRONG_PAR_SHIFT, $2->line_number, NULL, TABLE_NATURE_LIT);
+            throw_error(ERR_WRONG_PAR_SHIFT, $3->line_number, NULL, TABLE_NATURE_LIT);
 
         // create right node for shift left or right
         if ($2 == 0) $$ = create_node_shift_left($1, create_node_literal($3, NODE_TYPE_INT));
@@ -862,15 +864,14 @@ conditional_flux_control:
         // if expression is not of type compatible with bool, throw error
         if( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
         {
-            if(st == SYMBOL_TYPE_CHAR)
-                throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
-            if(st == SYMBOL_TYPE_STRING)
-                throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
+            int line = $1->line_number;
+            if(st == SYMBOL_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, line, NULL, TABLE_NATURE_VEC);
+            if(st == SYMBOL_TYPE_STRING) throw_error(ERR_STRING_TO_X, line, NULL, TABLE_NATURE_VEC);
         }
 
         $$ = create_node_if($3, $5, $6); 
         FreeValorLexico($2); FreeValorLexico($4); 
-        };
+    };
 maybe_else: 
     TK_PR_ELSE command_block { $$ = $2;   } | 
     %empty                   { $$ = NULL; };
@@ -883,10 +884,9 @@ for_flux_control:
         // if expression is not of type compatible with bool, throw error
         if ( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
         {
-            if (st == SYMBOL_TYPE_CHAR)
-                throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
-            if (st == SYMBOL_TYPE_STRING)
-                throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
+            int line = $1->line_number;
+            if (st == SYMBOL_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, line, NULL, TABLE_NATURE_VEC);
+            if (st == SYMBOL_TYPE_STRING) throw_error(ERR_STRING_TO_X, line, NULL, TABLE_NATURE_VEC);
         }
 
         $$ = create_node_for_loop($3, $5, $7, $9);
@@ -900,10 +900,9 @@ while_flux_control:
         // if expression is not of type compatible with bool, throw error
         if ( !ImplicitConversionPossible(st, SYMBOL_TYPE_BOOL))
         {
-            if(st == SYMBOL_TYPE_CHAR)
-                throw_error(ERR_CHAR_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
-            if(st == SYMBOL_TYPE_STRING)
-                throw_error(ERR_STRING_TO_X, $1->line_number, NULL, TABLE_NATURE_VEC);
+            int line = $1->line_number;
+            if(st == SYMBOL_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, line, NULL, TABLE_NATURE_VEC);
+            if(st == SYMBOL_TYPE_STRING) throw_error(ERR_STRING_TO_X, line, NULL, TABLE_NATURE_VEC);
         }
 
         $$ = create_node_while_loop($3, $6);
@@ -913,13 +912,14 @@ while_flux_control:
 expression: 
     exp_log_or '?' expression ':' expression    {
 
-        // check if first expression is not string or char
-        if ($1->nodeType == NODE_TYPE_STRING)
-            throw_error(ERR_STRING_TO_X, $2->line_number, NULL, TABLE_NATURE_VAR);
-        if ($1->nodeType == NODE_TYPE_CHAR)
-            throw_error(ERR_CHAR_TO_X, $2->line_number, NULL, TABLE_NATURE_VAR);
+        int line = $2->line_number;
+        NodeType nt = $1->nodeType;
 
-        $$ = create_node_ternary_operation($1, $3, $5, InferTypeTernary($3->nodeType, $5->nodeType, $2->line_number));
+        // check if first expression is not string or char
+        if (nt == NODE_TYPE_STRING) throw_error(ERR_STRING_TO_X, line, NULL, TABLE_NATURE_VAR);
+        if (nt == NODE_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, line, NULL, TABLE_NATURE_VAR);
+
+        $$ = create_node_ternary_operation($1, $3, $5, InferTypeTernary($3->nodeType, $5->nodeType, line));
         FreeValorLexico($2); FreeValorLexico($4);
     } | 
     exp_log_or                                  { $$ = $1; };
@@ -946,7 +946,7 @@ exp_relat_2:
     exp_relat_2 '>' exp_sum                     { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_sum                                     { $$ = $1; };
 exp_sum:
-    exp_sum '+' exp_mult                        {
+    exp_sum '+' exp_mult {
         NodeType inferredType = InferTypePlus($1->nodeType, $3->nodeType, $2->line_number);
 
         // add string length to stringConcatSize for every leaf node
@@ -967,20 +967,30 @@ exp_sum:
 
         $$ = create_node_binary_operation($2, $1, $3, inferredType);
 
+        /* intermediate code generation */
+
+        // create new register name to save the result
         std::string newRegister = createRegister();
         $$->local = newRegister;
+
+        // resulting code has first exp's code, then second one's code, then ADD instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) {
             $$->code->push_back(c);
         }
         $$->code->push_back(IlocCode(ADD, $1->local, $3->local, newRegister));
 
-        } | 
-    exp_sum '-' exp_mult                        {
+    } | 
+    exp_sum '-' exp_mult {
         $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
 
+        /* intermediate code generation */
+
+        // create new register name to save the result
         std::string newRegister = createRegister();
         $$->local = newRegister;
+
+        // resulting code has first exp's code, then second one's code, then SUB instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) {
             $$->code->push_back(c);
@@ -988,13 +998,18 @@ exp_sum:
         $$->code->push_back(IlocCode(SUB, $1->local, $3->local, newRegister));
 
     } | 
-    exp_mult                                    { $$ = $1; };
+    exp_mult { $$ = $1; };
 exp_mult: 
     exp_mult '*' exp_pow {
         $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
 
+        /* intermediate code generation */
+
+        // create new register name to save the result
         std::string newRegister = createRegister();
         $$->local = newRegister;
+
+        // resulting code has first exp's code, then second one's code, then MULT instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) {
             $$->code->push_back(c);
@@ -1005,8 +1020,13 @@ exp_mult:
     exp_mult '/' exp_pow {
         $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
 
+        /* intermediate code generation */
+
+        // create new register name to save the result
         std::string newRegister = createRegister();
         $$->local = newRegister;
+
+        // resulting code has first exp's code, then second one's code, then DIV instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) {
             $$->code->push_back(c);
