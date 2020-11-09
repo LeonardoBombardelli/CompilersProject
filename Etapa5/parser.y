@@ -143,6 +143,7 @@
 %type<node> func_header
 %type<node> func_header_list
 %type<node> func_header_list_iterator
+%type<node> func_header_parameter
 %type<node> simple_command
 %type<node> command_block
 %type<node> real_command_block
@@ -241,12 +242,12 @@ literal:
         memset(auxLiteral, 0, 500);
         switch (symbolType)
         {
-        case SYMBOL_TYPE_INTEGER: sprintf(auxLiteral, "%d",     lexval->tokenValue.integer  ); break;
-        case SYMBOL_TYPE_FLOAT:   sprintf(auxLiteral, "%f",     lexval->tokenValue.floating ); break;
-        case SYMBOL_TYPE_BOOL:    sprintf(auxLiteral, "%s",     lexval->tokenValue.string   ); break;
-        case SYMBOL_TYPE_CHAR:    sprintf(auxLiteral, "\'%c\'", lexval->tokenValue.character); break;
-        case SYMBOL_TYPE_STRING:  sprintf(auxLiteral, "\"%s\"", lexval->tokenValue.string   ); break;
-        default:                  sprintf(auxLiteral, ""                                    ); break;
+        case SYMBOL_TYPE_INTEGER: sprintf(auxLiteral, "%d",     lexval->tokenValue.integer          ); break;
+        case SYMBOL_TYPE_FLOAT:   sprintf(auxLiteral, "%f",     lexval->tokenValue.floating         ); break;
+        case SYMBOL_TYPE_CHAR:    sprintf(auxLiteral, "\'%c\'", lexval->tokenValue.character        ); break;
+        case SYMBOL_TYPE_STRING:  sprintf(auxLiteral, "\"%s\"", lexval->tokenValue.string           ); break;
+        case SYMBOL_TYPE_BOOL:    sprintf(auxLiteral, lexval->tokenValue.boolean ? "true" : "false" ); break;
+        default:                  sprintf(auxLiteral, ""); break;
         }
 
         SymbolTableEntry* ste = CreateSymbolTableEntry(symbolType, lexval->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
@@ -378,8 +379,13 @@ func_header:
         FreeValorLexico($4); FreeValorLexico($6);
     };
 func_header_list:
-    %empty                                                          { $$ = NULL; } |
-    maybe_const type TK_IDENTIFICADOR func_header_list_iterator     {
+    %empty                                              { $$ = NULL; } |
+    func_header_parameter func_header_list_iterator     { $$ = NULL; };
+func_header_list_iterator: 
+    %empty                                              { $$ = NULL;                      } |
+    ',' func_header_parameter func_header_list_iterator { $$ = NULL; FreeValorLexico($1); };
+func_header_parameter:
+    maybe_const type TK_IDENTIFICADOR {
 
         // create funcargument and add it to global list
         char* id = strdup($3->tokenValue.string);
@@ -388,18 +394,6 @@ func_header_list:
 
         $$ = NULL;
         FreeValorLexico($3);
-    };
-func_header_list_iterator: 
-    %empty                                                          { $$ = NULL; } |
-    ',' maybe_const type TK_IDENTIFICADOR func_header_list_iterator {
-
-        // create funcargument and add it to global list
-        char* id = strdup($4->tokenValue.string);
-        FuncArgument* fa = CreateFuncArgument(id, IntToSymbolType($3));
-        tempFuncArgList->push_back(fa);
-
-        $$ = NULL;
-        FreeValorLexico($1); FreeValorLexico($4);
     };
 
 simple_command: 
@@ -420,8 +414,7 @@ command_block:
 cmd_block_init_scope:
     %empty {
         /* create new scope with current function's name and desloc, and push it to scopeStack */
-        int desloc = scopeStack->back()->currentDesloc;
-        Scope* newScope = CreateNewScope(strdup(auxScopeName), desloc);
+        Scope* newScope = CreateNewScope(strdup(auxScopeName), scopeStack->back()->currentDesloc);
         scopeStack->push_back(newScope);
 
         // add formal parameters to function's scope
@@ -445,14 +438,14 @@ cmd_block_init_scope:
 
 cmd_block_destroy_scope:
     %empty {
-        /* pop current scope from scopeStack and free its memory */
         Scope* currentScope = scopeStack->back();
-        int desloc = currentScope->currentDesloc;
+
+        /* update symbol table offset except if returning to global scope */
+        if(currentScope->scopeName != NULL) currentScope->currentDesloc = currentScope->currentDesloc;
+
+        /* pop current scope from scopeStack and free its memory */
         DestroyScope(currentScope);
         scopeStack->pop_back();
-
-        /* update symbol table offset */
-        if(scopeStack->back()->scopeName != NULL) scopeStack->back()->currentDesloc = desloc;
     }
 
 real_command_block:
@@ -460,14 +453,11 @@ real_command_block:
 sequence_simple_command: 
     %empty { $$ = NULL; } |
     simple_command ';' sequence_simple_command  { 
-        if ($1 != NULL)
+        if ($1 == NULL) $$ = $3;
+        else
         {
             last_command_of_chain($1)->sequenceNode = $3;
             $$ = $1;
-        }
-        else
-        {
-            $$ = $3;
         }
         FreeValorLexico($2);
     };
@@ -515,31 +505,17 @@ local_var_declaration:
 
 local_var_list:
     local_var local_var_list_iterator {
-        if ($1 != NULL)
+        if ($1 == NULL)
+            $$ = $2;
+        else
         {
             $1->sequenceNode = $2;
             $$ = $1;
         }
-        else
-        {
-            $$ = $2;
-        }
     };
-
 local_var_list_iterator:
-    %empty                                  { $$ = NULL; } |
-    ',' local_var local_var_list_iterator   { 
-        if ($2 != NULL)
-        {
-            $2->sequenceNode = $3;
-            $$ = $2;
-        }
-        else
-        {
-            $$ = $3;
-        }
-        FreeValorLexico($1);
-    } ;
+    %empty               { $$ = NULL;                    } |
+    ',' local_var_list   { $$ = $2; FreeValorLexico($1); } ;
 
 local_var: 
     TK_IDENTIFICADOR {
