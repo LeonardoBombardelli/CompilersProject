@@ -7,3 +7,5 @@ etapa5: parser.y scanner.l main.c src/*.cpp
 
 clean:
 	rm -rf build etapa5
+
+redo: clean etapa5
