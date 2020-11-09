@@ -208,7 +208,7 @@ literal:
         memset(auxLiteral, 0, 500);
         sprintf(auxLiteral, "%d", $1->tokenValue.integer);
 
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INTEGER, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INTEGER, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
             DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
@@ -226,7 +226,7 @@ literal:
         memset(auxLiteral, 0, 500);
         sprintf(auxLiteral, "%f", $1->tokenValue.floating);
 
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_FLOAT, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_FLOAT, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
             DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
@@ -240,7 +240,7 @@ literal:
         memset(auxLiteral, 0, 500);
         sprintf(auxLiteral, "false");
 
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
             DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
@@ -254,7 +254,7 @@ literal:
         memset(auxLiteral, 0, 500);
         sprintf(auxLiteral, "true");
 
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
             DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
@@ -268,7 +268,7 @@ literal:
         memset(auxLiteral, 0, 500);
         sprintf(auxLiteral, "\'%c\'", $1->tokenValue.character);
 
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_CHAR, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_CHAR, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
             DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
@@ -282,7 +282,7 @@ literal:
         memset(auxLiteral, 0, 500);
         sprintf(auxLiteral, "\"%s\"", $1->tokenValue.string);
 
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_STRING, $1->line_number, TABLE_NATURE_LIT, NULL, 0);
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_STRING, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
 
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
             DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
@@ -295,7 +295,7 @@ global_var:
         // add var to symbol table if not already there
         if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
             char* id = $1->tokenValue.string;
             (*tempVarMap)[std::string(id)] = ste;
         }
@@ -309,7 +309,7 @@ global_var:
         // add var to symbol table if not already there
         if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VEC, NULL, $3->tokenValue.integer);
+            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VEC, NULL, $3->tokenValue.integer, 0);
             char* id = $1->tokenValue.string;
             (*tempVarMap)[std::string(id)] = ste;
         }
@@ -322,12 +322,25 @@ global_var:
 global_var_declaration: 
     maybe_static type global_var_list ';' {
 
+        Scope* scopeStackTop = scopeStack->back();
+
         // set type to all vars of list, and insert them in table
         std::map<std::string, SymbolTableEntry*>::iterator it;
         for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
         {
-            it->second->symbolType = IntToSymbolType($2);
-            (*scopeStack->back()->symbolTable)[it->first] = it->second;
+            SymbolType type = IntToSymbolType($2);
+            it->second->symbolType = type;
+
+            // update STE size
+            int size = SizeFromSymbolType(type);
+            if(it->second->entryNature == TABLE_NATURE_VEC) size *= vectorSize;
+            it->second->size = size;
+
+            // update offset info
+            it->second->desloc = scopeStackTop->currentDesloc;
+            scopeStackTop->currentDesloc += size;
+
+            (*scopeStackTop->symbolTable)[it->first] = it->second;
         }
 
         // free temp var map
@@ -364,7 +377,7 @@ func_header:
             }
 
             // create entry and add it to scope
-            SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, deepCopy, 0);
+            SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, deepCopy, 0, 0);
             char* id = $3->tokenValue.string;
             (*scopeStack->back()->symbolTable)[std::string(id)] = ste;
         }
@@ -421,8 +434,9 @@ command_block:
 
 cmd_block_init_scope:
     %empty {
-        /* create new scope with current function's name and push it to scopeStack */
-        Scope* newScope = CreateNewScope(strdup(auxScopeName));
+        /* create new scope with current function's name and desloc, and push it to scopeStack */
+        int desloc = scopeStack->back()->currentDesloc;
+        Scope* newScope = CreateNewScope(strdup(auxScopeName), desloc);
         scopeStack->push_back(newScope);
 
         // add formal parameters to function's scope
@@ -432,7 +446,7 @@ cmd_block_init_scope:
 
             while (it != tempFuncArgList->end())
             {
-                SymbolTableEntry* ste = CreateSymbolTableEntry((*it)->type, auxCurrentFuncLine, TABLE_NATURE_VAR, NULL, 0);
+                SymbolTableEntry* ste = CreateSymbolTableEntry((*it)->type, auxCurrentFuncLine, TABLE_NATURE_VAR, NULL, 0, 0);
                 (*scopeStack->back()->symbolTable)[std::string((*it)->argName)] = ste;
                 ++it;
             }
@@ -448,8 +462,12 @@ cmd_block_destroy_scope:
     %empty {
         /* pop current scope from scopeStack and free its memory */
         Scope* currentScope = scopeStack->back();
+        int desloc = currentScope->currentDesloc;
         DestroyScope(currentScope);
         scopeStack->pop_back();
+
+        /* update symbol table offset */
+        if(scopeStack->back()->scopeName != NULL) scopeStack->back()->currentDesloc = desloc;
     }
 
 real_command_block:
@@ -484,27 +502,17 @@ local_var_declaration:
         std::map<std::string, SymbolTableEntry*>::iterator it;
         for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
         {
-            it->second->symbolType = IntToSymbolType($3);
+            SymbolType type = IntToSymbolType($3);
+            it->second->symbolType = type;
 
-            switch (it->second->symbolType)
-            {
-            case SYMBOL_TYPE_INTEGER:
-                it->second->size = 4;
-                break;
-            case SYMBOL_TYPE_FLOAT:
-                it->second->size = 8;
-                break;
-            case SYMBOL_TYPE_CHAR:
-            case SYMBOL_TYPE_BOOL:
-                it->second->size = 1;
-                break;
-            case SYMBOL_TYPE_STRING:
-                it->second->size = -1;
-                break;
-            default:
-                it->second->size = 0;
-                break;
-            }
+            // update STE size
+            int size = SizeFromSymbolType(type);
+            if(it->second->entryNature == TABLE_NATURE_VEC) size *= vectorSize;
+            it->second->size = size;
+
+            // update offset info
+            it->second->desloc = scopeStackTop->currentDesloc;
+            scopeStackTop->currentDesloc += size;
 
             (*scopeStack->back()->symbolTable)[it->first] = it->second;
         }
@@ -551,7 +559,7 @@ local_var:
         // add var to symbol table if not already there
         if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
             char* id = $1->tokenValue.string;
             (*tempVarMap)[std::string(id)] = ste;
         }
@@ -565,7 +573,7 @@ local_var:
         // add var to symbol table if not already there
         if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
             
             // if literal is of type string, update ste's size accordingly
             if ($3->nodeType == NODE_TYPE_STRING)
@@ -587,7 +595,7 @@ local_var:
         // add var to symbol table if not already there
         if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
         {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0);
+            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
             
             char* s3_name = $3->tokenValue.string;
 

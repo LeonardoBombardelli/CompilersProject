@@ -4,16 +4,18 @@ std::list<Scope *> *scopeStack;
 
 // Create all structs
 
-Scope* CreateNewScope(char* scopeName)
+Scope* CreateNewScope(char* scopeName, int desloc)
 {
     Scope *scope = (Scope *)malloc(sizeof(Scope));
     scope->scopeName = scopeName;
     scope->symbolTable = new std::map<std::string, SymbolTableEntry *>;
+    scope->currentDesloc = desloc;
      
     return scope;
 }
 
-SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableEntryNature entryNature, std::list<FuncArgument *> *funcArguments, int vectorSize)
+SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableEntryNature entryNature, 
+                                        std::list<FuncArgument *> *funcArguments, int vectorSize, int desloc)
 {
     SymbolTableEntry *symbolTableEntry = (SymbolTableEntry *)malloc(sizeof(SymbolTableEntry));
 
@@ -21,28 +23,10 @@ SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableE
     symbolTableEntry->vectorSize = vectorSize;          // if not a vector, vectorSize == 0
     symbolTableEntry->funcArguments = funcArguments;    // if not a function, funcArguments = NULL
     symbolTableEntry->entryNature = entryNature;
+    symbolTableEntry->size = SizeFromSymbolType(symbolType);
     symbolTableEntry->symbolType = symbolType;
+    symbolTableEntry->desloc = desloc;
     
-    switch (symbolType)
-    {
-    case SYMBOL_TYPE_INTEGER:
-        symbolTableEntry->size = 4;
-        break;
-    case SYMBOL_TYPE_FLOAT:
-        symbolTableEntry->size = 8;
-        break;
-    case SYMBOL_TYPE_CHAR:
-    case SYMBOL_TYPE_BOOL:
-        symbolTableEntry->size = 1;
-        break;
-    case SYMBOL_TYPE_STRING:
-        symbolTableEntry->size = -1;
-        break;
-    default:
-        symbolTableEntry->size = 0;
-        break;
-    }
-
     if(entryNature == TABLE_NATURE_VEC) symbolTableEntry->size *= vectorSize;
 
     return symbolTableEntry;
@@ -106,7 +90,7 @@ void DestroyFuncArgument(FuncArgument *funcArgument)
 void CreateStack()
 {
     scopeStack = new std::list<Scope *>;
-    scopeStack->push_back(CreateNewScope(NULL));
+    scopeStack->push_back(CreateNewScope(NULL, 0));
 }
 
 void DestroyStack()
@@ -232,5 +216,18 @@ bool ImplicitConversionPossible(SymbolType symbolType, SymbolType symbolType2)
     default:
         return false;
         break;
+    }
+}
+
+int SizeFromSymbolType(SymbolType type)
+{
+    switch (type)
+    {
+    case SYMBOL_TYPE_INTEGER:   return 4;
+    case SYMBOL_TYPE_FLOAT:     return 8;
+    case SYMBOL_TYPE_CHAR:      return 1;
+    case SYMBOL_TYPE_BOOL:      return 1;
+    case SYMBOL_TYPE_STRING:    return -1;
+    default:                    return 0;
     }
 }

@@ -44,6 +44,7 @@ typedef struct symbolTableEntry
     int size;
     std::list<FuncArgument *> *funcArguments;
     int vectorSize;
+    int desloc;
 
 } SymbolTableEntry;
 
@@ -52,6 +53,7 @@ typedef struct scope
 {
     std::map<std::string, SymbolTableEntry *> *symbolTable;
     char* scopeName;
+    int currentDesloc;
 
 } Scope;
 
@@ -61,8 +63,9 @@ extern std::list<Scope *> *scopeStack;
 
 // Create all structs
 
-Scope* CreateNewScope(char* scopeName);
-SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableEntryNature entryNature, std::list<FuncArgument *> *funcArguments, int vectorSize);
+Scope* CreateNewScope(char* scopeName, int desloc);
+SymbolTableEntry* CreateSymbolTableEntry(SymbolType symbolType, int line, TableEntryNature entryNature, 
+                                        std::list<FuncArgument *> *funcArguments, int vectorSize, int desloc);
 FuncArgument* CreateFuncArgument(char* argName, SymbolType type);
 
 
@@ -90,5 +93,6 @@ SymbolType IntToSymbolType(int type);
 SymbolType NodeTypeToSymbolType(NodeType type);
 NodeType SymbolTypeToNodeType(SymbolType type);
 bool ImplicitConversionPossible(SymbolType symbolType, SymbolType symbolType2);
+int SizeFromSymbolType(SymbolType type);
 
 #endif
