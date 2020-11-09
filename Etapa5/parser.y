@@ -12,29 +12,48 @@
     int yylex(void);
     void yyerror (char const *s);
 
+    /* Aux function to print error message and exit execution with error */
     void throw_error(int err_code, int line, char* identifier, TableEntryNature nature);
-    NodeType InferTypePlus(NodeType t1, NodeType t2, int line);
-    NodeType InferTypeTernary(NodeType t1, NodeType t2, int line);
-    NodeType InferTypeEqNeq(NodeType t1, NodeType t2, int line);
-    NodeType InferType(NodeType t1, NodeType t2, int line);
+
+    /* Aux functions to do type inference for nodes and throw errors if needed */
+    NodeType InferTypePlus    (NodeType t1, NodeType t2, int line);
+    NodeType InferTypeTernary (NodeType t1, NodeType t2, int line);
+    NodeType InferTypeEqNeq   (NodeType t1, NodeType t2, int line);
+    NodeType InferType        (NodeType t1, NodeType t2, int line);
+
+    /* Aux function to find last sequenceNode of tree */
     Node* last_command_of_chain(Node* n);
 
-    char* auxLiteral = (char*) malloc(500);
-    char* auxScopeName = NULL;                              // save current function's name (used when creating new scopes)
-    SymbolType auxCurrentFuncType = SYMBOL_TYPE_INDEF;      // save current function's return type (used when verifying return command)
-    int auxCurrentFuncLine = 0;                             // save current func's decl. line (used when creating STEs for function's args)
-    int stringConcatSize = 0;                               // used to calculate the final size when concating strings
+    char* auxLiteral              = (char*) malloc(500); // Save literals in string format. Used when creating node_literals
+    char* auxScopeName            = NULL;                // Save current function's name. Used when creating new scopes
+    SymbolType auxCurrentFuncType = SYMBOL_TYPE_INDEF;   // Save current function's return type. Used when verifying return command
+    int auxCurrentFuncLine        = 0;                   // Save current func's decl. line. Used when creating STEs for function's args
+    int stringConcatSize          = 0;                   // Used to calculate the final size when concating strings
 
-    std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;            // aux map to check type when initializing vars on declaration
-    std::map<std::string, SymbolTableEntry*> *tempVarMap = new std::map<std::string, SymbolTableEntry*>;    // reusable map of vars
-    std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;                             // reusable list of function arguments
+    /* Aux map to check type when initializing vars on declaration */
+    std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;
+
+    /* Aux map of vars, used to gather all variables declared in the same command */
+    std::map<std::string, SymbolTableEntry*> *tempVarMap = new std::map<std::string, SymbolTableEntry*>;
+    
+    /* Aux list of function arguments, used both in func declaration (to gather 
+       all formal parameters) and in func call (to gather all real parameters)  */
+    std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;
 %}
 
 %union 
 {
+    /* A grammar symbol can be of one of the following types: */
+
+    /* Lexical value is the type of all terminals and some nonterminals (currently only 'unary_op') */
     struct valorLexico* valor_lexico;
+
+    /* Node is the atomic structure of the AST */
     struct node* node;
-    int symbol_type; /* int later converted to SymbolType */
+
+    /* The nonterminal 'type' uses this to propagate type info in declarations. 
+       Here we use an int which is later converted to SymbolType                */
+    int symbol_type;
 }
 
 %token<valor_lexico> TK_PR_INT
@@ -116,6 +135,7 @@
 %type<node> maybe_static
 %type<symbol_type> type
 %type<node> literal
+%type<valor_lexico> real_literal
 %type<node> global_var
 %type<node> global_var_declaration
 %type<node> global_var_list
@@ -170,29 +190,38 @@ program_list:
 
 init_stack:
     %empty {
+
+        // initialize global stack of scopes (which contain the symbol tables)
         CreateStack();
+
+        // initialize global counters used to generate the ILOC labels and registers
         labelIndex = 0;
         registerIndex = 0;
+        
         $$ = NULL;
     }
 
 destroy_stack:
-    %empty { DestroyStack(); 
-    free(auxLiteral); 
-    free(auxScopeName);
-    delete auxInitTypeMap;
-    delete tempVarMap;
-    delete tempFuncArgList;
+    %empty {
     
-    $$ = NULL; }
+        // deallocate all aux structures used during construction of the AST
+        DestroyStack(); 
+        free(auxLiteral); 
+        free(auxScopeName);
+        delete auxInitTypeMap;
+        delete tempVarMap;
+        delete tempFuncArgList;
+        
+        $$ = NULL;
+    }
 
 
 maybe_const: 
-    %empty        { $$ = NULL; } |
-    TK_PR_CONST   { $$ = NULL; };
+    %empty        { $$ = NULL; /* ignore (for now?) the 'const' and 'static' syntactic structures */ } |
+    TK_PR_CONST   { $$ = NULL;                                                                       };
 maybe_static: 
-    %empty        { $$ = NULL; } |
-    TK_PR_STATIC  { $$ = NULL; };
+    %empty        { $$ = NULL;                                                                       } |
+    TK_PR_STATIC  { $$ = NULL;                                                                       };
 
 type:
     TK_PR_INT     { $$ = 1; /* int later converted to SymbolType */ } |
@@ -200,95 +229,51 @@ type:
     TK_PR_CHAR    { $$ = 3;                                         } |
     TK_PR_BOOL    { $$ = 4;                                         } |
     TK_PR_STRING  { $$ = 5;                                         };
-literal: 
-    TK_LIT_INT    {
-        $$ = create_node_literal($1, NODE_TYPE_INT);
+literal:
+    real_literal {
+        struct valorLexico* lexval = $1;
+        SymbolType symbolType  = LiteralTypeToSymbolType(lexval->literalType);
+        NodeType nodeType  = SymbolTypeToNodeType(symbolType);
+        
+        $$ = create_node_literal(lexval, nodeType);
 
         // set auxLiteral to be the lexeme
         memset(auxLiteral, 0, 500);
-        sprintf(auxLiteral, "%d", $1->tokenValue.integer);
+        switch (symbolType)
+        {
+        case SYMBOL_TYPE_INTEGER: sprintf(auxLiteral, "%d",     lexval->tokenValue.integer  ); break;
+        case SYMBOL_TYPE_FLOAT:   sprintf(auxLiteral, "%f",     lexval->tokenValue.floating ); break;
+        case SYMBOL_TYPE_BOOL:    sprintf(auxLiteral, "%s",     lexval->tokenValue.string   ); break;
+        case SYMBOL_TYPE_CHAR:    sprintf(auxLiteral, "\'%c\'", lexval->tokenValue.character); break;
+        case SYMBOL_TYPE_STRING:  sprintf(auxLiteral, "\"%s\"", lexval->tokenValue.string   ); break;
+        default:                  sprintf(auxLiteral, ""                                    ); break;
+        }
 
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INTEGER, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
-
+        SymbolTableEntry* ste = CreateSymbolTableEntry(symbolType, lexval->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
+        
+        // keep only one (the last) STE for each literal in each symbol table
         if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
             DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
 
+        // insert STE in current scope's symbol table
         (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
 
-        std::string newRegister = createRegister();
-        $$->local = newRegister;
-        $$->code->push_back(IlocCode(LOADI, auxLiteral, "", newRegister));
-    } |
-    TK_LIT_FLOAT  {
-        $$ = create_node_literal($1, NODE_TYPE_FLOAT); 
+        // only create ILOC code if literal is an integer
+        if (symbolType == SYMBOL_TYPE_INTEGER)
+        {
+            std::string newRegister = createRegister();
+            $$->local = newRegister;
+            $$->code->push_back(IlocCode(LOADI, auxLiteral, "", newRegister));
+        }
 
-        // set auxLiteral to be the lexeme
-        memset(auxLiteral, 0, 500);
-        sprintf(auxLiteral, "%f", $1->tokenValue.floating);
-
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_FLOAT, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
-
-        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
-
-        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
-    } |
-    TK_LIT_FALSE  {
-        $$ = create_node_literal($1, NODE_TYPE_BOOL);  
-
-        // set auxLiteral to be the lexeme
-        memset(auxLiteral, 0, 500);
-        sprintf(auxLiteral, "false");
-
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
-
-        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
-
-        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
-    } |
-    TK_LIT_TRUE   {
-        $$ = create_node_literal($1, NODE_TYPE_BOOL);  
-
-        // set auxLiteral to be the lexeme
-        memset(auxLiteral, 0, 500);
-        sprintf(auxLiteral, "true");
-
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_BOOL, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
-
-        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
-
-        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
-    } |
-    TK_LIT_CHAR   {
-        $$ = create_node_literal($1, NODE_TYPE_CHAR);  
-
-        // set auxLiteral to be the lexeme
-        memset(auxLiteral, 0, 500);
-        sprintf(auxLiteral, "\'%c\'", $1->tokenValue.character);
-
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_CHAR, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
-
-        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
-
-        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
-    } |
-    TK_LIT_STRING {
-        $$ = create_node_literal($1, NODE_TYPE_STRING);
-
-        // set auxLiteral to be the lexeme
-        memset(auxLiteral, 0, 500);
-        sprintf(auxLiteral, "\"%s\"", $1->tokenValue.string);
-
-        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_STRING, $1->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
-
-        if (SymbolIsInSymbolTable(auxLiteral, scopeStack->back()))
-            DestroySymbolTableEntry((*scopeStack->back()->symbolTable)[std::string(auxLiteral)]);
-
-        (*scopeStack->back()->symbolTable)[std::string(auxLiteral)] = ste;
-    };
+    }
+real_literal: 
+    TK_LIT_INT    { $$ = $1; } |
+    TK_LIT_FLOAT  { $$ = $1; } |
+    TK_LIT_FALSE  { $$ = $1; } |
+    TK_LIT_TRUE   { $$ = $1; } |
+    TK_LIT_CHAR   { $$ = $1; } |
+    TK_LIT_STRING { $$ = $1; };
 
 global_var: 
     TK_IDENTIFICADOR {
