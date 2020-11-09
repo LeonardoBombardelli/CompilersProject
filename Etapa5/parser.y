@@ -54,6 +54,11 @@
     /* The nonterminal 'type' uses this to propagate type info in declarations. 
        Here we use an int which is later converted to SymbolType                */
     int symbol_type;
+
+    /* This field is used solely in the nonterminal 'io_command' to
+       differentiate between the input and the output reserved words */
+    int input_or_output;
+    int shift_left_or_right;
 }
 
 %token<valor_lexico> TK_PR_INT
@@ -137,6 +142,7 @@
 %type<node> literal
 %type<valor_lexico> real_literal
 %type<node> global_var
+%type<valor_lexico> global_var_maybe_vector
 %type<node> global_var_declaration
 %type<node> global_var_list
 %type<node> func_definition
@@ -157,10 +163,12 @@
 %type<node> var_access
 %type<node> attribution_command
 %type<node> io_command
+%type<input_or_output> input_or_output
 %type<node> call_func_command
 %type<node> func_parameters_list
 %type<node> func_parameters_list_iterator
 %type<node> shift_command
+%type<shift_left_or_right> shift_operator
 %type<node> return_command
 %type<node> flux_control_command
 %type<node> conditional_flux_control
@@ -277,34 +285,28 @@ real_literal:
     TK_LIT_STRING { $$ = $1; };
 
 global_var: 
-    TK_IDENTIFICADOR {
-        // add var to symbol table if not already there
-        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
-        {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
-            char* id = $1->tokenValue.string;
-            (*tempVarMap)[std::string(id)] = ste;
-        }
-        else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
+    TK_IDENTIFICADOR global_var_maybe_vector {
+
+        // define nature and vec_size if var is or is not a vector
+        TableEntryNature nature = ($2 == NULL) ? TABLE_NATURE_VAR : TABLE_NATURE_VEC;
+        int vec_size            = ($2 == NULL) ? 0 : $2->tokenValue.integer;
+
+        // throw error if var already in symbol table
+        if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
+            throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, nature);
+        
+        // add new var to temp var (to be included later in symbol table)
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, nature, NULL, vec_size, 0);
+        char* id = $1->tokenValue.string;
+        (*tempVarMap)[std::string(id)] = ste;
 
         // ignore global vars in AST
         $$ = NULL; 
         FreeValorLexico($1);
-    } |
-    TK_IDENTIFICADOR '[' TK_LIT_INT ']' {
-        // add var to symbol table if not already there
-        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
-        {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VEC, NULL, $3->tokenValue.integer, 0);
-            char* id = $1->tokenValue.string;
-            (*tempVarMap)[std::string(id)] = ste;
-        }
-        else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
-
-        // ignore global vars in AST
-        $$ = NULL; 
-        FreeValorLexico($1); FreeValorLexico($2); FreeValorLexico($3); FreeValorLexico($4);
     };
+global_var_maybe_vector:
+    %empty             { $$ = NULL;                                                              } |
+    '[' TK_LIT_INT ']' { $$ = $2; FreeValorLexico($1); FreeValorLexico($2); FreeValorLexico($3); };
 global_var_declaration: 
     maybe_static type global_var_list ';' {
 
@@ -350,28 +352,27 @@ func_definition:
 func_header:
     maybe_static type TK_IDENTIFICADOR '(' func_header_list ')' {
 
-        // add function to symbol table if not already there
-        if (!SymbolIsInSymbolTable($3->tokenValue.string, scopeStack->back()))
-        {
-            std::list<FuncArgument*> *deepCopy = new std::list<FuncArgument*>;
-            std::list<FuncArgument*>::iterator it = tempFuncArgList->begin();
+        char* id = $3->tokenValue.string;
 
-            while(it != tempFuncArgList->end())
-            {
-                deepCopy->push_back(*it);
-                ++it;
-            }
+        // throw error if function already in symbol table
+        if (SymbolIsInSymbolTable(id, scopeStack->back()))
+            throw_error(ERR_DECLARED, $3->line_number, id, TABLE_NATURE_FUNC);
 
-            // create entry and add it to scope
-            SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, deepCopy, 0, 0);
-            char* id = $3->tokenValue.string;
-            (*scopeStack->back()->symbolTable)[std::string(id)] = ste;
+        // make a deep copy of func args list
+        std::list<FuncArgument*> *deepCopy = new std::list<FuncArgument*>;
+        std::list<FuncArgument*>::iterator it = tempFuncArgList->begin();
+        while(it != tempFuncArgList->end()) {
+            deepCopy->push_back(*it);
+            ++it;
         }
-        else throw_error(ERR_DECLARED, $3->line_number, $3->tokenValue.string, TABLE_NATURE_FUNC);
+
+        // add function to symbol table
+        SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, deepCopy, 0, 0);
+        (*scopeStack->back()->symbolTable)[std::string(id)] = ste;
 
         // update aux vars with new scope name, current function's type and current function's line
         if(auxScopeName != NULL) free(auxScopeName);
-        auxScopeName = strdup($3->tokenValue.string);
+        auxScopeName = strdup(id);
         auxCurrentFuncType = IntToSymbolType($2);
         auxCurrentFuncLine = $3->line_number;
 
@@ -519,76 +520,77 @@ local_var_list_iterator:
 
 local_var: 
     TK_IDENTIFICADOR {
-        // add var to symbol table if not already there
-        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
-        {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
-            char* id = $1->tokenValue.string;
-            (*tempVarMap)[std::string(id)] = ste;
-        }
-        else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
+
+        char* id = $1->tokenValue.string;
+        
+        // throw error if var already in symbol table
+        if (SymbolIsInSymbolTable(id, scopeStack->back()))
+            throw_error(ERR_DECLARED, $1->line_number, id, TABLE_NATURE_VAR);
+            
+        // add new var to temp var (to be included later in symbol table)
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
+        (*tempVarMap)[std::string(id)] = ste;
 
         // ignore unititialized var in AST
         $$ = NULL;
         FreeValorLexico($1);
     } |
     TK_IDENTIFICADOR TK_OC_LE literal {
-        // add var to symbol table if not already there
-        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
-        {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
-            
-            // if literal is of type string, update ste's size accordingly
-            if ($3->nodeType == NODE_TYPE_STRING)
-                ste->size = (int) strlen($3->n_literal.literal->tokenValue.string);
 
-            // add entry in aux map to check type of initialized vars
-            (*auxInitTypeMap)[$1] = NodeTypeToSymbolType($3->nodeType);
+        char* id = $1->tokenValue.string;
 
-            char* id = $1->tokenValue.string;
-            (*tempVarMap)[std::string(id)] = ste;
-        }
-        else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
+        // throw error if var already in symbol table
+        if (SymbolIsInSymbolTable(id, scopeStack->back()))
+            throw_error(ERR_DECLARED, $1->line_number, id, TABLE_NATURE_VAR);
+
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
+        
+        // if literal is of type string, update ste's size accordingly
+        if ($3->nodeType == NODE_TYPE_STRING)
+            ste->size = (int) strlen($3->n_literal.literal->tokenValue.string);
+
+        // add new var to temp var (to be included later in symbol table)
+        (*tempVarMap)[std::string(id)] = ste;
+
+        // add entry in aux map to check type of initialized vars
+        (*auxInitTypeMap)[$1] = NodeTypeToSymbolType($3->nodeType);
 
         // add var_init node to AST
         $$ = create_node_var_init(create_node_var_access($1, $3->nodeType), $3);
         FreeValorLexico($2);
     } |
     TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
+
+        char* id = $1->tokenValue.string;
+        char* s3_name = $3->tokenValue.string;
+        int s3_line = $3->line_number;
+
         // add var to symbol table if not already there
-        if (!SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
-        {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
-            
-            char* s3_name = $3->tokenValue.string;
+        if (SymbolIsInSymbolTable(id, scopeStack->back()))
+            throw_error(ERR_DECLARED, $1->line_number, id, TABLE_NATURE_VAR);
 
-            SymbolTableEntry* ste2 = GetFirstOccurrence(s3_name);
-            // if var s3_name doesn't exist, throw ERR_UNDECLARED
-            if (ste2 == NULL) 
-                throw_error(ERR_UNDECLARED, $3->line_number, s3_name, TABLE_NATURE_VAR);
-            // if s3_name is a function or a vector, throw ERR_FUNCTION or ERR_VECTOR
-            if (ste2->entryNature == TABLE_NATURE_FUNC)
-                throw_error(ERR_FUNCTION, $3->line_number, s3_name, TABLE_NATURE_FUNC);
-            if (ste2->entryNature == TABLE_NATURE_VEC)
-                throw_error(ERR_VECTOR, $3->line_number, s3_name, TABLE_NATURE_VEC);
+        SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
+        
+        SymbolTableEntry* ste2 = GetFirstOccurrence(s3_name);
+        // if var s3_name doesn't exist, throw ERR_UNDECLARED
+        if (ste2 == NULL) throw_error(ERR_UNDECLARED, s3_line, s3_name, TABLE_NATURE_VAR);
+        // if s3_name is a function or a vector, throw ERR_FUNCTION or ERR_VECTOR
+        if (ste2->entryNature == TABLE_NATURE_FUNC) throw_error(ERR_FUNCTION, s3_line, s3_name, TABLE_NATURE_FUNC);
+        if (ste2->entryNature == TABLE_NATURE_VEC) throw_error(ERR_VECTOR, s3_line, s3_name, TABLE_NATURE_VEC);
 
-            // if $3 is of type string, update ste's size accordingly
-            if (ste2->symbolType == SYMBOL_TYPE_STRING)
-                ste->size = ste2->size;
+        // if $3 is of type string, update ste's size accordingly
+        if (ste2->symbolType == SYMBOL_TYPE_STRING) ste->size = ste2->size;
 
-            // add entry in aux map to check type of initialized vars
-            (*auxInitTypeMap)[$1] = ste2->symbolType;
-            
-            char* id = $1->tokenValue.string;
-            (*tempVarMap)[std::string(id)] = ste;
+        // add new var to temp var (to be included later in symbol table)
+        (*tempVarMap)[std::string(id)] = ste;
 
-            // add var_init node to AST
-            $$ = create_node_var_init(create_node_var_access($1, SymbolTypeToNodeType(ste2->symbolType)),
-                                      create_node_var_access($3, SymbolTypeToNodeType(ste2->symbolType)));
-            FreeValorLexico($2);
-        }
-        else throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, TABLE_NATURE_VAR);
-
+        // add entry in aux map to check type of initialized vars
+        (*auxInitTypeMap)[$1] = ste2->symbolType;
+        
+        // add var_init node to AST
+        $$ = create_node_var_init(create_node_var_access($1, SymbolTypeToNodeType(ste2->symbolType)),
+                                    create_node_var_access($3, SymbolTypeToNodeType(ste2->symbolType)));
+        FreeValorLexico($2);
     };
 
 var_access:
@@ -596,23 +598,22 @@ var_access:
     
         char* id = $1->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(id);
+        int line = $1->line_number;
 
         // check if var was declared
-        if (ste == NULL)
-            throw_error(ERR_UNDECLARED, $1->line_number, id, TABLE_NATURE_VAR);
+        if (ste == NULL) throw_error(ERR_UNDECLARED, line, id, TABLE_NATURE_VAR);
         // check if symbol's nature is not function or vector
-        if (ste->entryNature == TABLE_NATURE_FUNC)
-            throw_error(ERR_FUNCTION, $1->line_number, id, TABLE_NATURE_FUNC);
-        if (ste->entryNature == TABLE_NATURE_VEC)
-            throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
+        if (ste->entryNature == TABLE_NATURE_FUNC) throw_error(ERR_FUNCTION, line, id, TABLE_NATURE_FUNC);
+        if (ste->entryNature == TABLE_NATURE_VEC) throw_error(ERR_VECTOR, line, id, TABLE_NATURE_VEC);
 
+        // add var_access node to AST
         $$ = create_node_var_access($1, SymbolTypeToNodeType(ste->symbolType));
 
-        std::string baseReg;
+        /* intermediate code generation */
 
-        // check whether var is local or global
-        if (SymbolIsInSymbolTable(id, scopeStack->front())) baseReg = "rbss";
-        else baseReg = "rfp";
+        // select correct base register
+        bool var_is_global = SymbolIsInSymbolTable(id, scopeStack->front());
+        std::string baseReg = var_is_global ? "rbss" : "rfp";
 
         std::string newRegister = createRegister();
         $$->local = newRegister;
@@ -626,22 +627,20 @@ var_access:
 
         char* id = $1->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(id);
+        int line = $1->line_number;
 
         // check if var was declared
-        if (ste == NULL)
-            throw_error(ERR_UNDECLARED, $1->line_number, id, TABLE_NATURE_VEC);
+        if (ste == NULL) throw_error(ERR_UNDECLARED, line, id, TABLE_NATURE_VEC);
         // check if symbol's nature is not function or vector
-        if (ste->entryNature == TABLE_NATURE_FUNC)
-            throw_error(ERR_FUNCTION, $1->line_number, id, TABLE_NATURE_FUNC);
-        if (ste->entryNature == TABLE_NATURE_VAR)
-            throw_error(ERR_VARIABLE, $1->line_number, id, TABLE_NATURE_VAR);
+        if (ste->entryNature == TABLE_NATURE_FUNC) throw_error(ERR_FUNCTION, line, id, TABLE_NATURE_FUNC);
+        if (ste->entryNature == TABLE_NATURE_VAR) throw_error(ERR_VARIABLE, line, id, TABLE_NATURE_VAR);
 
         // check if expression is not of type string or char
-        if ($3->nodeType == NODE_TYPE_STRING)
-            throw_error(ERR_STRING_TO_X, $1->line_number, id, TABLE_NATURE_VEC);
-        if ($3->nodeType == NODE_TYPE_CHAR)
-            throw_error(ERR_CHAR_TO_X, $1->line_number, id, TABLE_NATURE_VEC);
+        NodeType exp_type = $3->nodeType;
+        if (exp_type == NODE_TYPE_STRING) throw_error(ERR_STRING_TO_X, line, id, TABLE_NATURE_VEC);
+        if (exp_type == NODE_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, line, id, TABLE_NATURE_VEC);
 
+        // add vector_access node to AST
         NodeType nt = SymbolTypeToNodeType(ste->symbolType);
         $$ = create_node_vector_access(create_node_var_access($1, nt), $3, nt);
         FreeValorLexico($2); FreeValorLexico($4);
@@ -650,6 +649,8 @@ var_access:
 attribution_command:
     var_access '=' expression {
 
+        int line = $2->line_number;
+
         if ($1->nodeCategory == NODE_VAR_ACCESS)
         {
             char* id = $1->n_var_access.identifier->tokenValue.string;
@@ -657,41 +658,43 @@ attribution_command:
 
             // check if expression and var/vector have compatible types
             if ( !ImplicitConversionPossible(ste->symbolType, NodeTypeToSymbolType($3->nodeType)) )
-                throw_error(ERR_WRONG_TYPE, $2->line_number, id, TABLE_NATURE_VAR);
+                throw_error(ERR_WRONG_TYPE, line, id, TABLE_NATURE_VAR);
 
+            // if var is of type string, do size checks
             if(ste->symbolType == SYMBOL_TYPE_STRING)
             {
-                if($3->nodeCategory == NODE_LITERAL)
+                NodeCategory nodeCat = $3->nodeCategory;
+                if(nodeCat == NODE_LITERAL)
                 {
                     int literalSize = strlen($3->n_literal.literal->tokenValue.string);
                     if(ste->size == -1) ste->size = literalSize;
-                    else if(ste->size < literalSize) throw_error(ERR_STRING_SIZE, $2->line_number, id, TABLE_NATURE_VAR);
+                    else if(ste->size < literalSize) throw_error(ERR_STRING_SIZE, line, id, TABLE_NATURE_VAR);
                 }
             
-                if($3->nodeCategory == NODE_VAR_ACCESS)
+                if(nodeCat == NODE_VAR_ACCESS)
                 {
                     SymbolTableEntry* ste2 = GetFirstOccurrence($3->n_var_access.identifier->tokenValue.string);
                     if(ste->size == -1) ste->size = ste2->size;
-                    else if(ste->size < ste2->size) throw_error(ERR_STRING_SIZE, $2->line_number, id, TABLE_NATURE_VAR);
+                    else if(ste->size < ste2->size) throw_error(ERR_STRING_SIZE, line, id, TABLE_NATURE_VAR);
                 }
 
-                if($3->nodeCategory == NODE_BINARY_OPERATION)
+                if(nodeCat == NODE_BINARY_OPERATION)
                 {
                     if(ste->size == -1) ste->size = stringConcatSize;
-                    else if (ste->size < stringConcatSize) throw_error(ERR_STRING_SIZE, $2->line_number, id, TABLE_NATURE_VAR);
+                    else if (ste->size < stringConcatSize) throw_error(ERR_STRING_SIZE, line, id, TABLE_NATURE_VAR);
 
                     stringConcatSize = 0;
                 }
             }
 
-            std::string baseReg;
-
-            // check whether var is local or global
-            if (SymbolIsInSymbolTable(id, scopeStack->front())) baseReg = "rbss";
-            else baseReg = "rfp";
-
             $$ = create_node_var_attr($1, $3);
             FreeValorLexico($2);
+
+            /* intermediate code generation */
+
+            // select correct base register
+            bool var_is_global = SymbolIsInSymbolTable(id, scopeStack->front());
+            std::string baseReg = var_is_global ? "rbss" : "rfp";
 
             $$->code = $3->code;
             $$->code->push_back(IlocCode(STOREAI, $3->local, baseReg, std::to_string(ste->desloc)));
@@ -699,12 +702,15 @@ attribution_command:
         }
         else if ($1->nodeCategory == NODE_VECTOR_ACCESS)
         {
+            /* we'll only need to address this if vectors are 
+            included back in the language in the next phases */
+
             char* id = $1->n_vector_access.var->n_var_access.identifier->tokenValue.string;
             SymbolTableEntry* ste = GetFirstOccurrence(id);
 
             // check if expression and var/vector have compatible types
             if ( !ImplicitConversionPossible(ste->symbolType, NodeTypeToSymbolType($3->nodeType)) )
-                throw_error(ERR_WRONG_TYPE, $2->line_number, id, TABLE_NATURE_VEC);
+                throw_error(ERR_WRONG_TYPE, line, id, TABLE_NATURE_VEC);
                 
             $$ = create_node_var_attr($1, $3);
             FreeValorLexico($2);
@@ -713,47 +719,24 @@ attribution_command:
     };
 
 io_command: 
-    TK_PR_INPUT TK_IDENTIFICADOR {
+    input_or_output TK_IDENTIFICADOR {
 
         char* id = $2->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(id);
         int line = $2->line_number;
 
-        // check if var was declared
-        if (ste == NULL)
-            throw_error(ERR_UNDECLARED, line, id, TABLE_NATURE_VAR);
-        // check if symbol's nature is not function or vector
-        if (ste->entryNature == TABLE_NATURE_FUNC)
-            throw_error(ERR_FUNCTION, line, id, TABLE_NATURE_FUNC);
-        if (ste->entryNature == TABLE_NATURE_VEC)
-            throw_error(ERR_VECTOR, line, id, TABLE_NATURE_VEC);
+        // check if var was declared and is not a function or a vector
+        if (ste == NULL) throw_error(ERR_UNDECLARED, line, id, TABLE_NATURE_VAR);
+        if (ste->entryNature == TABLE_NATURE_FUNC) throw_error(ERR_FUNCTION, line, id, TABLE_NATURE_FUNC);
+        if (ste->entryNature == TABLE_NATURE_VEC) throw_error(ERR_VECTOR, line, id, TABLE_NATURE_VEC);
 
         // check if id is of type int or float
         if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
             throw_error(ERR_WRONG_PAR_INPUT, line, id, TABLE_NATURE_VAR);
 
-        $$ = create_node_input(create_node_var_access($2, SymbolTypeToNodeType(ste->symbolType)));
-    } | 
-    TK_PR_OUTPUT TK_IDENTIFICADOR {
-
-        char* id = $2->tokenValue.string;
-        SymbolTableEntry* ste = GetFirstOccurrence(id);
-        int line = $2->line_number;
-
-        // check if var was declared
-        if (ste == NULL)
-            throw_error(ERR_UNDECLARED, line, id, TABLE_NATURE_VAR);
-        // check if symbol's nature is not function or vector
-        if (ste->entryNature == TABLE_NATURE_FUNC)
-            throw_error(ERR_FUNCTION, line, id, TABLE_NATURE_FUNC);
-        if (ste->entryNature == TABLE_NATURE_VEC)
-            throw_error(ERR_VECTOR, line, id, TABLE_NATURE_VEC);
-
-        // check if id is of type int or float
-        if (ste->symbolType != SYMBOL_TYPE_INTEGER && ste->symbolType != SYMBOL_TYPE_FLOAT)
-            throw_error(ERR_WRONG_PAR_OUTPUT, line, id, TABLE_NATURE_VAR);
-
-        $$ = create_node_output(create_node_var_access($2, SymbolTypeToNodeType(ste->symbolType)));
+        // create right node for input or output
+        if ($1 == 0) $$ = create_node_input(create_node_var_access($2, SymbolTypeToNodeType(ste->symbolType)));
+        else $$ = create_node_output(create_node_var_access($2, SymbolTypeToNodeType(ste->symbolType)));
     } | 
     TK_PR_OUTPUT literal {
         int line = $2->n_literal.literal->line_number;
@@ -764,30 +747,30 @@ io_command:
 
         $$ = create_node_output($2);
     } ;
+input_or_output:
+    TK_PR_INPUT  { $$ = 0; } |
+    TK_PR_OUTPUT { $$ = 1; /* TODO : FreeValorLexico?? */};
 
 call_func_command:
     TK_IDENTIFICADOR '(' func_parameters_list ')' {
 
         char* id = $1->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(id);
+        int line = $1->line_number;
 
-        if (ste == NULL)
-            throw_error(ERR_UNDECLARED, $1->line_number, id, TABLE_NATURE_FUNC);
-
-        if (ste->entryNature == TABLE_NATURE_VAR)
-            throw_error(ERR_VARIABLE, $1->line_number, id, TABLE_NATURE_VAR);
-
-        if (ste->entryNature == TABLE_NATURE_VEC)
-            throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
+        // check if function was declared and is not a var or a vector
+        if (ste == NULL) throw_error(ERR_UNDECLARED, line, id, TABLE_NATURE_FUNC);
+        if (ste->entryNature == TABLE_NATURE_VAR) throw_error(ERR_VARIABLE, line, id, TABLE_NATURE_VAR);
+        if (ste->entryNature == TABLE_NATURE_VEC) throw_error(ERR_VECTOR, line, id, TABLE_NATURE_VEC);
 
         // if function is called with arguments
         if ($3 != NULL)
         {
             if (tempFuncArgList->size() > ste->funcArguments->size())
-                throw_error(ERR_EXCESS_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
+                throw_error(ERR_EXCESS_ARGS, line, id, TABLE_NATURE_FUNC);
 
             if (tempFuncArgList->size() < ste->funcArguments->size())
-                throw_error(ERR_MISSING_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
+                throw_error(ERR_MISSING_ARGS, line, id, TABLE_NATURE_FUNC);
 
             // iterate through both lists comparing each argument's type
             std::list<FuncArgument*>::iterator it_formal_args = ste->funcArguments->begin();
@@ -795,7 +778,7 @@ call_func_command:
             while (it_formal_args != ste->funcArguments->end() && it_real_args != tempFuncArgList->end())
             {
                 if ( !ImplicitConversionPossible((*it_formal_args)->type, (*it_real_args)->type) )
-                    throw_error(ERR_WRONG_TYPE_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
+                    throw_error(ERR_WRONG_TYPE_ARGS, line, id, TABLE_NATURE_FUNC);
 
                 DestroyFuncArgument(*it_real_args);   
                 ++it_formal_args; ++it_real_args;
@@ -805,12 +788,14 @@ call_func_command:
             delete tempFuncArgList;
             tempFuncArgList = new std::list<FuncArgument*>;
         }
-        // if function is called without arguments, check if it has formal params
-        else if (ste->funcArguments != NULL) if(!ste->funcArguments->empty())
-            throw_error(ERR_MISSING_ARGS, $1->line_number, id, TABLE_NATURE_FUNC);
+        // throw error if function is called without arguments but has formal params
+        else if (ste->funcArguments != NULL && !ste->funcArguments->empty())
+            throw_error(ERR_MISSING_ARGS, line, id, TABLE_NATURE_FUNC);
 
         // get nodeType from function return type
-        $$ = create_node_function_call($1, $3, SymbolTypeToNodeType(ste->symbolType));
+        NodeType nt = SymbolTypeToNodeType(ste->symbolType);
+
+        $$ = create_node_function_call($1, $3, nt);
         FreeValorLexico($2); FreeValorLexico($4);
     };
 func_parameters_list: 
@@ -838,24 +823,20 @@ func_parameters_list_iterator:
     };
 
 shift_command:
-    var_access TK_OC_SL TK_LIT_INT {
+    var_access shift_operator TK_LIT_INT {
 
         // check if shift number greater than 16
         if ($3->tokenValue.integer > 16)
             throw_error(ERR_WRONG_PAR_SHIFT, $2->line_number, NULL, TABLE_NATURE_LIT);
 
-        $$ = create_node_shift_left($1, create_node_literal($3, NODE_TYPE_INT));
-        FreeValorLexico($2);
-    } |
-    var_access TK_OC_SR TK_LIT_INT {
+        // create right node for shift left or right
+        if ($2 == 0) $$ = create_node_shift_left($1, create_node_literal($3, NODE_TYPE_INT));
+        else $$ = create_node_shift_right($1, create_node_literal($3, NODE_TYPE_INT));
 
-        // check if shift number greater than 16
-        if ($3->tokenValue.integer > 16)
-            throw_error(ERR_WRONG_PAR_SHIFT, $2->line_number, NULL, TABLE_NATURE_LIT);
-
-        $$ = create_node_shift_right($1, create_node_literal($3, NODE_TYPE_INT));
-        FreeValorLexico($2);
     };
+shift_operator:
+    TK_OC_SL { $$ = 0; FreeValorLexico($1); } |
+    TK_OC_SR { $$ = 1; FreeValorLexico($1); };
 
 return_command:
     TK_PR_RETURN expression { 
