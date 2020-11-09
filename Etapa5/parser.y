@@ -333,7 +333,7 @@ global_var_declaration:
 
             // update STE size
             int size = SizeFromSymbolType(type);
-            if(it->second->entryNature == TABLE_NATURE_VEC) size *= vectorSize;
+            if(it->second->entryNature == TABLE_NATURE_VEC) size *= it->second->vectorSize;
             it->second->size = size;
 
             // update offset info
@@ -498,6 +498,8 @@ local_var_declaration:
                 throw_error(ERR_WRONG_TYPE, it2->first->line_number, it2->first->tokenValue.string, TABLE_NATURE_VAR);
         }
 
+        Scope* scopeStackTop = scopeStack->back();
+
         // set type to all vars of list, and insert them in table
         std::map<std::string, SymbolTableEntry*>::iterator it;
         for(it = tempVarMap->begin(); it != tempVarMap->end(); ++it)
@@ -507,7 +509,7 @@ local_var_declaration:
 
             // update STE size
             int size = SizeFromSymbolType(type);
-            if(it->second->entryNature == TABLE_NATURE_VEC) size *= vectorSize;
+            if(it->second->entryNature == TABLE_NATURE_VEC) size *= it->second->vectorSize;
             it->second->size = size;
 
             // update offset info
@@ -644,8 +646,22 @@ var_access:
             throw_error(ERR_VECTOR, $1->line_number, id, TABLE_NATURE_VEC);
 
         $$ = create_node_var_access($1, SymbolTypeToNodeType(ste->symbolType));
+
+        std::string baseReg;
+
+        // check whether var is local or global
+        if (SymbolIsInSymbolTable(id, scopeStack->front())) baseReg = "rbss";
+        else baseReg = "rfp";
+
+        std::string newRegister = createRegister();
+        $$->local = newRegister;
+        $$->code->push_back(IlocCode(LOADAI, baseReg, std::to_string(ste->desloc), newRegister));
+
     } | 
     TK_IDENTIFICADOR '[' expression ']' {
+
+        /* we'll only need to address this if vectors are 
+           included back in the language in the next phases */
 
         char* id = $1->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(id);
@@ -706,6 +722,19 @@ attribution_command:
                     stringConcatSize = 0;
                 }
             }
+
+            std::string baseReg;
+
+            // check whether var is local or global
+            if (SymbolIsInSymbolTable(id, scopeStack->front())) baseReg = "rbss";
+            else baseReg = "rfp";
+
+            $$ = create_node_var_attr($1, $3);
+            FreeValorLexico($2);
+
+            $$->code = $3->code;
+            $$->code->push_back(IlocCode(STOREAI, $3->local, baseReg, std::to_string(ste->desloc)));
+
         }
         else if ($1->nodeCategory == NODE_VECTOR_ACCESS)
         {
@@ -715,10 +744,11 @@ attribution_command:
             // check if expression and var/vector have compatible types
             if ( !ImplicitConversionPossible(ste->symbolType, NodeTypeToSymbolType($3->nodeType)) )
                 throw_error(ERR_WRONG_TYPE, $2->line_number, id, TABLE_NATURE_VEC);
+                
+            $$ = create_node_var_attr($1, $3);
+            FreeValorLexico($2);
         }
 
-        $$ = create_node_var_attr($1, $3);
-        FreeValorLexico($2);
     };
 
 io_command: 
