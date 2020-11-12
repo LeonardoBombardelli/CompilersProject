@@ -1202,6 +1202,7 @@ void yyerror (char const *s) {
 
 void exporta (void *arvore) {
     PrintAll((Node*) arvore);
+    PrintIlocCode(*(*(Node*)arvore).n_function_declaration.firstCommand->n_if.expression->code);
 }
 
 void libera (void *arvore) {

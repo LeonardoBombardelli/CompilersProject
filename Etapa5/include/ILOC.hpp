@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <list>
 #include <string>
+#include <iostream>
 
 typedef enum
 {
@@ -46,7 +47,7 @@ class IlocCode {
 
 public:
     IlocCode(Operations opcode, std::string* firstArg, std::string* secondArg, std::string* thirdArg) {
-        this->label     = new std::string;
+        this->label     = NULL;
         this->opcode    = opcode;
         this->firstArg  = firstArg;
         this->secondArg = secondArg;
@@ -75,5 +76,7 @@ extern int registerIndex;
 std::string* createLabel();
 std::string* createRegister();
 
+std::string opcodeToString(Operations opcode);
+void PrintIlocCode(std::list<IlocCode> code);
 
 #endif
