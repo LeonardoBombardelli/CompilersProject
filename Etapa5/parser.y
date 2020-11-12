@@ -929,7 +929,6 @@ exp_log_or:
         std::list<std::string*> *b2tl = $3->tl;
         std::list<std::string*> *b2fl = $3->fl;
 
-
         // mend the patches in first exp's fl
         for (std::string* s : *b1fl) *s = *x;
 
@@ -946,7 +945,32 @@ exp_log_or:
     } | 
     exp_log_and                                 { $$ = $1; };
 exp_log_and: 
-    exp_log_and TK_OC_AND exp_bit_or            { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_log_and TK_OC_AND exp_bit_or {
+        $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
+
+        /* intermediate code generation */
+        
+        std::string *x = createLabel();
+        
+        std::list<std::string*> *b1tl = $1->tl;
+        std::list<std::string*> *b1fl = $1->fl;
+        std::list<std::string*> *b2tl = $3->tl;
+        std::list<std::string*> *b2fl = $3->fl;
+
+        // mend the patches in first exp's fl
+        for (std::string* s : *b1tl) *s = *x;
+
+        // propagate the other lists
+        $$->tl = b2tl;
+        $$->fl = b1fl;
+        for (std::string* s : *b2fl) $$->fl->push_back(s);
+
+        // resulting code has first exp's code, then label "x", then second one's code
+        $$->code = $1->code;
+        $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
+
+    } | 
     exp_bit_or                                  { $$ = $1; };
 exp_bit_or: 
     exp_bit_or '|' exp_bit_and                  { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
@@ -982,13 +1006,143 @@ exp_relat_1:
         $$->fl->push_back(flPatch);
 
         } | 
-    exp_relat_1 TK_OC_NE exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferTypeEqNeq($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_relat_1 TK_OC_NE exp_relat_2 { 
+        $$ = create_node_binary_operation($2, $1, $3, InferTypeEqNeq($1->nodeType, $3->nodeType, $2->line_number)); 
+
+        /* intermediate code generation */
+        
+        // create new register name to save the result
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
+
+        // resulting code has first exp's code, then second one's code, then EQ instruction
+        $$->code = $1->code;
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
+
+        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
+        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+
+        std::string *flPatch = new std::string;
+        std::string *tlPatch = new std::string;
+
+        $$->code->push_back(IlocCode(CMP_NE, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+
+        // patch for future mend
+        $$->tl->push_back(tlPatch);
+        $$->fl->push_back(flPatch);
+
+        } | 
     exp_relat_2                                 { $$ = $1; };
 exp_relat_2: 
-    exp_relat_2 TK_OC_LE exp_sum                { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
-    exp_relat_2 TK_OC_GE exp_sum                { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
-    exp_relat_2 '<' exp_sum                     { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
-    exp_relat_2 '>' exp_sum                     { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_relat_2 TK_OC_LE exp_sum {
+        $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
+
+        /* intermediate code generation */
+        
+        // create new register name to save the result
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
+
+        // resulting code has first exp's code, then second one's code, then EQ instruction
+        $$->code = $1->code;
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
+
+        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
+        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+
+        std::string *flPatch = new std::string;
+        std::string *tlPatch = new std::string;
+
+        $$->code->push_back(IlocCode(CMP_LE, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+
+        // patch for future mend
+        $$->tl->push_back(tlPatch);
+        $$->fl->push_back(flPatch);
+
+    } | 
+    exp_relat_2 TK_OC_GE exp_sum {
+        $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
+
+        /* intermediate code generation */
+        
+        // create new register name to save the result
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
+
+        // resulting code has first exp's code, then second one's code, then EQ instruction
+        $$->code = $1->code;
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
+
+        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
+        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+
+        std::string *flPatch = new std::string;
+        std::string *tlPatch = new std::string;
+
+        $$->code->push_back(IlocCode(CMP_GE, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+
+        // patch for future mend
+        $$->tl->push_back(tlPatch);
+        $$->fl->push_back(flPatch);
+
+    } | 
+    exp_relat_2 '<' exp_sum {
+        $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
+
+        /* intermediate code generation */
+        
+        // create new register name to save the result
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
+
+        // resulting code has first exp's code, then second one's code, then EQ instruction
+        $$->code = $1->code;
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
+
+        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
+        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+
+        std::string *flPatch = new std::string;
+        std::string *tlPatch = new std::string;
+
+        $$->code->push_back(IlocCode(CMP_LT, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+
+        // patch for future mend
+        $$->tl->push_back(tlPatch);
+        $$->fl->push_back(flPatch);
+
+    } | 
+    exp_relat_2 '>' exp_sum {
+        $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
+
+        /* intermediate code generation */
+        
+        // create new register name to save the result
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
+
+        // resulting code has first exp's code, then second one's code, then EQ instruction
+        $$->code = $1->code;
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
+
+        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
+        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+
+        std::string *flPatch = new std::string;
+        std::string *tlPatch = new std::string;
+
+        $$->code->push_back(IlocCode(CMP_GT, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+
+        // patch for future mend
+        $$->tl->push_back(tlPatch);
+        $$->fl->push_back(flPatch);
+
+    } | 
     exp_sum                                     { $$ = $1; };
 exp_sum:
     exp_sum '+' exp_mult {
