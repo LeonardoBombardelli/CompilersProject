@@ -931,7 +931,7 @@ exp_log_or:
 
 
         // mend the patches in first exp's fl
-        for (std::string* s : *b1fl) s = x;
+        for (std::string* s : *b1fl) *s = *x;
 
         // propagate the other lists
         $$->fl = b2fl;
