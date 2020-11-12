@@ -270,9 +270,10 @@ literal:
         // only create ILOC code if literal is an integer
         if (symbolType == SYMBOL_TYPE_INTEGER)
         {
-            std::string newRegister = createRegister();
-            $$->local = newRegister;
-            $$->code->push_back(IlocCode(LOADI, auxLiteral, "", newRegister));
+            std::string *newRegister = createRegister();
+            $$->local = *newRegister;
+            std::string *temp = new std::string; *temp = std::string(auxLiteral);
+            $$->code->push_back(IlocCode(LOADI, temp, NULL, newRegister));
         }
 
     }
@@ -606,9 +607,11 @@ var_access:
         bool var_is_global = SymbolIsInSymbolTable(id, scopeStack->front());
         std::string baseReg = var_is_global ? "rbss" : "rfp";
 
-        std::string newRegister = createRegister();
-        $$->local = newRegister;
-        $$->code->push_back(IlocCode(LOADAI, baseReg, std::to_string(ste->desloc), newRegister));
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
+        std::string *temp1 = new std::string; *temp1 = std::string(baseReg);
+        std::string *temp2 = new std::string; *temp2 = std::to_string(ste->desloc);
+        $$->code->push_back(IlocCode(LOADAI, temp1, temp2, newRegister));
 
     } | 
     TK_IDENTIFICADOR '[' expression ']' {
@@ -688,7 +691,10 @@ attribution_command:
             std::string baseReg = var_is_global ? "rbss" : "rfp";
 
             $$->code = $3->code;
-            $$->code->push_back(IlocCode(STOREAI, $3->local, baseReg, std::to_string(ste->desloc)));
+            std::string *temp1 = new std::string; *temp1 = std::string(baseReg);
+            std::string *temp2 = new std::string; *temp2 = std::to_string(ste->desloc);
+            std::string *temp3 = new std::string; *temp3 = std::string($3->local);
+            $$->code->push_back(IlocCode(STOREAI, temp1, temp2, temp3));
 
         }
         else if ($1->nodeCategory == NODE_VECTOR_ACCESS)
@@ -911,7 +917,37 @@ expression:
     } | 
     exp_log_or                                  { $$ = $1; };
 exp_log_or: 
-    exp_log_or TK_OC_OR exp_log_and             { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_log_or TK_OC_OR exp_log_and {
+        $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
+
+        /* intermediate code generation */
+        
+        std::string *x = createLabel();
+        
+        std::list<std::string*> *b1tl = $1->tl;
+        std::list<std::string*> *b1fl = $1->fl;
+        std::list<std::string*> *b2tl = $3->tl;
+        std::list<std::string*> *b2fl = $3->fl;
+
+
+        // mend the patches in first exp's fl
+        for (std::string* s : *b1fl) s = x;
+
+        // propagate the other lists
+        $$->fl = b2fl;
+        $$->tl = b1tl;
+        for (std::string* s : *b2tl) {
+            $$->fl->push_back(s);
+        }
+
+        // resulting code has first exp's code, then label "x", then second one's code
+        $$->code = $1->code;
+        $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
+        for (IlocCode c : *($3->code)) {
+            $$->code->push_back(c);
+        }
+
+    } | 
     exp_log_and                                 { $$ = $1; };
 exp_log_and: 
     exp_log_and TK_OC_AND exp_bit_or            { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
@@ -927,12 +963,10 @@ exp_relat_1:
         $$ = create_node_binary_operation($2, $1, $3, InferTypeEqNeq($1->nodeType, $3->nodeType, $2->line_number)); 
 
         /* intermediate code generation */
-        std::string flPatch = std::string();
-        std::string tlPatch = std::string();
         
         // create new register name to save the result
-        std::string newRegister = createRegister();
-        $$->local = newRegister;
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
         $$->code = $1->code;
@@ -940,13 +974,18 @@ exp_relat_1:
             $$->code->push_back(c);
         }
 
-        $$->code->push_back(IlocCode(CMP_EQ, $1->local, $3->local, newRegister));
+        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
+        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+
+        std::string *flPatch = new std::string;
+        std::string *tlPatch = new std::string;
+
+        $$->code->push_back(IlocCode(CMP_EQ, exp1local, exp2local, newRegister));
         $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
 
         // patch for future mend
-
-        $$->tl->push_back(&tlPatch);
-        $$->fl->push_back(&flPatch);
+        $$->tl->push_back(tlPatch);
+        $$->fl->push_back(flPatch);
 
         } | 
     exp_relat_1 TK_OC_NE exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferTypeEqNeq($1->nodeType, $3->nodeType, $2->line_number)); } | 
@@ -982,15 +1021,17 @@ exp_sum:
         /* intermediate code generation */
 
         // create new register name to save the result
-        std::string newRegister = createRegister();
-        $$->local = newRegister;
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
 
         // resulting code has first exp's code, then second one's code, then ADD instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) {
             $$->code->push_back(c);
         }
-        $$->code->push_back(IlocCode(ADD, $1->local, $3->local, newRegister));
+        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
+        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+        $$->code->push_back(IlocCode(ADD, exp1local, exp2local, newRegister));
 
     } | 
     exp_sum '-' exp_mult {
@@ -999,15 +1040,17 @@ exp_sum:
         /* intermediate code generation */
 
         // create new register name to save the result
-        std::string newRegister = createRegister();
-        $$->local = newRegister;
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
 
         // resulting code has first exp's code, then second one's code, then SUB instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) {
             $$->code->push_back(c);
         }
-        $$->code->push_back(IlocCode(SUB, $1->local, $3->local, newRegister));
+        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
+        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+        $$->code->push_back(IlocCode(SUB, exp1local, exp2local, newRegister));
 
     } | 
     exp_mult { $$ = $1; };
@@ -1018,15 +1061,17 @@ exp_mult:
         /* intermediate code generation */
 
         // create new register name to save the result
-        std::string newRegister = createRegister();
-        $$->local = newRegister;
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
 
         // resulting code has first exp's code, then second one's code, then MULT instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) {
             $$->code->push_back(c);
         }
-        $$->code->push_back(IlocCode(MULT, $1->local, $3->local, newRegister));
+        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
+        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+        $$->code->push_back(IlocCode(MULT, exp1local, exp2local, newRegister));
 
     } | 
     exp_mult '/' exp_pow {
@@ -1035,15 +1080,17 @@ exp_mult:
         /* intermediate code generation */
 
         // create new register name to save the result
-        std::string newRegister = createRegister();
-        $$->local = newRegister;
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
 
         // resulting code has first exp's code, then second one's code, then DIV instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) {
             $$->code->push_back(c);
         }
-        $$->code->push_back(IlocCode(DIV, $1->local, $3->local, newRegister));
+        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
+        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+        $$->code->push_back(IlocCode(DIV, exp1local, exp2local, newRegister));
 
     } | 
     exp_mult '%' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 

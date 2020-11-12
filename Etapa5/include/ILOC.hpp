@@ -45,25 +45,35 @@ typedef enum
 class IlocCode {
 
 public:
-    IlocCode(Operations opcode, std::string firstArg, std::string secondArg, std::string thirdArg) {
+    IlocCode(Operations opcode, std::string* firstArg, std::string* secondArg, std::string* thirdArg) {
+        this->label     = new std::string;
         this->opcode    = opcode;
         this->firstArg  = firstArg;
         this->secondArg = secondArg;
         this->thirdArg  = thirdArg;
     }
 
+    IlocCode(std::string* label, Operations opcode, std::string* firstArg, std::string* secondArg, std::string* thirdArg) {
+        this->label     = label;
+        this->opcode    = opcode;
+        this->firstArg  = firstArg;
+        this->secondArg = secondArg;
+        this->thirdArg  = thirdArg;
+    }
+
+    std::string* label;
     Operations opcode;
-    std::string firstArg;
-    std::string secondArg;
-    std::string thirdArg;
+    std::string* firstArg;
+    std::string* secondArg;
+    std::string* thirdArg;
 
 };
 
 // manage label and register names
 extern int labelIndex;
 extern int registerIndex;
-std::string createLabel();
-std::string createRegister();
+std::string* createLabel();
+std::string* createRegister();
 
 
 #endif
