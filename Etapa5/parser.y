@@ -936,16 +936,12 @@ exp_log_or:
         // propagate the other lists
         $$->fl = b2fl;
         $$->tl = b1tl;
-        for (std::string* s : *b2tl) {
-            $$->fl->push_back(s);
-        }
+        for (std::string* s : *b2tl) $$->fl->push_back(s);
 
         // resulting code has first exp's code, then label "x", then second one's code
         $$->code = $1->code;
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
-        for (IlocCode c : *($3->code)) {
-            $$->code->push_back(c);
-        }
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
     } | 
     exp_log_and                                 { $$ = $1; };
@@ -970,9 +966,7 @@ exp_relat_1:
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
         $$->code = $1->code;
-        for (IlocCode c : *($3->code)) {
-            $$->code->push_back(c);
-        }
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
         std::string *exp1local = new std::string; *exp1local = std::string($1->local);
         std::string *exp2local = new std::string; *exp2local = std::string($3->local);
@@ -1026,9 +1020,7 @@ exp_sum:
 
         // resulting code has first exp's code, then second one's code, then ADD instruction
         $$->code = $1->code;
-        for (IlocCode c : *($3->code)) {
-            $$->code->push_back(c);
-        }
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
         std::string *exp1local = new std::string; *exp1local = std::string($1->local);
         std::string *exp2local = new std::string; *exp2local = std::string($3->local);
         $$->code->push_back(IlocCode(ADD, exp1local, exp2local, newRegister));
@@ -1045,9 +1037,7 @@ exp_sum:
 
         // resulting code has first exp's code, then second one's code, then SUB instruction
         $$->code = $1->code;
-        for (IlocCode c : *($3->code)) {
-            $$->code->push_back(c);
-        }
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
         std::string *exp1local = new std::string; *exp1local = std::string($1->local);
         std::string *exp2local = new std::string; *exp2local = std::string($3->local);
         $$->code->push_back(IlocCode(SUB, exp1local, exp2local, newRegister));
@@ -1066,9 +1056,7 @@ exp_mult:
 
         // resulting code has first exp's code, then second one's code, then MULT instruction
         $$->code = $1->code;
-        for (IlocCode c : *($3->code)) {
-            $$->code->push_back(c);
-        }
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
         std::string *exp1local = new std::string; *exp1local = std::string($1->local);
         std::string *exp2local = new std::string; *exp2local = std::string($3->local);
         $$->code->push_back(IlocCode(MULT, exp1local, exp2local, newRegister));
@@ -1085,9 +1073,7 @@ exp_mult:
 
         // resulting code has first exp's code, then second one's code, then DIV instruction
         $$->code = $1->code;
-        for (IlocCode c : *($3->code)) {
-            $$->code->push_back(c);
-        }
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
         std::string *exp1local = new std::string; *exp1local = std::string($1->local);
         std::string *exp2local = new std::string; *exp2local = std::string($3->local);
         $$->code->push_back(IlocCode(DIV, exp1local, exp2local, newRegister));
