@@ -9,6 +9,8 @@ Node* CreateGenericNode(NodeCategory category)
     node->nodeType     = NODE_TYPE_INDEF;
     node->sequenceNode = NULL;
     node->code         = new std::list<IlocCode>;
+    node->tl           = new std::list<std::string*>;
+    node->fl           = new std::list<std::string*>;
     return(node);
 }
 

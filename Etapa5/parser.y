@@ -923,7 +923,32 @@ exp_bit_and:
     exp_bit_and '&' exp_relat_1                 { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_relat_1                                 { $$ = $1; };
 exp_relat_1: 
-    exp_relat_1 TK_OC_EQ exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferTypeEqNeq($1->nodeType, $3->nodeType, $2->line_number)); } | 
+    exp_relat_1 TK_OC_EQ exp_relat_2    { 
+        $$ = create_node_binary_operation($2, $1, $3, InferTypeEqNeq($1->nodeType, $3->nodeType, $2->line_number)); 
+
+        /* intermediate code generation */
+        std::string flPatch = std::string();
+        std::string tlPatch = std::string();
+        
+        // create new register name to save the result
+        std::string newRegister = createRegister();
+        $$->local = newRegister;
+
+        // resulting code has first exp's code, then second one's code, then EQ instruction
+        $$->code = $1->code;
+        for (IlocCode c : *($3->code)) {
+            $$->code->push_back(c);
+        }
+
+        $$->code->push_back(IlocCode(CMP_EQ, $1->local, $3->local, newRegister));
+        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+
+        // patch for future mend
+
+        $$->tl->push_back(&tlPatch);
+        $$->fl->push_back(&flPatch);
+
+        } | 
     exp_relat_1 TK_OC_NE exp_relat_2            { $$ = create_node_binary_operation($2, $1, $3, InferTypeEqNeq($1->nodeType, $3->nodeType, $2->line_number)); } | 
     exp_relat_2                                 { $$ = $1; };
 exp_relat_2: 
