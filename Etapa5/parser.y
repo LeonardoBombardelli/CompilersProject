@@ -913,6 +913,32 @@ for_flux_control:
 
         $$ = create_node_for_loop($3, $5, $7, $9);
         FreeValorLexico($2); FreeValorLexico($4); FreeValorLexico($6); FreeValorLexico($8);
+
+        /* intermediate code generation */
+        
+        Node* s1 = $3;
+        Node* exp = $5;
+        Node* s2 = $7;
+        Node* s3 = $9;
+
+        std::string *x = createLabel();
+        std::string *y = createLabel();
+        std::string *z = createLabel();
+        
+        // mend the patches in exp's tl with x and fl with y
+        for (std::string* s : *(exp->tl)) *s = *x;
+        for (std::string* s : *(exp->fl)) *s = *y;
+
+        // define node's resulting ILOC code
+        $$->code = s1->code;                                        // S1.code
+        $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));    // z: nop
+        for (IlocCode c : *(exp->code)) $$->code->push_back(c);     // B.code
+        $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));    // x: nop
+        for (IlocCode c : *(s3->code)) $$->code->push_back(c);      // S3.code
+        for (IlocCode c : *(s2->code)) $$->code->push_back(c);      // S2.code
+        $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));         // jump z
+        $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));    // y: nop
+
     };
 while_flux_control:
     TK_PR_WHILE '(' expression ')' TK_PR_DO command_block {
@@ -929,6 +955,28 @@ while_flux_control:
 
         $$ = create_node_while_loop($3, $6);
         FreeValorLexico($2); FreeValorLexico($4);
+
+        /* intermediate code generation */
+        
+        Node* exp = $3;
+        Node* s1 = $6;
+
+        std::string *x = createLabel();
+        std::string *y = createLabel();
+        std::string *z = createLabel();
+        
+        // mend the patches in exp's tl with x and fl with y
+        for (std::string* s : *(exp->tl)) *s = *x;
+        for (std::string* s : *(exp->fl)) *s = *y;
+
+        // define node's resulting ILOC code
+        $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));    // z: nop
+        for (IlocCode c : *(exp->code)) $$->code->push_back(c);     // B.code
+        $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));    // x: nop
+        for (IlocCode c : *(s1->code)) $$->code->push_back(c);      // S1.code
+        $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));         // jump z
+        $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));    // y: nop
+
     };
 
 expression: 
