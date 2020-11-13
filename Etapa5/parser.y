@@ -255,7 +255,7 @@ literal:
         case SYMBOL_TYPE_CHAR:    sprintf(auxLiteral, "\'%c\'", lexval->tokenValue.character        ); break;
         case SYMBOL_TYPE_STRING:  sprintf(auxLiteral, "\"%s\"", lexval->tokenValue.string           ); break;
         case SYMBOL_TYPE_BOOL:    sprintf(auxLiteral, lexval->tokenValue.boolean ? "true" : "false" ); break;
-        default:                  sprintf(auxLiteral, ""); break;
+        default:                  break;
         }
 
         SymbolTableEntry* ste = CreateSymbolTableEntry(symbolType, lexval->line_number, TABLE_NATURE_LIT, NULL, 0, 0);
@@ -864,6 +864,35 @@ conditional_flux_control:
 
         $$ = create_node_if($3, $5, $6); 
         FreeValorLexico($2); FreeValorLexico($4); 
+
+        /* intermediate code generation */
+        
+        Node* exp = $3;
+        Node* s1 = $5;
+        Node* maybe_else = $6;
+
+        std::string *x = createLabel();
+        std::string *y = createLabel();
+        std::string *z;
+        if (maybe_else != NULL) z = createLabel();
+        
+        // mend the patches in exp's tl with x and fl with y
+        for (std::string* s : *(exp->tl)) *s = *x;
+        for (std::string* s : *(exp->fl)) *s = *y;
+
+        // resulting code has first exp's code, then label "x", then second one's code
+        $$->code = exp->code;
+        $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
+        for (IlocCode c : *(s1->code)) $$->code->push_back(c);
+        if (maybe_else != NULL) $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));
+        $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));
+        
+        if (maybe_else != NULL)
+        {
+            for (IlocCode c : *(maybe_else->code)) $$->code->push_back(c);
+            $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));
+        }
+
     };
 maybe_else: 
     TK_PR_ELSE command_block { $$ = $2;   } | 
@@ -1356,7 +1385,7 @@ void yyerror (char const *s) {
 
 void exporta (void *arvore) {
     PrintAll((Node*) arvore);
-    PrintIlocCode(*(*(Node*)arvore).n_function_declaration.firstCommand->n_if.expression->code);
+    PrintIlocCode(*(*(Node*)arvore).n_function_declaration.firstCommand->code);
 }
 
 void libera (void *arvore) {
