@@ -883,7 +883,7 @@ conditional_flux_control:
         // resulting code has first exp's code, then label "x", then second one's code
         $$->code = exp->code;
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
-        for (IlocCode c : *(s1->code)) $$->code->push_back(c);
+        if(s1 != NULL) for (IlocCode c : *(s1->code)) $$->code->push_back(c);
         if (maybe_else != NULL) $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));
         
@@ -930,14 +930,14 @@ for_flux_control:
         for (std::string* s : *(exp->fl)) *s = *y;
 
         // define node's resulting ILOC code
-        $$->code = s1->code;                                        // S1.code
-        $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));    // z: nop
-        for (IlocCode c : *(exp->code)) $$->code->push_back(c);     // B.code
-        $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));    // x: nop
-        for (IlocCode c : *(s3->code)) $$->code->push_back(c);      // S3.code
-        for (IlocCode c : *(s2->code)) $$->code->push_back(c);      // S2.code
-        $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));         // jump z
-        $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));    // y: nop
+        $$->code = s1->code;                                                       // S1.code
+        $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));                   // z: nop
+        for (IlocCode c : *(exp->code)) $$->code->push_back(c);                    // B.code
+        $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));                   // x: nop
+        if(s3 != NULL) for (IlocCode c : *(s3->code)) $$->code->push_back(c);      // S3.code
+        for (IlocCode c : *(s2->code)) $$->code->push_back(c);                     // S2.code
+        $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));                        // jump z
+        $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));                   // y: nop
 
     };
 while_flux_control:
