@@ -161,6 +161,7 @@
 %type<node> local_var_list_iterator
 %type<node> local_var
 %type<node> var_access
+%type<node> var_access_attr
 %type<node> attribution_command
 %type<node> io_command
 %type<input_or_output> input_or_output
@@ -642,8 +643,51 @@ var_access:
 
     };
 
+var_access_attr:
+    TK_IDENTIFICADOR {
+    
+        char* id = $1->tokenValue.string;
+        SymbolTableEntry* ste = GetFirstOccurrence(id);
+        int line = $1->line_number;
+
+        // check if var was declared
+        if (ste == NULL) throw_error(ERR_UNDECLARED, line, id, TABLE_NATURE_VAR);
+        // check if symbol's nature is not function or vector
+        if (ste->entryNature == TABLE_NATURE_FUNC) throw_error(ERR_FUNCTION, line, id, TABLE_NATURE_FUNC);
+        if (ste->entryNature == TABLE_NATURE_VEC) throw_error(ERR_VECTOR, line, id, TABLE_NATURE_VEC);
+
+        // add var_access node to AST
+        $$ = create_node_var_access($1, SymbolTypeToNodeType(ste->symbolType));
+    } |
+
+    TK_IDENTIFICADOR '[' expression ']' {
+        char* id = $1->tokenValue.string;
+        SymbolTableEntry* ste = GetFirstOccurrence(id);
+        int line = $1->line_number;
+
+        // check if var was declared
+        if (ste == NULL) throw_error(ERR_UNDECLARED, line, id, TABLE_NATURE_VEC);
+        // check if symbol's nature is not function or vector
+        if (ste->entryNature == TABLE_NATURE_FUNC) throw_error(ERR_FUNCTION, line, id, TABLE_NATURE_FUNC);
+        if (ste->entryNature == TABLE_NATURE_VAR) throw_error(ERR_VARIABLE, line, id, TABLE_NATURE_VAR);
+
+        // check if expression is not of type string or char
+        NodeType exp_type = $3->nodeType;
+        if (exp_type == NODE_TYPE_STRING) throw_error(ERR_STRING_TO_X, line, id, TABLE_NATURE_VEC);
+        if (exp_type == NODE_TYPE_CHAR) throw_error(ERR_CHAR_TO_X, line, id, TABLE_NATURE_VEC);
+
+        // add vector_access node to AST
+        NodeType nt = SymbolTypeToNodeType(ste->symbolType);
+        $$ = create_node_vector_access(create_node_var_access($1, nt), $3, nt);
+        FreeValorLexico($2); FreeValorLexico($4);
+
+        /* we'll only need to create intermediate code here if vectors 
+           are included back in the language in the next phases */
+
+    };
+
 attribution_command:
-    var_access '=' expression {
+    var_access_attr '=' expression {
 
         int line = $2->line_number;
 
