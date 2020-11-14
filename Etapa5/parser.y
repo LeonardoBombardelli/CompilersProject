@@ -455,6 +455,7 @@ sequence_simple_command:
         {
             last_command_of_chain($1)->sequenceNode = $3;
             $$ = $1;
+            if($3 != NULL) for(IlocCode c: *($3->code)) $$->code->push_back(c);
         }
         FreeValorLexico($2);
     };
