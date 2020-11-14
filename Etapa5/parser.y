@@ -1038,6 +1038,41 @@ expression:
 
         $$ = create_node_ternary_operation($1, $3, $5, InferTypeTernary($3->nodeType, $5->nodeType, line));
         FreeValorLexico($2); FreeValorLexico($4);
+
+        /* intermediate code generation */
+        
+        Node* exp1 = $1;
+        Node* exp2 = $3;
+        Node* exp3 = $5;
+
+        std::string *newRegister = createRegister();
+        $$->local = *newRegister;
+
+        std::string *x = createLabel();
+        std::string *y = createLabel();
+        std::string *z = createLabel();
+
+        std::string *temp1 = new std::string; *temp1 = std::string($$->local);
+        std::string *temp2 = new std::string; *temp2 = std::string(exp2->local);
+        std::string *temp3 = new std::string; *temp3 = std::string(exp3->local);
+        
+        // mend the patches in exp's tl with x and fl with y
+        for (std::string* s : *(exp1->tl)) *s = *x;
+        for (std::string* s : *(exp1->fl)) *s = *y;
+
+        // resulting code has first exp's code, then label "x", then second one's code
+        $$->code = exp1->code;
+        
+        $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
+        for (IlocCode c : *(exp2->code)) $$->code->push_back(c);
+        $$->code->push_back(IlocCode(I2I, temp2, NULL, temp1));
+        $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));
+
+        $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));
+        for (IlocCode c : *(exp3->code)) $$->code->push_back(c);
+        $$->code->push_back(IlocCode(I2I, temp3, NULL, temp1));
+        $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));
+
     } | 
     exp_log_or                                  { $$ = $1; };
 exp_log_or: 
