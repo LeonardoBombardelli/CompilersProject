@@ -414,7 +414,8 @@ command_block:
 cmd_block_init_scope:
     %empty {
         /* create new scope with current function's name and desloc, and push it to scopeStack */
-        Scope* newScope = CreateNewScope(strdup(auxScopeName), scopeStack->back()->currentDesloc);
+        int desloc = scopeStack->back()->scopeName == NULL ? 0 : scopeStack->back()->currentDesloc;
+        Scope* newScope = CreateNewScope(strdup(auxScopeName), desloc);
         scopeStack->push_back(newScope);
 
         // add formal parameters to function's scope
@@ -434,12 +435,13 @@ cmd_block_destroy_scope:
     %empty {
         Scope* currentScope = scopeStack->back();
 
-        /* update symbol table offset except if returning to global scope */
-        if(currentScope->scopeName != NULL) currentScope->currentDesloc = currentScope->currentDesloc;
+        int desloc = currentScope->currentDesloc;
 
         /* pop current scope from scopeStack and free its memory */
         DestroyScope(currentScope);
         scopeStack->pop_back();
+
+        if(scopeStack->back()->scopeName != NULL) scopeStack->back()->currentDesloc = desloc;
     }
 
 real_command_block:
@@ -1432,7 +1434,7 @@ void yyerror (char const *s) {
 }
 
 void exporta (void *arvore) {
-    PrintAll((Node*) arvore);
+    // PrintAll((Node*) arvore);
     PrintIlocCode(*(*(Node*)arvore).n_function_declaration.firstCommand->code);
 }
 
