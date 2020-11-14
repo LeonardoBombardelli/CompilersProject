@@ -31,6 +31,9 @@
     int stringConcatSize          = 0;                   // Used to calculate the final size when concating strings
     int localVarListSize          = 0;                   // Used to calculate offset in relation to rsp
 
+    /* Aux map to help complete ILOC instructions in local var declarations with init  */
+    std::map<std::string, std::string*> *auxLocalVarDecDesloc = new std::map<std::string, std::string*>;
+
     /* Aux map to check type when initializing vars on declaration */
     std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;
 
@@ -510,12 +513,18 @@ local_var_declaration:
             (*scopeStack->back()->symbolTable)[item.first] = ste;
         }
 
+        for (std::pair<std::string, std::string*> item : *auxLocalVarDecDesloc)
+        {
+            std::string desloc = std::to_string((*scopeStack->back()->symbolTable)[item.first]->desloc);
+            *(item.second) = desloc;
+        }
+
         $$ = $4;
         
         std::string *temp1 = new std::string; *temp1 = std::to_string(localVarListSize);
         std::string *temp2 = new std::string; *temp2 = std::string("rsp");
         std::string *temp3 = new std::string; *temp3 = std::string("rsp");
-        $$->code->push_back(IlocCode(ADDI, temp2, temp1, temp3));
+        $$->code->push_front(IlocCode(ADDI, temp2, temp1, temp3));
 
         // free temp var map and aux init type map
         delete tempVarMap;
@@ -530,6 +539,7 @@ local_var_list:
     local_var local_var_list_iterator {
         localVarListSize += 4;
         $1->sequenceNode = $2;
+        if ($2 != NULL) for (IlocCode c : *($2->code)) $1->code->push_back(c);
         $$ = $1;
     };
 local_var_list_iterator:
@@ -576,6 +586,18 @@ local_var:
         // add var_init node to AST
         $$ = create_node_var_init(create_node_var_access($1, $3->nodeType), $3);
         FreeValorLexico($2);
+
+        /* intermediate code generation */
+
+        $$->code = $3->code;
+        std::string *temp1 = new std::string; *temp1 = std::string("rfp");
+        std::string *temp2 = new std::string;
+        std::string *temp3 = new std::string; *temp3 = std::string($3->local);
+        $$->code->push_back(IlocCode(STOREAI, temp1, temp2, temp3));
+
+        // save the place where we'll later write the var's offset in relation to rfp
+        (*auxLocalVarDecDesloc)[std::string(id)] = temp2;
+
     } |
     TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {
 
@@ -609,6 +631,27 @@ local_var:
         $$ = create_node_var_init(create_node_var_access($1, SymbolTypeToNodeType(ste2->symbolType)),
                                     create_node_var_access($3, SymbolTypeToNodeType(ste2->symbolType)));
         FreeValorLexico($2);
+
+        /* intermediate code generation */
+
+        // select correct base register
+        bool var_is_global = SymbolIsInSymbolTable(s3_name, scopeStack->front());
+        std::string baseReg = var_is_global ? "rbss" : "rfp";
+
+        // load s3's value in newRegister
+        std::string *temp1 = new std::string; *temp1 = std::string(baseReg);
+        std::string *temp2 = new std::string; *temp2 = std::to_string(ste2->desloc);
+        std::string *newRegister = createRegister();
+        $$->code->push_back(IlocCode(LOADAI, temp1, temp2, newRegister));
+
+        // store newRegister's value in var's address
+        std::string *temp3 = new std::string; *temp3 = std::string("rfp");
+        std::string *temp4 = new std::string;
+        $$->code->push_back(IlocCode(STOREAI, temp3, temp4, newRegister));
+
+        // save the place where we'll later write the var's offset in relation to rfp
+        (*auxLocalVarDecDesloc)[std::string(id)] = temp4;
+
     };
 
 var_access:
