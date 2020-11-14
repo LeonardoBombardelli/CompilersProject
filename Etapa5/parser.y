@@ -37,8 +37,9 @@
     /* Aux map to check type when initializing vars on declaration */
     std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;
 
-    /* Aux map of vars, used to gather all variables declared in the same command */
-    std::map<std::string, SymbolTableEntry*> *tempVarMap = new std::map<std::string, SymbolTableEntry*>;
+    /* Aux list of vars, used to gather all variables declared in the same command.
+       Instead of using a map we now use a list of pairs in order to keep the order of push_backs */
+    std::list<std::pair<std::string, SymbolTableEntry*>> *tempVarList = new std::list<std::pair<std::string, SymbolTableEntry*>>;
     
     /* Aux list of function arguments, used both in func declaration (to gather 
        all formal parameters) and in func call (to gather all real parameters)  */
@@ -239,7 +240,7 @@ destroy_stack:
         free(auxLiteral); 
         free(auxScopeName);
         delete auxInitTypeMap;
-        delete tempVarMap;
+        delete tempVarList;
         delete tempFuncArgList;
         
         $$ = NULL;
@@ -317,10 +318,10 @@ global_var:
         if (SymbolIsInSymbolTable($1->tokenValue.string, scopeStack->back()))
             throw_error(ERR_DECLARED, $1->line_number, $1->tokenValue.string, nature);
         
-        // add new var to temp var (to be included later in symbol table)
+        // add new var to temp var list (to be included later in symbol table)
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, nature, NULL, vec_size, 0);
         char* id = $1->tokenValue.string;
-        (*tempVarMap)[std::string(id)] = ste;
+        tempVarList->push_back(std::make_pair(std::string(id), ste));
 
         // ignore global vars in AST
         $$ = NULL; 
@@ -337,7 +338,7 @@ global_var_declaration:
         SymbolType type = IntToSymbolType($2);
 
         // set type to all vars of list, and insert them in table
-        for (std::pair<std::string, SymbolTableEntry*> item : *tempVarMap)
+        for (std::pair<std::string, SymbolTableEntry*> item : *tempVarList)
         {
             SymbolTableEntry* ste = item.second;
 
@@ -355,9 +356,9 @@ global_var_declaration:
             (*scopeStackTop->symbolTable)[item.first] = ste;
         }
 
-        // free temp var map
-        delete tempVarMap;
-        tempVarMap = new std::map<std::string, SymbolTableEntry*>;
+        // free temp var list
+        delete tempVarList;
+        tempVarList = new std::list<std::pair<std::string, SymbolTableEntry*>>;
 
         $$ = NULL; 
         FreeValorLexico($4); 
@@ -493,10 +494,8 @@ local_var_declaration:
         Scope* scopeStackTop = scopeStack->back();
 
         // set type to all vars of list, and insert them in table
-        for (std::pair<std::string, SymbolTableEntry*> item : *tempVarMap)
+        for (std::pair<std::string, SymbolTableEntry*> item : *tempVarList)
         {
-            // TODO: invert order of tempVarMap?
-
             SymbolTableEntry* ste = item.second;
             SymbolType type = IntToSymbolType($3);
             ste->symbolType = type;
@@ -526,9 +525,9 @@ local_var_declaration:
         std::string *temp3 = new std::string; *temp3 = std::string("rsp");
         $$->code->push_front(IlocCode(ADDI, temp2, temp1, temp3));
 
-        // free temp var map and aux init type map
-        delete tempVarMap;
-        tempVarMap = new std::map<std::string, SymbolTableEntry*>;
+        // free temp var list and aux init type map
+        delete tempVarList;
+        tempVarList = new std::list<std::pair<std::string, SymbolTableEntry*>>;
         delete auxInitTypeMap;
         auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;
         localVarListSize = 0;
@@ -555,9 +554,9 @@ local_var:
         if (SymbolIsInSymbolTable(id, scopeStack->back()))
             throw_error(ERR_DECLARED, $1->line_number, id, TABLE_NATURE_VAR);
             
-        // add new var to temp var (to be included later in symbol table)
+        // add new var to temp var list (to be included later in symbol table)
         SymbolTableEntry* ste = CreateSymbolTableEntry(SYMBOL_TYPE_INDEF, $1->line_number, TABLE_NATURE_VAR, NULL, 0, 0);
-        (*tempVarMap)[std::string(id)] = ste;
+        tempVarList->push_back(std::make_pair(std::string(id), ste));
 
         // ignore unititialized var in AST
         $$ = CreateGenericNode(NODE_INDEF);
@@ -577,8 +576,8 @@ local_var:
         if ($3->nodeType == NODE_TYPE_STRING)
             ste->size = (int) strlen($3->n_literal.literal->tokenValue.string);
 
-        // add new var to temp var (to be included later in symbol table)
-        (*tempVarMap)[std::string(id)] = ste;
+        // add new var to temp var list (to be included later in symbol table)
+        tempVarList->push_back(std::make_pair(std::string(id), ste));
 
         // add entry in aux map to check type of initialized vars
         (*auxInitTypeMap)[$1] = NodeTypeToSymbolType($3->nodeType);
@@ -621,8 +620,8 @@ local_var:
         // if $3 is of type string, update ste's size accordingly
         if (ste2->symbolType == SYMBOL_TYPE_STRING) ste->size = ste2->size;
 
-        // add new var to temp var (to be included later in symbol table)
-        (*tempVarMap)[std::string(id)] = ste;
+        // add new var to temp var list (to be included later in symbol table)
+        tempVarList->push_back(std::make_pair(std::string(id), ste));
 
         // add entry in aux map to check type of initialized vars
         (*auxInitTypeMap)[$1] = ste2->symbolType;
