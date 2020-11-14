@@ -351,6 +351,9 @@ void FreeNode(Node* node)
         FreeValorLexico(node->n_literal.literal);
         break;
 
+    case NODE_INDEF:
+        break;
+
     default:
         printf("Erro ao desalocar memoria!!!");
     }
@@ -466,6 +469,9 @@ void PrintNode(Node* node, Node* parent)
         break;
     
     case NODE_LITERAL:
+        break;
+
+    case NODE_INDEF:
         break;
 
     default:
@@ -629,6 +635,9 @@ void PrintLabel(Node* node)
             break;
         
         }
+        break;
+
+    case NODE_INDEF:
         break;
 
     default:

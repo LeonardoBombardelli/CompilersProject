@@ -29,6 +29,7 @@
     SymbolType auxCurrentFuncType = SYMBOL_TYPE_INDEF;   // Save current function's return type. Used when verifying return command
     int auxCurrentFuncLine        = 0;                   // Save current func's decl. line. Used when creating STEs for function's args
     int stringConcatSize          = 0;                   // Used to calculate the final size when concating strings
+    int localVarListSize          = 0;                   // Used to calculate offset in relation to rsp
 
     /* Aux map to check type when initializing vars on declaration */
     std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;
@@ -192,7 +193,23 @@
 
 %%
 programa: 
-    init_stack program_list destroy_stack { $$ = $2; arvore = $$; };
+    init_stack program_list destroy_stack {
+
+        // TODO: fix size later
+        std::string *temp1 = new std::string; *temp1 = std::to_string($2->code->size() + 3);
+        std::string *temp2 = new std::string; *temp2 = std::string("rbss");
+        $2->code->push_front(IlocCode(LOADI, temp1, NULL, temp2));
+
+        std::string *temp3 = new std::string; *temp3 = std::to_string(1024);
+        std::string *temp4 = new std::string; *temp4 = std::string("rsp");
+        $2->code->push_front(IlocCode(LOADI, temp3, NULL, temp4));
+
+        std::string *temp5 = new std::string; *temp5 = std::to_string(1024);
+        std::string *temp6 = new std::string; *temp6 = std::string("rfp");
+        $2->code->push_front(IlocCode(LOADI, temp5, NULL, temp6));
+
+        $$ = $2; arvore = $$;
+    };
 program_list: 
     global_var_declaration program_list   { $$ = $2; /* ignore global vars in AST */    } |
     func_definition program_list          { $1->sequenceNode = $2; $$ = $1;             } |
@@ -475,6 +492,8 @@ local_var_declaration:
         // set type to all vars of list, and insert them in table
         for (std::pair<std::string, SymbolTableEntry*> item : *tempVarMap)
         {
+            // TODO: invert order of tempVarMap?
+
             SymbolTableEntry* ste = item.second;
             SymbolType type = IntToSymbolType($3);
             ste->symbolType = type;
@@ -491,24 +510,27 @@ local_var_declaration:
             (*scopeStack->back()->symbolTable)[item.first] = ste;
         }
 
+        $$ = $4;
+        
+        std::string *temp1 = new std::string; *temp1 = std::to_string(localVarListSize);
+        std::string *temp2 = new std::string; *temp2 = std::string("rsp");
+        std::string *temp3 = new std::string; *temp3 = std::string("rsp");
+        $$->code->push_back(IlocCode(ADDI, temp2, temp1, temp3));
+
         // free temp var map and aux init type map
         delete tempVarMap;
         tempVarMap = new std::map<std::string, SymbolTableEntry*>;
         delete auxInitTypeMap;
         auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;
+        localVarListSize = 0;
 
-        $$ = $4;
     };
 
 local_var_list:
     local_var local_var_list_iterator {
-        if ($1 == NULL)
-            $$ = $2;
-        else
-        {
-            $1->sequenceNode = $2;
-            $$ = $1;
-        }
+        localVarListSize += 4;
+        $1->sequenceNode = $2;
+        $$ = $1;
     };
 local_var_list_iterator:
     %empty               { $$ = NULL;                    } |
@@ -528,7 +550,7 @@ local_var:
         (*tempVarMap)[std::string(id)] = ste;
 
         // ignore unititialized var in AST
-        $$ = NULL;
+        $$ = CreateGenericNode(NODE_INDEF);
         FreeValorLexico($1);
     } |
     TK_IDENTIFICADOR TK_OC_LE literal {

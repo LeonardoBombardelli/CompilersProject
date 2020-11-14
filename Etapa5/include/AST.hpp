@@ -29,7 +29,8 @@ typedef enum
     NODE_UNARY_OPERATION         ,
     NODE_BINARY_OPERATION        ,
     NODE_TERNARY_OPERATION       ,
-    NODE_LITERAL
+    NODE_LITERAL                 ,
+    NODE_INDEF
 
 } NodeCategory;
 
