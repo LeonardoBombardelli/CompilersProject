@@ -44,6 +44,9 @@
     /* Aux list of function arguments, used both in func declaration (to gather 
        all formal parameters) and in func call (to gather all real parameters)  */
     std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;
+
+    /* Aux map to store all function's labels */
+    std::map<std::string, std::string> *auxFuncLabelMap = new std::map<std::string, std::string>;
 %}
 
 %union 
@@ -929,7 +932,27 @@ call_func_command:
         std::string *temp10 = new std::string; *temp10 = std::string("rfp");
         $$->code->push_back(IlocCode(STOREAI, temp3, temp4, temp7));        // save rfp
 
-        // TODO: save parameters
+        int param_address = 8; // start stacking params in rsp+12
+        Node* param = $3;
+        while (param != NULL)
+        {
+            param_address += 4;
+            for (IlocCode c : *(param->code)) $$->code->push_back(c);       // copy param's code
+
+            std::string *temp11 = new std::string; *temp11 = std::string("rsp");
+            std::string *temp12 = new std::string; *temp12 = std::to_string(param_address);
+            std::string *temp13 = new std::string; *temp13 = std::string(param->local);
+            $$->code->push_back(IlocCode(STOREAI, temp11, temp12, temp13)); // stack param in rsp+param_address
+
+            param = param->sequenceNode;
+        }
+
+        // compute number of instructions to jump over (to jump right after the JUMP instruction)
+        *temp2 = std::to_string(1+param_address/4);
+
+        std::string calledFuncLabel = (*auxFuncLabelMap)[std::string(id)];
+        std::string *temp14; *temp14 = std::string(calledFuncLabel);
+        $$->code->push_back(IlocCode(JUMPI, temp14, NULL, NULL));           // jump to called function
 
     };
 func_parameters_list: 
@@ -941,7 +964,6 @@ func_parameters_list:
         tempFuncArgList->push_back(fa);
 
         $1->sequenceNode = $2;
-        if ($2 != NULL) for (IlocCode c : *($2->code)) $1->code->push_back(c);
         $$ = $1;
     };
 func_parameters_list_iterator:
@@ -953,7 +975,6 @@ func_parameters_list_iterator:
         tempFuncArgList->push_back(fa);
 
         $2->sequenceNode = $3;
-        if ($3 != NULL) for (IlocCode c : *($3->code)) $2->code->push_back(c);
         $$ = $2;
         FreeValorLexico($1);
     };
