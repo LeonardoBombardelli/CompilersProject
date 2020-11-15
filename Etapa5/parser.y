@@ -419,9 +419,35 @@ func_definition:
         std::string *temp6 = new std::string; *temp6 = std::string("rsp");
         $$->code->push_back(IlocCode(ADDI, temp5, temp4, temp6));          // update rsp
 
-        for (IlocCode c : *($2->code)) $$->code->push_back(c);              // copy command block's code
+        if($2 != NULL) for (IlocCode c : *($2->code)) $$->code->push_back(c);              // copy command block's code
 
         // CONTINUE HERE: implement implicit return?
+
+        std::string *temp12 = new std::string; *temp12 = std::string("rfp");
+        std::string *temp13 = new std::string; *temp13 = std::string("0");
+        std::string *newRegister1 = createRegister();
+        $$->code->push_back(IlocCode(LOADAI, temp12, temp13, newRegister1));
+
+        std::string *temp14 = new std::string; *temp14 = std::string("rfp");
+        std::string *temp15 = new std::string; *temp15 = std::string("4");
+        std::string *newRegister2 = createRegister();
+        $$->code->push_back(IlocCode(LOADAI, temp14, temp15, newRegister2));
+
+        std::string *temp8 = new std::string; *temp8 = std::string("rfp");
+        std::string *temp9 = new std::string; *temp9 = std::string("8");
+        std::string *newRegister3 = createRegister();
+        $$->code->push_back(IlocCode(LOADAI, temp8, temp9, newRegister3));
+
+        std::string *temp10 = new std::string; *temp10 = std::string("rsp");
+        std::string *newRegister4 = new std::string; *newRegister4 = std::string(*newRegister2);
+        $$->code->push_back(IlocCode(I2I, newRegister4 , NULL, temp10));
+
+        std::string *temp11 = new std::string; *temp11 = std::string("rfp");
+        std::string *newRegister5 = new std::string; *newRegister5 = std::string(*newRegister3);
+        $$->code->push_back(IlocCode(I2I, newRegister5 , NULL, temp11));
+
+        std::string *newRegister6 = new std::string; *newRegister6 = std::string(*newRegister1);
+        $$->code->push_back(IlocCode(JUMP, newRegister6 , NULL, NULL));
     };
 
 func_header:
@@ -996,7 +1022,7 @@ call_func_command:
         *temp2 = std::to_string(1+param_address/4);
 
         std::string calledFuncLabel = (*auxFuncLabelMap)[std::string(id)];
-        std::string *temp14; *temp14 = std::string(calledFuncLabel);
+        std::string *temp14 = new std::string; *temp14 = std::string(calledFuncLabel);
         $$->code->push_back(IlocCode(JUMPI, temp14, NULL, NULL));           // jump to called function
 
     };
@@ -1048,7 +1074,41 @@ return_command:
             throw_error(ERR_WRONG_PAR_RETURN, $1->line_number, auxScopeName, TABLE_NATURE_FUNC);
 
         $$ = create_node_return($2); 
-    
+
+        for (IlocCode c : *($2->code)) $$->code->push_back(c);              // copy expression's code
+
+        std::string *temp1 = new std::string; *temp1 = std::string("rfp");
+        std::string *temp2 = new std::string; *temp2 = std::string("12");
+        std::string *temp3 = new std::string; *temp3 = std::string($2->local);
+        $$->code->push_back(IlocCode(STOREAI, temp1, temp2, temp3));        // save return value
+
+        std::string *temp4 = new std::string; *temp4 = std::string("rfp");
+        std::string *temp5 = new std::string; *temp5 = std::string("0");
+        std::string *newRegister1 = createRegister();
+        $$->code->push_back(IlocCode(LOADAI, temp4, temp5, newRegister1));
+
+        std::string *temp6 = new std::string; *temp6 = std::string("rfp");
+        std::string *temp7 = new std::string; *temp7 = std::string("4");
+        std::string *newRegister2 = createRegister();
+        $$->code->push_back(IlocCode(LOADAI, temp6, temp7, newRegister2));
+
+        std::string *temp8 = new std::string; *temp8 = std::string("rfp");
+        std::string *temp9 = new std::string; *temp9 = std::string("8");
+        std::string *newRegister3 = createRegister();
+        $$->code->push_back(IlocCode(LOADAI, temp8, temp9, newRegister3));
+
+        std::string *temp10 = new std::string; *temp10 = std::string("rsp");
+        std::string *newRegister4 = new std::string; *newRegister4 = std::string(*newRegister2);
+        $$->code->push_back(IlocCode(I2I, newRegister4 , NULL, temp10));
+
+        std::string *temp11 = new std::string; *temp11 = std::string("rfp");
+        std::string *newRegister5 = new std::string; *newRegister5 = std::string(*newRegister3);
+        $$->code->push_back(IlocCode(I2I, newRegister5 , NULL, temp11));
+
+        std::string *newRegister6 = new std::string; *newRegister6 = std::string(*newRegister1);
+        $$->code->push_back(IlocCode(JUMP, newRegister6 , NULL, NULL));
+
+
     };
 
 flux_control_command: 
