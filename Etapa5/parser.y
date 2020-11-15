@@ -46,7 +46,7 @@
     std::list<FuncArgument *> *tempFuncArgList = new std::list<FuncArgument *>;
 
     /* Aux map to store all function's labels */
-    std::map<std::string, std::string> *auxFuncLabelMap = new std::map<std::string, std::string>;
+    std::map<std::string, std::string*> *auxFuncLabelMap = new std::map<std::string, std::string*>;
 %}
 
 %union 
@@ -204,9 +204,8 @@ programa:
 
         $2->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
        
-        std::string tempString = std::string("main");
-        std::string temp1 = (*auxFuncLabelMap)[tempString];
-        std::string *labelMain = new std::string; *labelMain = std::string(temp1);
+        std::string *temp1 = (*auxFuncLabelMap)[std::string("main")];
+        std::string *labelMain = new std::string; *labelMain = std::string(*temp1);
         $2->code->push_front(IlocCode(JUMPI, labelMain, NULL, NULL));           // add instruction to jump to function main
 
         std::string *temp14  = new std::string; *temp14  = std::string("rsp");
@@ -274,6 +273,11 @@ destroy_stack:
         delete auxInitTypeMap;
         delete tempVarList;
         delete tempFuncArgList;
+
+        for (std::pair<std::string, std::string*> item : *auxFuncLabelMap)
+        {
+            delete item.second;
+        }
         delete auxFuncLabelMap;
         
         $$ = NULL;
@@ -413,8 +417,9 @@ func_definition:
         int num_params = ste->funcArguments->size();
 
         std::string *funcLabel = createLabel();
-        (*auxFuncLabelMap)[std::string(funcName)] = std::string(*funcLabel);
+        (*auxFuncLabelMap)[std::string(funcName)] = funcLabel;
 
+        std::string *funcLabelCopy = new std::string; *funcLabelCopy = std::string(*funcLabel);
         $$->code->push_back(IlocCode(funcLabel, NOP, NULL, NULL, NULL));          // instruction with func's label
 
         std::string *temp1 = new std::string; *temp1 = std::string("rsp");
@@ -1029,8 +1034,8 @@ call_func_command:
         // compute number of instructions to jump over (to jump right after the JUMP instruction)
         *temp2 = std::to_string(3+param_address/4);
 
-        std::string calledFuncLabel = (*auxFuncLabelMap)[std::string(id)];
-        std::string *temp14 = new std::string; *temp14 = std::string(calledFuncLabel);
+        std::string *calledFuncLabel = (*auxFuncLabelMap)[std::string(id)];
+        std::string *temp14 = new std::string; *temp14 = std::string(*calledFuncLabel);
         $$->code->push_back(IlocCode(JUMPI, temp14, NULL, NULL));           // jump to called function
 
     };
