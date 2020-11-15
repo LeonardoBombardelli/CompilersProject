@@ -204,7 +204,8 @@ programa:
 
         $2->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
        
-        std::string temp1 = (*auxFuncLabelMap)[std::string("main")];
+        std::string tempString = std::string("main");
+        std::string temp1 = (*auxFuncLabelMap)[tempString];
         std::string *labelMain = new std::string; *labelMain = std::string(temp1);
         $2->code->push_front(IlocCode(JUMPI, labelMain, NULL, NULL));           // add instruction to jump to function main
 
@@ -273,7 +274,6 @@ destroy_stack:
         delete auxInitTypeMap;
         delete tempVarList;
         delete tempFuncArgList;
-        auxFuncLabelMap->clear();
         delete auxFuncLabelMap;
         
         $$ = NULL;
