@@ -38,7 +38,7 @@
     std::map<ValorLexico*, SymbolType> *auxInitTypeMap = new std::map<ValorLexico*, SymbolType>;
 
     /* Aux list of vars, used to gather all variables declared in the same command.
-       Instead of using a map we now use a list of pairs in order to keep the order of push_backs */
+       Instead of using a map we now use a list of pairs in order to keep the order of pushbacks */
     std::list<std::pair<std::string, SymbolTableEntry*>> *tempVarList = new std::list<std::pair<std::string, SymbolTableEntry*>>;
     
     /* Aux list of function arguments, used both in func declaration (to gather 
@@ -199,8 +199,10 @@
 programa: 
     init_stack program_list destroy_stack {
 
-        // TODO: fix size later
-        std::string *temp1 = new std::string; *temp1 = std::to_string($2->code->size() + 3);
+        // add instruction to jump to function main
+        // $2->code->push_front(IlocCode(JUMPI, labelMain, NULL, NULL));
+
+        std::string *temp1 = new std::string; *temp1 = std::to_string($2->code->size() + 4);
         std::string *temp2 = new std::string; *temp2 = std::string("rbss");
         $2->code->push_front(IlocCode(LOADI, temp1, NULL, temp2));
 
@@ -436,14 +438,16 @@ command_block:
 cmd_block_init_scope:
     %empty {
         /* create new scope with current function's name and desloc, and push it to scopeStack */
+        // TODO: when beginning a new function, desloc must be initialized with 16+4*nbr_params 
         int desloc = scopeStack->back()->scopeName == NULL ? 0 : scopeStack->back()->currentDesloc;
         Scope* newScope = CreateNewScope(strdup(auxScopeName), desloc);
         scopeStack->push_back(newScope);
 
-        // add formal parameters to function's scope
+        // add formal parameters to function's scope. update symbol table offset (desloc) accordingly
         for (FuncArgument* arg : *tempFuncArgList)
         {
-            SymbolTableEntry* ste = CreateSymbolTableEntry(arg->type, auxCurrentFuncLine, TABLE_NATURE_VAR, NULL, 0, 0);
+            SymbolTableEntry* ste = CreateSymbolTableEntry(arg->type, auxCurrentFuncLine, TABLE_NATURE_VAR, NULL, 0, scopeStack->back()->currentDesloc);
+            scopeStack->back()->currentDesloc += SizeFromSymbolType(arg->type);
             (*scopeStack->back()->symbolTable)[std::string(arg->argName)] = ste;
         }
 
@@ -903,6 +907,30 @@ call_func_command:
 
         $$ = create_node_function_call($1, $3, nt);
         FreeValorLexico($2); FreeValorLexico($4);
+
+        /* intermediate code generation */
+        
+        std::string *temp1 = new std::string; *temp1 = std::string("rpc");
+        std::string *temp2 = new std::string;   // number of instructions to jump over
+        std::string *newRegister = createRegister();
+        $$->code->push_back(IlocCode(ADDI, temp1, temp2, newRegister));     // compute return address
+
+        std::string *temp3 = new std::string; *temp3 = std::string("rsp");
+        std::string *temp4 = new std::string; *temp4 = std::string("0");
+        $$->code->push_back(IlocCode(STOREAI, temp3, temp4, newRegister));  // save return address
+
+        std::string *temp5 = new std::string; *temp5 = std::string("rsp");
+        std::string *temp6 = new std::string; *temp6 = std::string("4");
+        std::string *temp7 = new std::string; *temp7 = std::string("rsp");
+        $$->code->push_back(IlocCode(STOREAI, temp3, temp4, temp7));        // save rsp
+
+        std::string *temp8  = new std::string; *temp8  = std::string("rsp");
+        std::string *temp9  = new std::string; *temp9  = std::string("8");
+        std::string *temp10 = new std::string; *temp10 = std::string("rfp");
+        $$->code->push_back(IlocCode(STOREAI, temp3, temp4, temp7));        // save rfp
+
+        // TODO: save parameters
+
     };
 func_parameters_list: 
     %empty                                   { $$ = NULL; } |
@@ -913,6 +941,7 @@ func_parameters_list:
         tempFuncArgList->push_back(fa);
 
         $1->sequenceNode = $2;
+        if ($2 != NULL) for (IlocCode c : *($2->code)) $1->code->push_back(c);
         $$ = $1;
     };
 func_parameters_list_iterator:
@@ -924,6 +953,7 @@ func_parameters_list_iterator:
         tempFuncArgList->push_back(fa);
 
         $2->sequenceNode = $3;
+        if ($3 != NULL) for (IlocCode c : *($3->code)) $2->code->push_back(c);
         $$ = $2;
         FreeValorLexico($1);
     };
