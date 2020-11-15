@@ -248,6 +248,13 @@ void FreeNode(Node* node)
         return;
     }
 
+    delete node->code;
+
+    delete node->tl;
+    
+    delete node->fl;
+
+
     if(node->sequenceNode != NULL)
     {
         FreeNode(node->sequenceNode);
@@ -648,4 +655,5 @@ void PrintLabel(Node* node)
     {
         PrintLabel(node->sequenceNode);
     }
+
 }

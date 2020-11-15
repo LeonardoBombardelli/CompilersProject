@@ -224,7 +224,8 @@ programa:
         $2->code->push_front(IlocCode(STOREAI, temp5, temp6, newRegister));
 
         std::string *temp7 = new std::string; *temp7 = std::to_string(8);       // save return address (halt)
-        $2->code->push_front(IlocCode(LOADI, temp7, NULL, newRegister));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister2); 
+        $2->code->push_front(IlocCode(LOADI, temp7, NULL, newRegister2));
 
         std::string *temp8 = new std::string; *temp8 = std::to_string($2->code->size() + 3);
         std::string *temp9 = new std::string; *temp9 = std::string("rbss");
@@ -272,6 +273,8 @@ destroy_stack:
         delete auxInitTypeMap;
         delete tempVarList;
         delete tempFuncArgList;
+        auxFuncLabelMap->clear();
+        delete auxFuncLabelMap;
         
         $$ = NULL;
     }
@@ -410,7 +413,7 @@ func_definition:
         int num_params = ste->funcArguments->size();
 
         std::string *funcLabel = createLabel();
-        (*auxFuncLabelMap)[std::string(funcName)] = *funcLabel;
+        (*auxFuncLabelMap)[std::string(funcName)] = std::string(*funcLabel);
 
         $$->code->push_back(IlocCode(funcLabel, NOP, NULL, NULL, NULL));          // instruction with func's label
 
@@ -1752,5 +1755,22 @@ void exporta (void *arvore) {
 }
 
 void libera (void *arvore) {
+    for (IlocCode c : *(((Node *)arvore)->code))
+    {
+        if(c.label != NULL) delete c.label;
+        if(c.firstArg != NULL) delete c.firstArg;
+        if(c.secondArg != NULL) delete c.secondArg;
+        if(c.thirdArg != NULL) delete c.thirdArg;
+    } 
+
+    for (std::string* c : *(((Node *)arvore)->tl))
+    {
+        delete c;
+    } 
+
+    for (std::string* c : *(((Node *)arvore)->fl))
+    {
+        delete c;
+    } 
     FreeTree((Node*) arvore);
 }
