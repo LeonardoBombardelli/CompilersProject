@@ -1156,7 +1156,7 @@ conditional_flux_control:
         $$->code = exp->code;
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
         if(s1 != NULL) for (IlocCode c : *(s1->code)) $$->code->push_back(c);
-        if (maybe_else != NULL) $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));
+        if (maybe_else != NULL) $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));
         
         if (maybe_else != NULL)
@@ -1208,7 +1208,7 @@ for_flux_control:
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));                   // x: nop
         if(s3 != NULL) for (IlocCode c : *(s3->code)) $$->code->push_back(c);      // S3.code
         for (IlocCode c : *(s2->code)) $$->code->push_back(c);                     // S2.code
-        $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));                        // jump z
+        $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));                        // jump z
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));                   // y: nop
 
     };
@@ -1246,7 +1246,7 @@ while_flux_control:
         for (IlocCode c : *(exp->code)) $$->code->push_back(c);                     // B.code
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));                    // x: nop
         if(s1 != NULL) for (IlocCode c : *(s1->code)) $$->code->push_back(c);       // S1.code
-        $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));                         // jump z
+        $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));                         // jump z
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));                    // y: nop
 
     };
@@ -1291,7 +1291,7 @@ expression:
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
         for (IlocCode c : *(exp2->code)) $$->code->push_back(c);
         $$->code->push_back(IlocCode(I2I, temp2, NULL, temp1));
-        $$->code->push_back(IlocCode(JUMP, NULL, NULL, z));
+        $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));
 
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));
         for (IlocCode c : *(exp3->code)) $$->code->push_back(c);
