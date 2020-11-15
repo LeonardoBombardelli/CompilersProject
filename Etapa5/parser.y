@@ -242,7 +242,11 @@ programa:
     };
 program_list: 
     global_var_declaration program_list   { $$ = $2; /* ignore global vars in AST */    } |
-    func_definition program_list          { $1->sequenceNode = $2; $$ = $1;             } |
+    func_definition program_list          { 
+        $1->sequenceNode = $2; 
+        $$ = $1; 
+        if($2 != NULL) for(IlocCode c: *($2->code)) $$->code->push_back(c);           
+    } |
     %empty                                { $$ = NULL;                                  };
 
 init_stack:
@@ -991,7 +995,8 @@ call_func_command:
 
         std::string *temp3 = new std::string; *temp3 = std::string("rsp");
         std::string *temp4 = new std::string; *temp4 = std::string("0");
-        $$->code->push_back(IlocCode(STOREAI, temp3, temp4, newRegister));  // save return address
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(STOREAI, temp3, temp4, newRegister2));  // save return address
 
         std::string *temp5 = new std::string; *temp5 = std::string("rsp");
         std::string *temp6 = new std::string; *temp6 = std::string("4");
@@ -1019,7 +1024,7 @@ call_func_command:
         }
 
         // compute number of instructions to jump over (to jump right after the JUMP instruction)
-        *temp2 = std::to_string(1+param_address/4);
+        *temp2 = std::to_string(3+param_address/4);
 
         std::string calledFuncLabel = (*auxFuncLabelMap)[std::string(id)];
         std::string *temp14 = new std::string; *temp14 = std::string(calledFuncLabel);
@@ -1636,7 +1641,15 @@ operand:
     '(' expression ')' { $$ = $2; FreeValorLexico($1); FreeValorLexico($3); } | 
     var_access         { $$ = $1; } | 
     literal            { $$ = $1; } | 
-    call_func_command  { $$ = $1; };
+    call_func_command  { 
+        $$ = $1;
+        std::string *temp1 = new std::string; *temp1 = std::string("rsp");
+        std::string *temp2 = new std::string; *temp2 = std::string("12");
+        std::string *newRegister = createRegister();
+
+        $$->code->push_back(IlocCode(LOADI, temp1, temp2, newRegister));
+        $$->local = *newRegister;
+     };
 
 %%
 // Referencia para precedencia e associatividade dos operadores nas expressoes: https://en.cppreference.com/w/cpp/language/operator_precedence
