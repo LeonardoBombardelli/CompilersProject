@@ -15,21 +15,8 @@ typedef enum
     MULT,
     DIV,
     ADDI,
-    SUBI,
-    RSUBI,
-    MULTI,
-    DIVI,
-    RDIVI,
-    // shifts?
-    AND,
-    ANDI,
-    OR,
-    ORI,
     LOADI,
-    LOAD,
     LOADAI,
-    // loadA0, storeA0 -> arrays
-    STORE,
     STOREAI,
     I2I,
     JUMPI,
@@ -77,7 +64,6 @@ extern int registerIndex;
 std::string* createLabel();
 std::string* createRegister();
 
-std::string opcodeToString(Operations opcode);
 void PrintIlocCode(std::list<IlocCode> code);
 
 #endif

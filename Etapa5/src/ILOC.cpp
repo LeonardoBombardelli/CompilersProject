@@ -17,54 +17,82 @@ std::string* createRegister()
     return reg;
 }
 
-std::string opcodeToString(Operations opcode)
-{
-    switch(opcode)
-    {
-    case HALT:    return std::string("HALT");
-    case NOP:     return std::string("NOP");
-    case ADD:     return std::string("ADD");
-    case SUB:     return std::string("SUB");
-    case MULT:    return std::string("MULT");
-    case DIV:     return std::string("DIV");
-    case ADDI:    return std::string("ADDI");
-    case SUBI:    return std::string("SUBI");
-    case RSUBI:   return std::string("RSUBI");
-    case MULTI:   return std::string("MULTI");
-    case DIVI:    return std::string("DIVI");
-    case RDIVI:   return std::string("RDIVI");
-    case AND:     return std::string("AND");
-    case ANDI:    return std::string("ANDI");
-    case OR:      return std::string("OR");
-    case ORI:     return std::string("ORI");
-    case LOADI:   return std::string("LOADI");
-    case LOAD:    return std::string("LOAD");
-    case LOADAI:  return std::string("LOADAI");
-    case STORE:   return std::string("STORE");
-    case STOREAI: return std::string("STOREAI");
-    case I2I:     return std::string("I2I");
-    case JUMPI:   return std::string("JUMPI");
-    case JUMP:    return std::string("JUMP");
-    case CBR:     return std::string("CBR");
-    case CMP_LT:  return std::string("CMP_LT");
-    case CMP_LE:  return std::string("CMP_LE");
-    case CMP_EQ:  return std::string("CMP_EQ");
-    case CMP_GE:  return std::string("CMP_GE");
-    case CMP_GT:  return std::string("CMP_GT");
-    case CMP_NE:  return std::string("CMP_NE");
-    default:      return std::string("(no op)");
-    }
-}
-
 void PrintIlocCode(std::list<IlocCode> code)
 {
-    for (IlocCode instruction : code)
+    for (IlocCode inst : code)
     {
-        if (instruction.label != nullptr) std::cout << *(instruction.label) << ": ";
-        std::cout << opcodeToString(instruction.opcode) << " ";
-        if (instruction.firstArg  != NULL) std::cout << *(instruction.firstArg)  << " "; else std::cout << "NULL ";
-        if (instruction.secondArg != NULL) std::cout << *(instruction.secondArg) << " "; else std::cout << "NULL ";
-        if (instruction.thirdArg  != NULL) std::cout << *(instruction.thirdArg)  << "\n"; else std::cout << "NULL\n";
-        // TODO: some instructions have -> or => so we'll need to check each case
+        std::string first  = (inst.firstArg != nullptr)  ? *(inst.firstArg)  : std::string();
+        std::string second = (inst.secondArg != nullptr) ? *(inst.secondArg) : std::string();
+        std::string third  = (inst.thirdArg != nullptr)  ? *(inst.thirdArg)  : std::string();
+
+        if (inst.label != nullptr) std::cout << *(inst.label) << ": ";
+
+        switch(inst.opcode)
+        {
+        case HALT:
+            std::cout << "halt";
+            break;
+        case NOP:
+            break;
+        case ADD:
+            std::cout << "add " << first << ", " << second << " => " << third;
+            break;
+        case SUB:
+            std::cout << "sub " << first << ", " << second << " => " << third;
+            break;
+        case MULT:
+            std::cout << "mult " << first << ", " << second << " => " << third;
+            break;
+        case DIV:
+            std::cout << "div " << first << ", " << second << " => " << third;
+            break;
+        case ADDI:
+            std::cout << "addI " << first << ", " << second << " => " << third;
+            break;
+        case LOADI:
+            std::cout << "loadI " << first << " => " << third;
+            break;
+        case LOADAI:
+            std::cout << "loadAI " << first << ", " << second << " => " << third;
+            break;
+        case STOREAI:
+            std::cout << "storeAI " << third << " => " << first << ", " << second;
+            break;
+        case I2I:
+            std::cout << "i2i " << first << " => " << third;
+            break;
+        case JUMPI:
+            std::cout << "jumpI -> " << first;
+            break;
+        case JUMP:
+            std::cout << "jump -> " << first;
+            break;
+        case CBR:
+            std::cout << "cbr " << first << " -> " << second << ", " << third;
+            break;
+        case CMP_LT:
+            std::cout << "cmp_LT " << first << ", " << second << " -> " << third;
+            break;
+        case CMP_LE:
+            std::cout << "cmp_LE " << first << ", " << second << " -> " << third;
+            break;
+        case CMP_EQ:
+            std::cout << "cmp_EQ " << first << ", " << second << " -> " << third;
+            break;
+        case CMP_GE:
+            std::cout << "cmp_GE " << first << ", " << second << " -> " << third;
+            break;
+        case CMP_GT:
+            std::cout << "cmp_GT " << first << ", " << second << " -> " << third;
+            break;
+        case CMP_NE:
+            std::cout << "cmp_NE " << first << ", " << second << " -> " << third;
+            break;
+        default:
+            break;
+        }
+        
+        std::cout << std::endl;
+
     }
 }
