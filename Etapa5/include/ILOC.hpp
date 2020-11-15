@@ -8,6 +8,7 @@
 
 typedef enum
 {
+    HALT,
     NOP,
     ADD,
     SUB,

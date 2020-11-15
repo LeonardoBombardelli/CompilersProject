@@ -202,20 +202,36 @@
 programa: 
     init_stack program_list destroy_stack {
 
-        // add instruction to jump to function main
-        // $2->code->push_front(IlocCode(JUMPI, labelMain, NULL, NULL));
+        $2->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
+       
+        std::string temp1 = (*auxFuncLabelMap)[std::string("main")];
+        std::string *labelMain = new std::string; *labelMain = std::string(temp1);
+        $2->code->push_front(IlocCode(JUMPI, labelMain, NULL, NULL));           // add instruction to jump to function main
 
-        std::string *temp1 = new std::string; *temp1 = std::to_string($2->code->size() + 4);
-        std::string *temp2 = new std::string; *temp2 = std::string("rbss");
-        $2->code->push_front(IlocCode(LOADI, temp1, NULL, temp2));
-
-        std::string *temp3 = new std::string; *temp3 = std::to_string(1024);
+        std::string *temp2 = new std::string; *temp2 = std::to_string(4);
+        std::string *temp3 = new std::string; *temp3 = std::string("rsp");
         std::string *temp4 = new std::string; *temp4 = std::string("rsp");
-        $2->code->push_front(IlocCode(LOADI, temp3, NULL, temp4));
+        $$->code->push_front(IlocCode(ADDI, temp3, temp2, temp4));
 
-        std::string *temp5 = new std::string; *temp5 = std::to_string(1024);
-        std::string *temp6 = new std::string; *temp6 = std::string("rfp");
-        $2->code->push_front(IlocCode(LOADI, temp5, NULL, temp6));
+        std::string *temp5 = new std::string; *temp5 = std::string("rsp");
+        std::string *temp6 = new std::string; *temp6 = std::to_string(0);
+        std::string *newRegister = createRegister();
+        $$->code->push_front(IlocCode(STOREAI, temp5, temp6, newRegister));
+
+        std::string *temp7 = new std::string; *temp7 = std::to_string(7);       // save return address (halt)
+        $2->code->push_front(IlocCode(LOADI, temp7, NULL, newRegister));
+
+        std::string *temp8 = new std::string; *temp8 = std::to_string($2->code->size() + 4);
+        std::string *temp9 = new std::string; *temp9 = std::string("rbss");
+        $2->code->push_front(IlocCode(LOADI, temp8, NULL, temp9));
+
+        std::string *temp10 = new std::string; *temp10 = std::to_string(1024);
+        std::string *temp11 = new std::string; *temp11 = std::string("rsp");
+        $2->code->push_front(IlocCode(LOADI, temp10, NULL, temp11));
+
+        std::string *temp12 = new std::string; *temp12 = std::to_string(1024);
+        std::string *temp13 = new std::string; *temp13 = std::string("rfp");
+        $2->code->push_front(IlocCode(LOADI, temp12, NULL, temp13));
 
         $$ = $2; arvore = $$;
     };
@@ -377,6 +393,30 @@ func_definition:
     func_header command_block {
         $1->n_function_declaration.firstCommand = $2;
         $$ = $1;
+
+        /* intermediate code generation */
+
+        char* funcName = $1->n_function_declaration.identifier->tokenValue.string;
+        SymbolTableEntry* ste = GetFirstOccurrence(funcName);
+        int num_params = ste->funcArguments->size();
+
+        std::string *funcLabel = createLabel();
+        (*auxFuncLabelMap)[std::string(funcName)] = *funcLabel;
+
+        $$->code->push_back(IlocCode(funcLabel, NOP, NULL, NULL, NULL));          // instruction with func's label
+
+        std::string *temp1 = new std::string; *temp1 = std::string("rsp");
+        std::string *temp2 = new std::string; *temp2 = std::string("rfp");
+        $$->code->push_back(IlocCode(I2I, temp1, NULL, temp2));                   // copy rsp to rfp
+
+        std::string *temp4 = new std::string; *temp4 = std::to_string(16+4*num_params);
+        std::string *temp5 = new std::string; *temp5 = std::string("rsp");
+        std::string *temp6 = new std::string; *temp6 = std::string("rsp");
+        $$->code->push_back(IlocCode(ADDI, temp5, temp4, temp6));          // update rsp
+
+        for (IlocCode c : *($2->code)) $$->code->push_back(c);              // copy command block's code
+
+        // CONTINUE HERE: implement implicit return?
     };
 
 func_header:
@@ -440,9 +480,9 @@ command_block:
 
 cmd_block_init_scope:
     %empty {
-        /* create new scope with current function's name and desloc, and push it to scopeStack */
-        // TODO: when beginning a new function, desloc must be initialized with 16+4*nbr_params 
-        int desloc = scopeStack->back()->scopeName == NULL ? 0 : scopeStack->back()->currentDesloc;
+        /* create new scope with current function's name and desloc, and push it to scopeStack.
+           when it's a new function, start offset at 16 (after return addr, rsp, rfp and return value) */
+        int desloc = scopeStack->back()->scopeName == NULL ? 16 : scopeStack->back()->currentDesloc;
         Scope* newScope = CreateNewScope(strdup(auxScopeName), desloc);
         scopeStack->push_back(newScope);
 
@@ -932,7 +972,7 @@ call_func_command:
         std::string *temp10 = new std::string; *temp10 = std::string("rfp");
         $$->code->push_back(IlocCode(STOREAI, temp3, temp4, temp7));        // save rfp
 
-        int param_address = 8; // start stacking params in rsp+12
+        int param_address = 12; // start stacking params in rsp+16 (skip an addr to store return value)
         Node* param = $3;
         while (param != NULL)
         {

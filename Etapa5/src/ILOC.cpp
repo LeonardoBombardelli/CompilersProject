@@ -21,6 +21,7 @@ std::string opcodeToString(Operations opcode)
 {
     switch(opcode)
     {
+    case HALT:    return std::string("HALT");
     case NOP:     return std::string("NOP");
     case ADD:     return std::string("ADD");
     case SUB:     return std::string("SUB");
