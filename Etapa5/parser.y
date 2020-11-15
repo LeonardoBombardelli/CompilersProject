@@ -208,20 +208,25 @@ programa:
         std::string *labelMain = new std::string; *labelMain = std::string(temp1);
         $2->code->push_front(IlocCode(JUMPI, labelMain, NULL, NULL));           // add instruction to jump to function main
 
-        std::string *temp2 = new std::string; *temp2 = std::to_string(4);
-        std::string *temp3 = new std::string; *temp3 = std::string("rsp");
+        std::string *temp14  = new std::string; *temp14  = std::string("rsp");
+        std::string *temp15  = new std::string; *temp15  = std::string("8");
+        std::string *temp16 = new std::string; *temp16 = std::string("rfp");
+        $2->code->push_front(IlocCode(STOREAI, temp14, temp15, temp16));        // save rfp
+
+        std::string *temp2 = new std::string; *temp2 = std::string("rsp");
+        std::string *temp3 = new std::string; *temp3 = std::string("4");
         std::string *temp4 = new std::string; *temp4 = std::string("rsp");
-        $$->code->push_front(IlocCode(ADDI, temp3, temp2, temp4));
+        $2->code->push_front(IlocCode(STOREAI, temp2, temp3, temp4));        // save rsp
 
         std::string *temp5 = new std::string; *temp5 = std::string("rsp");
         std::string *temp6 = new std::string; *temp6 = std::to_string(0);
         std::string *newRegister = createRegister();
-        $$->code->push_front(IlocCode(STOREAI, temp5, temp6, newRegister));
+        $2->code->push_front(IlocCode(STOREAI, temp5, temp6, newRegister));
 
-        std::string *temp7 = new std::string; *temp7 = std::to_string(7);       // save return address (halt)
+        std::string *temp7 = new std::string; *temp7 = std::to_string(8);       // save return address (halt)
         $2->code->push_front(IlocCode(LOADI, temp7, NULL, newRegister));
 
-        std::string *temp8 = new std::string; *temp8 = std::to_string($2->code->size() + 4);
+        std::string *temp8 = new std::string; *temp8 = std::to_string($2->code->size() + 3);
         std::string *temp9 = new std::string; *temp9 = std::string("rbss");
         $2->code->push_front(IlocCode(LOADI, temp8, NULL, temp9));
 
@@ -965,12 +970,12 @@ call_func_command:
         std::string *temp5 = new std::string; *temp5 = std::string("rsp");
         std::string *temp6 = new std::string; *temp6 = std::string("4");
         std::string *temp7 = new std::string; *temp7 = std::string("rsp");
-        $$->code->push_back(IlocCode(STOREAI, temp3, temp4, temp7));        // save rsp
+        $$->code->push_back(IlocCode(STOREAI, temp5, temp6, temp7));        // save rsp
 
         std::string *temp8  = new std::string; *temp8  = std::string("rsp");
         std::string *temp9  = new std::string; *temp9  = std::string("8");
         std::string *temp10 = new std::string; *temp10 = std::string("rfp");
-        $$->code->push_back(IlocCode(STOREAI, temp3, temp4, temp7));        // save rfp
+        $$->code->push_back(IlocCode(STOREAI, temp8, temp9, temp10));        // save rfp
 
         int param_address = 12; // start stacking params in rsp+16 (skip an addr to store return value)
         Node* param = $3;
@@ -1670,7 +1675,7 @@ void yyerror (char const *s) {
 
 void exporta (void *arvore) {
     // PrintAll((Node*) arvore);
-    PrintIlocCode(*(*(Node*)arvore).n_function_declaration.firstCommand->code);
+    PrintIlocCode(*((Node*) arvore)->code);
 }
 
 void libera (void *arvore) {
