@@ -1647,7 +1647,7 @@ operand:
         std::string *temp2 = new std::string; *temp2 = std::string("12");
         std::string *newRegister = createRegister();
 
-        $$->code->push_back(IlocCode(LOADI, temp1, temp2, newRegister));
+        $$->code->push_back(IlocCode(LOADAI, temp1, temp2, newRegister));
         $$->local = *newRegister;
      };
 
