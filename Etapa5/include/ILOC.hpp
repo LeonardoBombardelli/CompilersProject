@@ -78,7 +78,9 @@ public:
 extern int labelIndex;
 extern int registerIndex;
 std::string* createLabel();
+std::string createLabelDirect();
 std::string* createRegister();
+std::string createRegisterDirect();
 
 void PrintIlocCode(std::list<IlocCode> code);
 

@@ -8,6 +8,7 @@ Node* CreateGenericNode(NodeCategory category)
     node->nodeCategory = category;
     node->nodeType     = NODE_TYPE_INDEF;
     node->sequenceNode = NULL;
+    node->local        = new std::string;
     node->code         = new std::list<IlocCode>;
     node->tl           = new std::list<std::string*>;
     node->fl           = new std::list<std::string*>;
@@ -254,6 +255,7 @@ void FreeNode(Node* node)
     
     delete node->fl;
 
+    delete node->local;
 
     if(node->sequenceNode != NULL)
     {

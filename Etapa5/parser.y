@@ -208,15 +208,15 @@ programa:
         std::string rfp  = std::string("rfp");
         std::string rbss = std::string("rbss");
 
-        std::string *newRegister = createRegister();
+        std::string newRegister = createRegisterDirect();
         int codeSize = $2->code->size() + 9;
 
         $2->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
         $2->code->push_front(IlocCode(JUMPI, mainFuncLabel, NULL, NULL));                       // add instruction to jump to function main
         $2->code->push_front(IlocCode(STOREAI, rsp, std::string("8"), rfp));                    // save rfp
         $2->code->push_front(IlocCode(STOREAI, rsp, std::string("4"), rsp));                    // save rsp
-        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("0"), *newRegister));
-        $2->code->push_front(IlocCode(LOADI, std::string("8"), std::string(), *newRegister));   // save return address (halt)
+        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("0"), newRegister));
+        $2->code->push_front(IlocCode(LOADI, std::string("8"), std::string(), newRegister));   // save return address (halt)
 
         $2->code->push_front(IlocCode(LOADI, std::to_string(codeSize), std::string(), rbss));   // define starting points to data segment ...
         $2->code->push_front(IlocCode(LOADI, std::string("1024"), std::string(), rsp));         // ... stack pointer ...
@@ -261,7 +261,7 @@ destroy_stack:
         for (std::pair<std::string, std::string*> item : *auxFuncLabelMap) delete item.second;
         delete auxFuncLabelMap;
         
-        for (std::pair<std::string, std::string*> item : *auxLocalVarDecDesloc) delete item.second;
+        // for (std::pair<std::string, std::string*> item : *auxLocalVarDecDesloc) delete item.second;
         delete auxLocalVarDecDesloc;
         
         $$ = NULL;
@@ -314,7 +314,8 @@ literal:
         if (symbolType == SYMBOL_TYPE_INTEGER)
         {
             std::string *newRegister = createRegister();
-            $$->local = *newRegister;
+            delete $$->local;
+            $$->local = newRegister;
             $$->code->push_back(IlocCode(LOADI, std::string(auxLiteral), std::string(), *newRegister));
         }
 
@@ -415,16 +416,16 @@ func_definition:
 
         // implicit return
 
-        std::string *regReturnAddress = createRegister();
-        std::string *regRestoreRsp    = createRegister();
-        std::string *regRestoreRfp    = createRegister();
+        std::string regReturnAddress = createRegisterDirect();
+        std::string regRestoreRsp    = createRegisterDirect();
+        std::string regRestoreRfp    = createRegisterDirect();
 
-        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("0"), *regReturnAddress));
-        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("4"), *regRestoreRsp));
-        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("8"), *regRestoreRfp));
-        $$->code->push_back(IlocCode(I2I, *regRestoreRsp , std::string(), rsp));
-        $$->code->push_back(IlocCode(I2I, *regRestoreRfp , std::string(), rfp));
-        $$->code->push_back(IlocCode(JUMP, *regReturnAddress , std::string(), std::string()));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("0"), regReturnAddress));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("4"), regRestoreRsp));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("8"), regRestoreRfp));
+        $$->code->push_back(IlocCode(I2I, regRestoreRsp , std::string(), rsp));
+        $$->code->push_back(IlocCode(I2I, regRestoreRfp , std::string(), rfp));
+        $$->code->push_back(IlocCode(JUMP, regReturnAddress , std::string(), std::string()));
     };
 
 func_header:
@@ -641,10 +642,10 @@ local_var:
 
         /* intermediate code generation */
 
-        $$->code = $3->code;
+        for (IlocCode c : *($3->code)) $$->code->push_back(c);
         std::string *temp1 = new std::string; *temp1 = std::string("rfp");
         std::string *temp2 = new std::string;
-        std::string *temp3 = new std::string; *temp3 = std::string($3->local);
+        std::string *temp3 = new std::string; *temp3 = std::string(*($3->local));
         $$->code->push_back(IlocCode(STOREAI, temp1, temp2, temp3));
 
         // save the place where we'll later write the var's offset in relation to rfp
@@ -729,7 +730,8 @@ var_access:
         std::string baseReg = var_is_global ? "rbss" : "rfp";
 
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
         $$->code->push_back(IlocCode(LOADAI, std::string(baseReg), std::to_string(ste->desloc), *newRegister));
 
     } | 
@@ -852,8 +854,8 @@ attribution_command:
             bool var_is_global = SymbolIsInSymbolTable(id, scopeStack->front());
             std::string baseReg = var_is_global ? "rbss" : "rfp";
 
-            $$->code = $3->code;
-            std::string expLocal = std::string($3->local);
+            for (IlocCode c : *($3->code)) $$->code->push_back(c);
+            std::string expLocal = std::string(*($3->local));
             $$->code->push_back(IlocCode(STOREAI, std::string(baseReg), std::to_string(ste->desloc), expLocal));
 
         }
@@ -974,7 +976,7 @@ call_func_command:
             param_address += 4;
             for (IlocCode c : *(param->code)) $$->code->push_back(c);                           // copy param's code
             std::string str_param_address = std::to_string(param_address);
-            std::string str_param_reg     = std::string(param->local);
+            std::string str_param_reg     = std::string(*(param->local));
             $$->code->push_back(IlocCode(STOREAI, rsp, str_param_address, str_param_reg));      // stack param in rsp+param_address
             param = param->sequenceNode;
         }
@@ -1043,18 +1045,18 @@ return_command:
         std::string rfp  = std::string("rfp");
         std::string rbss = std::string("rbss");
 
-        std::string *newRegister1 = createRegister();
-        std::string *newRegister2 = createRegister();
-        std::string *newRegister3 = createRegister();
+        std::string newRegister1 = createRegisterDirect();
+        std::string newRegister2 = createRegisterDirect();
+        std::string newRegister3 = createRegisterDirect();
 
-        std::string expLocal = std::string($2->local);
+        std::string expLocal = std::string(*($2->local));
         $$->code->push_back(IlocCode(STOREAI, rfp, std::string("12"), expLocal));        // save return value
-        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("0"), *newRegister1));
-        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("4"), *newRegister2));
-        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("8"), *newRegister3));
-        $$->code->push_back(IlocCode(I2I, *newRegister2 , NULL, rsp));
-        $$->code->push_back(IlocCode(I2I, *newRegister3 , NULL, rfp));
-        $$->code->push_back(IlocCode(JUMP, *newRegister1 , NULL, NULL));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("0"), newRegister1));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("4"), newRegister2));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("8"), newRegister3));
+        $$->code->push_back(IlocCode(I2I, newRegister2 , std::string(), rsp));
+        $$->code->push_back(IlocCode(I2I, newRegister3 , std::string(), rfp));
+        $$->code->push_back(IlocCode(JUMP, newRegister1 , std::string(), std::string()));
 
     };
 
@@ -1095,7 +1097,8 @@ conditional_flux_control:
         for (std::string* s : *(exp->fl)) *s = *y;
 
         // resulting code has first exp's code, then label "x", then second one's code
-        $$->code = exp->code;
+        for (IlocCode c : *(exp->code)) $$->code->push_back(c);
+        
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
         if(s1 != NULL) for (IlocCode c : *(s1->code)) $$->code->push_back(c);
         if (maybe_else != NULL) $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));
@@ -1137,20 +1140,21 @@ for_flux_control:
 
         std::string *x = createLabel();
         std::string *y = createLabel();
-        std::string *z = createLabel();
+        std::string *z1 = createLabel();
+        std::string *z2 = new std::string; *z2 = *z1;
         
         // mend the patches in exp's tl with x and fl with y
         for (std::string* s : *(exp->tl)) *s = *x;
         for (std::string* s : *(exp->fl)) *s = *y;
 
         // define node's resulting ILOC code
-        $$->code = s1->code;                                                       // S1.code
-        $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));                   // z: nop
+        for (IlocCode c : *(s1->code)) $$->code->push_back(c);                     // S1.code
+        $$->code->push_back(IlocCode(z1, NOP, NULL, NULL, NULL));                   // z: nop
         for (IlocCode c : *(exp->code)) $$->code->push_back(c);                    // B.code
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));                   // x: nop
         if(s3 != NULL) for (IlocCode c : *(s3->code)) $$->code->push_back(c);      // S3.code
         for (IlocCode c : *(s2->code)) $$->code->push_back(c);                     // S2.code
-        $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));                       // jump z
+        $$->code->push_back(IlocCode(JUMPI, z2, NULL, NULL));                       // jump z
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));                   // y: nop
 
     };
@@ -1212,8 +1216,8 @@ expression:
         Node* exp2 = $3;
         Node* exp3 = $5;
 
-        std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = createRegister();
 
         std::string *x = createLabel();
         std::string *y = createLabel();
@@ -1224,16 +1228,16 @@ expression:
         for (std::string* s : *(exp1->fl)) *s = *y;
 
         // resulting code has first exp's code, then label "x", then second one's code
-        $$->code = exp1->code;
+        for (IlocCode c : *(exp1->code)) $$->code->push_back(c);
         
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
         for (IlocCode c : *(exp2->code)) $$->code->push_back(c);
-        $$->code->push_back(IlocCode(I2I, std::string(exp2->local), std::string(), std::string($$->local)));
+        $$->code->push_back(IlocCode(I2I, std::string(*(exp2->local)), std::string(), std::string(*($$->local))));
         $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));
 
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));
         for (IlocCode c : *(exp3->code)) $$->code->push_back(c);
-        $$->code->push_back(IlocCode(I2I, std::string(exp3->local), std::string(), std::string($$->local)));
+        $$->code->push_back(IlocCode(I2I, std::string(*(exp3->local)), std::string(), std::string(*($$->local))));
         $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));
 
     } | 
@@ -1260,7 +1264,7 @@ exp_log_or:
         for (std::string* s : *b2tl) $$->fl->push_back(s);
 
         // resulting code has first exp's code, then label "x", then second one's code
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
@@ -1288,7 +1292,7 @@ exp_log_and:
         for (std::string* s : *b2fl) $$->fl->push_back(s);
 
         // resulting code has first exp's code, then label "x", then second one's code
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
@@ -1308,20 +1312,22 @@ exp_relat_1:
         
         // create new register name to save the result
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string($1->local);
-        std::string exp2local = std::string($3->local);
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
         $$->code->push_back(IlocCode(CMP_EQ, exp1local, exp2local, *newRegister));
-        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
         $$->tl->push_back(tlPatch);
@@ -1335,20 +1341,22 @@ exp_relat_1:
         
         // create new register name to save the result
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string($1->local);
-        std::string exp2local = std::string($3->local);
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
         $$->code->push_back(IlocCode(CMP_NE, exp1local, exp2local, *newRegister));
-        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
         $$->tl->push_back(tlPatch);
@@ -1364,20 +1372,22 @@ exp_relat_2:
         
         // create new register name to save the result
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string($1->local);
-        std::string exp2local = std::string($3->local);
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
         $$->code->push_back(IlocCode(CMP_LE, exp1local, exp2local, *newRegister));
-        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
         $$->tl->push_back(tlPatch);
@@ -1391,20 +1401,22 @@ exp_relat_2:
         
         // create new register name to save the result
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string($1->local);
-        std::string exp2local = std::string($3->local);
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
         $$->code->push_back(IlocCode(CMP_GE, exp1local, exp2local, *newRegister));
-        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
         $$->tl->push_back(tlPatch);
@@ -1418,20 +1430,22 @@ exp_relat_2:
         
         // create new register name to save the result
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string($1->local);
-        std::string exp2local = std::string($3->local);
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
         $$->code->push_back(IlocCode(CMP_LT, exp1local, exp2local, *newRegister));
-        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
         $$->tl->push_back(tlPatch);
@@ -1445,20 +1459,22 @@ exp_relat_2:
         
         // create new register name to save the result
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string($1->local);
-        std::string exp2local = std::string($3->local);
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
         $$->code->push_back(IlocCode(CMP_GT, exp1local, exp2local, *newRegister));
-        $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
         $$->tl->push_back(tlPatch);
@@ -1492,13 +1508,14 @@ exp_sum:
 
         // create new register name to save the result
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
 
         // resulting code has first exp's code, then second one's code, then ADD instruction
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string exp1local = std::string($1->local);
-        std::string exp2local = std::string($3->local);
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
         $$->code->push_back(IlocCode(ADD, exp1local, exp2local, *newRegister));
 
     } | 
@@ -1509,13 +1526,14 @@ exp_sum:
 
         // create new register name to save the result
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
 
         // resulting code has first exp's code, then second one's code, then SUB instruction
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string exp1local = std::string($1->local);
-        std::string exp2local = std::string($3->local);
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
         $$->code->push_back(IlocCode(SUB, exp1local, exp2local, *newRegister));
 
     } | 
@@ -1528,13 +1546,14 @@ exp_mult:
 
         // create new register name to save the result
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
 
         // resulting code has first exp's code, then second one's code, then MULT instruction
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string exp1local = std::string($1->local);
-        std::string exp2local = std::string($3->local);
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
         $$->code->push_back(IlocCode(MULT, exp1local, exp2local, *newRegister));
 
     } | 
@@ -1545,13 +1564,14 @@ exp_mult:
 
         // create new register name to save the result
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
 
         // resulting code has first exp's code, then second one's code, then DIV instruction
-        $$->code = $1->code;
+        for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string exp1local = std::string($1->local);
-        std::string exp2local = std::string($3->local);
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
         $$->code->push_back(IlocCode(DIV, exp1local, exp2local, *newRegister));
 
     } | 
@@ -1583,7 +1603,8 @@ operand:
         $$ = $1;
 
         std::string *newRegister = createRegister();
-        $$->local = *newRegister;
+        delete $$->local;
+        $$->local = newRegister;
         $$->code->push_back(IlocCode(LOADAI, std::string("rsp"), std::string("12"), *newRegister));
      };
 
@@ -1696,14 +1717,5 @@ void libera (void *arvore) {
         if(c.thirdArg != NULL) delete c.thirdArg;
     } 
 
-    for (std::string* c : *(((Node *)arvore)->tl))
-    {
-        delete c;
-    } 
-
-    for (std::string* c : *(((Node *)arvore)->fl))
-    {
-        delete c;
-    } 
     FreeTree((Node*) arvore);
 }

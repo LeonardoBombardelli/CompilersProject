@@ -148,7 +148,7 @@ typedef struct node {
     NodeType     nodeType;
     struct node* sequenceNode;
 
-    std::string local;
+    std::string* local;
     std::list<IlocCode> *code;
     std::list<std::string*> *tl;
     std::list<std::string*> *fl;
