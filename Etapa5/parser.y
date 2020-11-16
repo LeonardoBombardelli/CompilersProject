@@ -31,6 +31,8 @@
     int stringConcatSize          = 0;                   // Used to calculate the final size when concating strings
     int localVarListSize          = 0;                   // Used to calculate offset in relation to rsp
 
+    std::string *mainFuncLabel = new std::string;
+
     /* Aux map to help complete ILOC instructions in local var declarations with init  */
     std::map<std::string, std::string*> *auxLocalVarDecDesloc = new std::map<std::string, std::string*>;
 
@@ -203,10 +205,7 @@ programa:
     init_stack program_list destroy_stack {
 
         $2->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
-       
-        std::string *temp1 = (*auxFuncLabelMap)[std::string("main")];
-        std::string *labelMain = new std::string; *labelMain = std::string(*temp1);
-        $2->code->push_front(IlocCode(JUMPI, labelMain, NULL, NULL));           // add instruction to jump to function main
+        $2->code->push_front(IlocCode(JUMPI, mainFuncLabel, NULL, NULL));           // add instruction to jump to function main
 
         std::string *temp14  = new std::string; *temp14  = std::string("rsp");
         std::string *temp15  = new std::string; *temp15  = std::string("8");
@@ -216,7 +215,7 @@ programa:
         std::string *temp2 = new std::string; *temp2 = std::string("rsp");
         std::string *temp3 = new std::string; *temp3 = std::string("4");
         std::string *temp4 = new std::string; *temp4 = std::string("rsp");
-        $2->code->push_front(IlocCode(STOREAI, temp2, temp3, temp4));        // save rsp
+        $2->code->push_front(IlocCode(STOREAI, temp2, temp3, temp4));           // save rsp
 
         std::string *temp5 = new std::string; *temp5 = std::string("rsp");
         std::string *temp6 = new std::string; *temp6 = std::to_string(0);
@@ -274,11 +273,12 @@ destroy_stack:
         delete tempVarList;
         delete tempFuncArgList;
 
-        for (std::pair<std::string, std::string*> item : *auxFuncLabelMap)
-        {
-            delete item.second;
-        }
+        *mainFuncLabel = std::string(*(*auxFuncLabelMap)[std::string("main")]);
+        for (std::pair<std::string, std::string*> item : *auxFuncLabelMap) delete item.second;
         delete auxFuncLabelMap;
+        
+        for (std::pair<std::string, std::string*> item : *auxLocalVarDecDesloc) delete item.second;
+        delete auxLocalVarDecDesloc;
         
         $$ = NULL;
     }
@@ -420,7 +420,7 @@ func_definition:
         (*auxFuncLabelMap)[std::string(funcName)] = funcLabel;
 
         std::string *funcLabelCopy = new std::string; *funcLabelCopy = std::string(*funcLabel);
-        $$->code->push_back(IlocCode(funcLabel, NOP, NULL, NULL, NULL));          // instruction with func's label
+        $$->code->push_back(IlocCode(funcLabelCopy, NOP, NULL, NULL, NULL));          // instruction with func's label
 
         std::string *temp1 = new std::string; *temp1 = std::string("rsp");
         std::string *temp2 = new std::string; *temp2 = std::string("rfp");
