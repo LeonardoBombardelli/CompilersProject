@@ -34,6 +34,21 @@ typedef enum
 class IlocCode {
 
 public:
+    IlocCode(Operations opcode, std::string firstArg, std::string secondArg, std::string thirdArg) {
+        this->label     = NULL;
+        this->opcode    = opcode;
+        this->firstArg  = new std::string; *(this->firstArg) = firstArg;
+        this->secondArg = new std::string; *(this->secondArg) = secondArg;
+        this->thirdArg  = new std::string; *(this->thirdArg) = thirdArg;
+    }
+
+    IlocCode(std::string label, Operations opcode, std::string firstArg, std::string secondArg, std::string thirdArg) {
+        this->label     = new std::string; *(this->label) = label;
+        this->opcode    = opcode;
+        this->firstArg  = new std::string; *(this->firstArg) = firstArg;
+        this->secondArg = new std::string; *(this->secondArg) = secondArg;
+        this->thirdArg  = new std::string; *(this->thirdArg) = thirdArg;
+    }
     IlocCode(Operations opcode, std::string* firstArg, std::string* secondArg, std::string* thirdArg) {
         this->label     = NULL;
         this->opcode    = opcode;
@@ -49,6 +64,7 @@ public:
         this->secondArg = secondArg;
         this->thirdArg  = thirdArg;
     }
+
 
     std::string* label;
     Operations opcode;

@@ -204,39 +204,23 @@
 programa: 
     init_stack program_list destroy_stack {
 
-        $2->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
-        $2->code->push_front(IlocCode(JUMPI, mainFuncLabel, NULL, NULL));           // add instruction to jump to function main
+        std::string rsp  = std::string("rsp");
+        std::string rfp  = std::string("rfp");
+        std::string rbss = std::string("rbss");
 
-        std::string *temp14  = new std::string; *temp14  = std::string("rsp");
-        std::string *temp15  = new std::string; *temp15  = std::string("8");
-        std::string *temp16 = new std::string; *temp16 = std::string("rfp");
-        $2->code->push_front(IlocCode(STOREAI, temp14, temp15, temp16));        // save rfp
-
-        std::string *temp2 = new std::string; *temp2 = std::string("rsp");
-        std::string *temp3 = new std::string; *temp3 = std::string("4");
-        std::string *temp4 = new std::string; *temp4 = std::string("rsp");
-        $2->code->push_front(IlocCode(STOREAI, temp2, temp3, temp4));           // save rsp
-
-        std::string *temp5 = new std::string; *temp5 = std::string("rsp");
-        std::string *temp6 = new std::string; *temp6 = std::to_string(0);
         std::string *newRegister = createRegister();
-        $2->code->push_front(IlocCode(STOREAI, temp5, temp6, newRegister));
+        int codeSize = $2->code->size() + 9;
 
-        std::string *temp7 = new std::string; *temp7 = std::to_string(8);       // save return address (halt)
-        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister2); 
-        $2->code->push_front(IlocCode(LOADI, temp7, NULL, newRegister2));
+        $2->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
+        $2->code->push_front(IlocCode(JUMPI, mainFuncLabel, NULL, NULL));                       // add instruction to jump to function main
+        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("8"), rfp));                    // save rfp
+        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("4"), rsp));                    // save rsp
+        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("0"), *newRegister));
+        $2->code->push_front(IlocCode(LOADI, std::string("8"), std::string(), *newRegister));   // save return address (halt)
 
-        std::string *temp8 = new std::string; *temp8 = std::to_string($2->code->size() + 3);
-        std::string *temp9 = new std::string; *temp9 = std::string("rbss");
-        $2->code->push_front(IlocCode(LOADI, temp8, NULL, temp9));
-
-        std::string *temp10 = new std::string; *temp10 = std::to_string(1024);
-        std::string *temp11 = new std::string; *temp11 = std::string("rsp");
-        $2->code->push_front(IlocCode(LOADI, temp10, NULL, temp11));
-
-        std::string *temp12 = new std::string; *temp12 = std::to_string(1024);
-        std::string *temp13 = new std::string; *temp13 = std::string("rfp");
-        $2->code->push_front(IlocCode(LOADI, temp12, NULL, temp13));
+        $2->code->push_front(IlocCode(LOADI, std::to_string(codeSize), std::string(), rbss));   // define starting points to data segment ...
+        $2->code->push_front(IlocCode(LOADI, std::string("1024"), std::string(), rsp));         // ... stack pointer ...
+        $2->code->push_front(IlocCode(LOADI, std::string("1024"), std::string(), rfp));         // ... and frame pointer
 
         $$ = $2; arvore = $$;
     };
@@ -331,8 +315,7 @@ literal:
         {
             std::string *newRegister = createRegister();
             $$->local = *newRegister;
-            std::string *temp = new std::string; *temp = std::string(auxLiteral);
-            $$->code->push_back(IlocCode(LOADI, temp, NULL, newRegister));
+            $$->code->push_back(IlocCode(LOADI, std::string(auxLiteral), std::string(), *newRegister));
         }
 
     }
@@ -412,6 +395,10 @@ func_definition:
 
         /* intermediate code generation */
 
+        std::string rsp  = std::string("rsp");
+        std::string rfp  = std::string("rfp");
+        std::string rbss = std::string("rbss");
+
         char* funcName = $1->n_function_declaration.identifier->tokenValue.string;
         SymbolTableEntry* ste = GetFirstOccurrence(funcName);
         int num_params = ste->funcArguments->size();
@@ -419,47 +406,25 @@ func_definition:
         std::string *funcLabel = createLabel();
         (*auxFuncLabelMap)[std::string(funcName)] = funcLabel;
 
-        std::string *funcLabelCopy = new std::string; *funcLabelCopy = std::string(*funcLabel);
-        $$->code->push_back(IlocCode(funcLabelCopy, NOP, NULL, NULL, NULL));          // instruction with func's label
+        int incr_rsp = 16+4*num_params;
 
-        std::string *temp1 = new std::string; *temp1 = std::string("rsp");
-        std::string *temp2 = new std::string; *temp2 = std::string("rfp");
-        $$->code->push_back(IlocCode(I2I, temp1, NULL, temp2));                   // copy rsp to rfp
+        $$->code->push_back(IlocCode(*funcLabel, NOP, std::string(), std::string(), std::string()));    // instruction with func's label
+        $$->code->push_back(IlocCode(I2I, rsp, std::string(), rfp));                                    // copy rsp to rfp
+        $$->code->push_back(IlocCode(ADDI, rsp, std::to_string(incr_rsp), rsp));                        // update rsp
+        if($2 != NULL) for (IlocCode c : *($2->code)) $$->code->push_back(c);                           // copy command block's code
 
-        std::string *temp4 = new std::string; *temp4 = std::to_string(16+4*num_params);
-        std::string *temp5 = new std::string; *temp5 = std::string("rsp");
-        std::string *temp6 = new std::string; *temp6 = std::string("rsp");
-        $$->code->push_back(IlocCode(ADDI, temp5, temp4, temp6));          // update rsp
+        // implicit return
 
-        if($2 != NULL) for (IlocCode c : *($2->code)) $$->code->push_back(c);              // copy command block's code
+        std::string *regReturnAddress = createRegister();
+        std::string *regRestoreRsp    = createRegister();
+        std::string *regRestoreRfp    = createRegister();
 
-        // CONTINUE HERE: implement implicit return?
-
-        std::string *temp12 = new std::string; *temp12 = std::string("rfp");
-        std::string *temp13 = new std::string; *temp13 = std::string("0");
-        std::string *newRegister1 = createRegister();
-        $$->code->push_back(IlocCode(LOADAI, temp12, temp13, newRegister1));
-
-        std::string *temp14 = new std::string; *temp14 = std::string("rfp");
-        std::string *temp15 = new std::string; *temp15 = std::string("4");
-        std::string *newRegister2 = createRegister();
-        $$->code->push_back(IlocCode(LOADAI, temp14, temp15, newRegister2));
-
-        std::string *temp8 = new std::string; *temp8 = std::string("rfp");
-        std::string *temp9 = new std::string; *temp9 = std::string("8");
-        std::string *newRegister3 = createRegister();
-        $$->code->push_back(IlocCode(LOADAI, temp8, temp9, newRegister3));
-
-        std::string *temp10 = new std::string; *temp10 = std::string("rsp");
-        std::string *newRegister4 = new std::string; *newRegister4 = std::string(*newRegister2);
-        $$->code->push_back(IlocCode(I2I, newRegister4 , NULL, temp10));
-
-        std::string *temp11 = new std::string; *temp11 = std::string("rfp");
-        std::string *newRegister5 = new std::string; *newRegister5 = std::string(*newRegister3);
-        $$->code->push_back(IlocCode(I2I, newRegister5 , NULL, temp11));
-
-        std::string *newRegister6 = new std::string; *newRegister6 = std::string(*newRegister1);
-        $$->code->push_back(IlocCode(JUMP, newRegister6 , NULL, NULL));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("0"), *regReturnAddress));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("4"), *regRestoreRsp));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("8"), *regRestoreRfp));
+        $$->code->push_back(IlocCode(I2I, *regRestoreRsp , std::string(), rsp));
+        $$->code->push_back(IlocCode(I2I, *regRestoreRfp , std::string(), rfp));
+        $$->code->push_back(IlocCode(JUMP, *regReturnAddress , std::string(), std::string()));
     };
 
 func_header:
@@ -610,10 +575,8 @@ local_var_declaration:
 
         $$ = $4;
         
-        std::string *temp1 = new std::string; *temp1 = std::to_string(localVarListSize);
-        std::string *temp2 = new std::string; *temp2 = std::string("rsp");
-        std::string *temp3 = new std::string; *temp3 = std::string("rsp");
-        $$->code->push_front(IlocCode(ADDI, temp2, temp1, temp3));
+        std::string rsp = std::string("rsp");
+        $$->code->push_front(IlocCode(ADDI, std::to_string(localVarListSize), rsp, rsp));
 
         // free temp var list and aux init type map
         delete tempVarList;
@@ -767,9 +730,7 @@ var_access:
 
         std::string *newRegister = createRegister();
         $$->local = *newRegister;
-        std::string *temp1 = new std::string; *temp1 = std::string(baseReg);
-        std::string *temp2 = new std::string; *temp2 = std::to_string(ste->desloc);
-        $$->code->push_back(IlocCode(LOADAI, temp1, temp2, newRegister));
+        $$->code->push_back(IlocCode(LOADAI, std::string(baseReg), std::to_string(ste->desloc), *newRegister));
 
     } | 
     TK_IDENTIFICADOR '[' expression ']' {
@@ -892,10 +853,8 @@ attribution_command:
             std::string baseReg = var_is_global ? "rbss" : "rfp";
 
             $$->code = $3->code;
-            std::string *temp1 = new std::string; *temp1 = std::string(baseReg);
-            std::string *temp2 = new std::string; *temp2 = std::to_string(ste->desloc);
-            std::string *temp3 = new std::string; *temp3 = std::string($3->local);
-            $$->code->push_back(IlocCode(STOREAI, temp1, temp2, temp3));
+            std::string expLocal = std::string($3->local);
+            $$->code->push_back(IlocCode(STOREAI, std::string(baseReg), std::to_string(ste->desloc), expLocal));
 
         }
         else if ($1->nodeCategory == NODE_VECTOR_ACCESS)
@@ -996,38 +955,27 @@ call_func_command:
 
         /* intermediate code generation */
         
+        std::string rfp = std::string("rfp");
+        std::string rsp = std::string("rsp");
+
         std::string *temp1 = new std::string; *temp1 = std::string("rpc");
         std::string *temp2 = new std::string;   // number of instructions to jump over
         std::string *newRegister = createRegister();
-        $$->code->push_back(IlocCode(ADDI, temp1, temp2, newRegister));     // compute return address
 
-        std::string *temp3 = new std::string; *temp3 = std::string("rsp");
-        std::string *temp4 = new std::string; *temp4 = std::string("0");
-        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
-        $$->code->push_back(IlocCode(STOREAI, temp3, temp4, newRegister2));  // save return address
-
-        std::string *temp5 = new std::string; *temp5 = std::string("rsp");
-        std::string *temp6 = new std::string; *temp6 = std::string("4");
-        std::string *temp7 = new std::string; *temp7 = std::string("rsp");
-        $$->code->push_back(IlocCode(STOREAI, temp5, temp6, temp7));        // save rsp
-
-        std::string *temp8  = new std::string; *temp8  = std::string("rsp");
-        std::string *temp9  = new std::string; *temp9  = std::string("8");
-        std::string *temp10 = new std::string; *temp10 = std::string("rfp");
-        $$->code->push_back(IlocCode(STOREAI, temp8, temp9, temp10));        // save rfp
+        $$->code->push_back(IlocCode(ADDI, temp1, temp2, newRegister));                         // compute return address
+        $$->code->push_back(IlocCode(STOREAI, rsp, std::string("0"), *newRegister));            // save return address
+        $$->code->push_back(IlocCode(STOREAI, rsp, std::string("4"), rsp));                     // save rsp
+        $$->code->push_back(IlocCode(STOREAI, rsp, std::string("8"), rfp));                     // save rfp
 
         int param_address = 12; // start stacking params in rsp+16 (skip an addr to store return value)
         Node* param = $3;
         while (param != NULL)
         {
             param_address += 4;
-            for (IlocCode c : *(param->code)) $$->code->push_back(c);       // copy param's code
-
-            std::string *temp11 = new std::string; *temp11 = std::string("rsp");
-            std::string *temp12 = new std::string; *temp12 = std::to_string(param_address);
-            std::string *temp13 = new std::string; *temp13 = std::string(param->local);
-            $$->code->push_back(IlocCode(STOREAI, temp11, temp12, temp13)); // stack param in rsp+param_address
-
+            for (IlocCode c : *(param->code)) $$->code->push_back(c);                           // copy param's code
+            std::string str_param_address = std::to_string(param_address);
+            std::string str_param_reg     = std::string(param->local);
+            $$->code->push_back(IlocCode(STOREAI, rsp, str_param_address, str_param_reg));      // stack param in rsp+param_address
             param = param->sequenceNode;
         }
 
@@ -1035,8 +983,7 @@ call_func_command:
         *temp2 = std::to_string(3+param_address/4);
 
         std::string *calledFuncLabel = (*auxFuncLabelMap)[std::string(id)];
-        std::string *temp14 = new std::string; *temp14 = std::string(*calledFuncLabel);
-        $$->code->push_back(IlocCode(JUMPI, temp14, NULL, NULL));           // jump to called function
+        $$->code->push_back(IlocCode(JUMPI, *calledFuncLabel, std::string(), std::string()));   // jump to called function
 
     };
 func_parameters_list: 
@@ -1088,39 +1035,26 @@ return_command:
 
         $$ = create_node_return($2); 
 
+        /* intermediate code generation */
+
         for (IlocCode c : *($2->code)) $$->code->push_back(c);              // copy expression's code
 
-        std::string *temp1 = new std::string; *temp1 = std::string("rfp");
-        std::string *temp2 = new std::string; *temp2 = std::string("12");
-        std::string *temp3 = new std::string; *temp3 = std::string($2->local);
-        $$->code->push_back(IlocCode(STOREAI, temp1, temp2, temp3));        // save return value
+        std::string rsp  = std::string("rsp");
+        std::string rfp  = std::string("rfp");
+        std::string rbss = std::string("rbss");
 
-        std::string *temp4 = new std::string; *temp4 = std::string("rfp");
-        std::string *temp5 = new std::string; *temp5 = std::string("0");
         std::string *newRegister1 = createRegister();
-        $$->code->push_back(IlocCode(LOADAI, temp4, temp5, newRegister1));
-
-        std::string *temp6 = new std::string; *temp6 = std::string("rfp");
-        std::string *temp7 = new std::string; *temp7 = std::string("4");
         std::string *newRegister2 = createRegister();
-        $$->code->push_back(IlocCode(LOADAI, temp6, temp7, newRegister2));
-
-        std::string *temp8 = new std::string; *temp8 = std::string("rfp");
-        std::string *temp9 = new std::string; *temp9 = std::string("8");
         std::string *newRegister3 = createRegister();
-        $$->code->push_back(IlocCode(LOADAI, temp8, temp9, newRegister3));
 
-        std::string *temp10 = new std::string; *temp10 = std::string("rsp");
-        std::string *newRegister4 = new std::string; *newRegister4 = std::string(*newRegister2);
-        $$->code->push_back(IlocCode(I2I, newRegister4 , NULL, temp10));
-
-        std::string *temp11 = new std::string; *temp11 = std::string("rfp");
-        std::string *newRegister5 = new std::string; *newRegister5 = std::string(*newRegister3);
-        $$->code->push_back(IlocCode(I2I, newRegister5 , NULL, temp11));
-
-        std::string *newRegister6 = new std::string; *newRegister6 = std::string(*newRegister1);
-        $$->code->push_back(IlocCode(JUMP, newRegister6 , NULL, NULL));
-
+        std::string expLocal = std::string($2->local);
+        $$->code->push_back(IlocCode(STOREAI, rfp, std::string("12"), expLocal));        // save return value
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("0"), *newRegister1));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("4"), *newRegister2));
+        $$->code->push_back(IlocCode(LOADAI, rfp, std::string("8"), *newRegister3));
+        $$->code->push_back(IlocCode(I2I, *newRegister2 , NULL, rsp));
+        $$->code->push_back(IlocCode(I2I, *newRegister3 , NULL, rfp));
+        $$->code->push_back(IlocCode(JUMP, *newRegister1 , NULL, NULL));
 
     };
 
@@ -1216,7 +1150,7 @@ for_flux_control:
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));                   // x: nop
         if(s3 != NULL) for (IlocCode c : *(s3->code)) $$->code->push_back(c);      // S3.code
         for (IlocCode c : *(s2->code)) $$->code->push_back(c);                     // S2.code
-        $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));                        // jump z
+        $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));                       // jump z
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));                   // y: nop
 
     };
@@ -1285,10 +1219,6 @@ expression:
         std::string *y = createLabel();
         std::string *z = createLabel();
 
-        std::string *temp1 = new std::string; *temp1 = std::string($$->local);
-        std::string *temp2 = new std::string; *temp2 = std::string(exp2->local);
-        std::string *temp3 = new std::string; *temp3 = std::string(exp3->local);
-        
         // mend the patches in exp's tl with x and fl with y
         for (std::string* s : *(exp1->tl)) *s = *x;
         for (std::string* s : *(exp1->fl)) *s = *y;
@@ -1298,12 +1228,12 @@ expression:
         
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
         for (IlocCode c : *(exp2->code)) $$->code->push_back(c);
-        $$->code->push_back(IlocCode(I2I, temp2, NULL, temp1));
+        $$->code->push_back(IlocCode(I2I, std::string(exp2->local), std::string(), std::string($$->local)));
         $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));
 
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));
         for (IlocCode c : *(exp3->code)) $$->code->push_back(c);
-        $$->code->push_back(IlocCode(I2I, temp3, NULL, temp1));
+        $$->code->push_back(IlocCode(I2I, std::string(exp3->local), std::string(), std::string($$->local)));
         $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));
 
     } | 
@@ -1384,13 +1314,13 @@ exp_relat_1:
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
-        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+        std::string exp1local = std::string($1->local);
+        std::string exp2local = std::string($3->local);
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_EQ, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CMP_EQ, exp1local, exp2local, *newRegister));
         $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
 
         // patch for future mend
@@ -1411,13 +1341,13 @@ exp_relat_1:
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
-        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+        std::string exp1local = std::string($1->local);
+        std::string exp2local = std::string($3->local);
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_NE, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CMP_NE, exp1local, exp2local, *newRegister));
         $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
 
         // patch for future mend
@@ -1440,13 +1370,13 @@ exp_relat_2:
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
-        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+        std::string exp1local = std::string($1->local);
+        std::string exp2local = std::string($3->local);
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_LE, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CMP_LE, exp1local, exp2local, *newRegister));
         $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
 
         // patch for future mend
@@ -1467,13 +1397,13 @@ exp_relat_2:
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
-        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+        std::string exp1local = std::string($1->local);
+        std::string exp2local = std::string($3->local);
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_GE, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CMP_GE, exp1local, exp2local, *newRegister));
         $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
 
         // patch for future mend
@@ -1494,13 +1424,13 @@ exp_relat_2:
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
-        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+        std::string exp1local = std::string($1->local);
+        std::string exp2local = std::string($3->local);
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_LT, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CMP_LT, exp1local, exp2local, *newRegister));
         $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
 
         // patch for future mend
@@ -1521,13 +1451,13 @@ exp_relat_2:
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
-        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
+        std::string exp1local = std::string($1->local);
+        std::string exp2local = std::string($3->local);
 
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_GT, exp1local, exp2local, newRegister));
+        $$->code->push_back(IlocCode(CMP_GT, exp1local, exp2local, *newRegister));
         $$->code->push_back(IlocCode(CBR, newRegister, tlPatch, flPatch));
 
         // patch for future mend
@@ -1567,9 +1497,9 @@ exp_sum:
         // resulting code has first exp's code, then second one's code, then ADD instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
-        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
-        $$->code->push_back(IlocCode(ADD, exp1local, exp2local, newRegister));
+        std::string exp1local = std::string($1->local);
+        std::string exp2local = std::string($3->local);
+        $$->code->push_back(IlocCode(ADD, exp1local, exp2local, *newRegister));
 
     } | 
     exp_sum '-' exp_mult {
@@ -1584,9 +1514,9 @@ exp_sum:
         // resulting code has first exp's code, then second one's code, then SUB instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
-        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
-        $$->code->push_back(IlocCode(SUB, exp1local, exp2local, newRegister));
+        std::string exp1local = std::string($1->local);
+        std::string exp2local = std::string($3->local);
+        $$->code->push_back(IlocCode(SUB, exp1local, exp2local, *newRegister));
 
     } | 
     exp_mult { $$ = $1; };
@@ -1603,9 +1533,9 @@ exp_mult:
         // resulting code has first exp's code, then second one's code, then MULT instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
-        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
-        $$->code->push_back(IlocCode(MULT, exp1local, exp2local, newRegister));
+        std::string exp1local = std::string($1->local);
+        std::string exp2local = std::string($3->local);
+        $$->code->push_back(IlocCode(MULT, exp1local, exp2local, *newRegister));
 
     } | 
     exp_mult '/' exp_pow {
@@ -1620,9 +1550,9 @@ exp_mult:
         // resulting code has first exp's code, then second one's code, then DIV instruction
         $$->code = $1->code;
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string *exp1local = new std::string; *exp1local = std::string($1->local);
-        std::string *exp2local = new std::string; *exp2local = std::string($3->local);
-        $$->code->push_back(IlocCode(DIV, exp1local, exp2local, newRegister));
+        std::string exp1local = std::string($1->local);
+        std::string exp2local = std::string($3->local);
+        $$->code->push_back(IlocCode(DIV, exp1local, exp2local, *newRegister));
 
     } | 
     exp_mult '%' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
@@ -1651,12 +1581,10 @@ operand:
     literal            { $$ = $1; } | 
     call_func_command  { 
         $$ = $1;
-        std::string *temp1 = new std::string; *temp1 = std::string("rsp");
-        std::string *temp2 = new std::string; *temp2 = std::string("12");
-        std::string *newRegister = createRegister();
 
-        $$->code->push_back(IlocCode(LOADAI, temp1, temp2, newRegister));
+        std::string *newRegister = createRegister();
         $$->local = *newRegister;
+        $$->code->push_back(IlocCode(LOADAI, std::string("rsp"), std::string("12"), *newRegister));
      };
 
 %%
