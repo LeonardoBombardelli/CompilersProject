@@ -24,6 +24,9 @@
     /* Aux function to find last sequenceNode of tree */
     Node* last_command_of_chain(Node* n);
 
+    /* Just an empty string to be passed by value */
+    std::string nullstr = std::string();
+
     char* auxLiteral              = (char*) malloc(500); // Save literals in string format. Used when creating node_literals
     char* auxScopeName            = NULL;                // Save current function's name. Used when creating new scopes
     SymbolType auxCurrentFuncType = SYMBOL_TYPE_INDEF;   // Save current function's return type. Used when verifying return command
@@ -212,15 +215,15 @@ programa:
         int codeSize = $2->code->size() + 9;
 
         $2->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
-        $2->code->push_front(IlocCode(JUMPI, mainFuncLabel, NULL, NULL));                       // add instruction to jump to function main
-        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("8"), rfp));                    // save rfp
-        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("4"), rsp));                    // save rsp
+        $2->code->push_front(IlocCode(JUMPI, mainFuncLabel, NULL, NULL));               // add instruction to jump to function main
+        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("8"), rfp));            // save rfp
+        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("4"), rsp));            // save rsp
         $2->code->push_front(IlocCode(STOREAI, rsp, std::string("0"), newRegister));
-        $2->code->push_front(IlocCode(LOADI, std::string("8"), std::string(), newRegister));   // save return address (halt)
+        $2->code->push_front(IlocCode(LOADI, std::string("8"), nullstr, newRegister));  // save return address (halt)
 
-        $2->code->push_front(IlocCode(LOADI, std::to_string(codeSize), std::string(), rbss));   // define starting points to data segment ...
-        $2->code->push_front(IlocCode(LOADI, std::string("1024"), std::string(), rsp));         // ... stack pointer ...
-        $2->code->push_front(IlocCode(LOADI, std::string("1024"), std::string(), rfp));         // ... and frame pointer
+        $2->code->push_front(IlocCode(LOADI, std::to_string(codeSize), nullstr, rbss)); // define starting points to data segment ...
+        $2->code->push_front(IlocCode(LOADI, std::string("1024"), nullstr, rsp));       // ... stack pointer ...
+        $2->code->push_front(IlocCode(LOADI, std::string("1024"), nullstr, rfp));       // ... and frame pointer
 
         $$ = $2; arvore = $$;
     };
@@ -229,7 +232,7 @@ program_list:
     func_definition program_list          { 
         $1->sequenceNode = $2; 
         $$ = $1; 
-        if($2 != NULL) for(IlocCode c: *($2->code)) $$->code->push_back(c);           
+        if($2 != NULL) for(IlocCode c: *($2->code)) $$->code->push_back(c);             // 
     } |
     %empty                                { $$ = NULL;                                  };
 
@@ -316,7 +319,7 @@ literal:
             std::string *newRegister = createRegister();
             delete $$->local;
             $$->local = newRegister;
-            $$->code->push_back(IlocCode(LOADI, std::string(auxLiteral), std::string(), *newRegister));
+            $$->code->push_back(IlocCode(LOADI, std::string(auxLiteral), nullstr, *newRegister));
         }
 
     }
@@ -409,10 +412,10 @@ func_definition:
 
         int incr_rsp = 16+4*num_params;
 
-        $$->code->push_back(IlocCode(*funcLabel, NOP, std::string(), std::string(), std::string()));    // instruction with func's label
-        $$->code->push_back(IlocCode(I2I, rsp, std::string(), rfp));                                    // copy rsp to rfp
-        $$->code->push_back(IlocCode(ADDI, rsp, std::to_string(incr_rsp), rsp));                        // update rsp
-        if($2 != NULL) for (IlocCode c : *($2->code)) $$->code->push_back(c);                           // copy command block's code
+        $$->code->push_back(IlocCode(*funcLabel, NOP, nullstr, nullstr, nullstr));  // instruction with func's label
+        $$->code->push_back(IlocCode(I2I, rsp, nullstr, rfp));                      // copy rsp to rfp
+        $$->code->push_back(IlocCode(ADDI, rsp, std::to_string(incr_rsp), rsp));    // update rsp
+        if($2 != NULL) for (IlocCode c : *($2->code)) $$->code->push_back(c);       // copy command block's code
 
         // implicit return
 
@@ -423,9 +426,9 @@ func_definition:
         $$->code->push_back(IlocCode(LOADAI, rfp, std::string("0"), regReturnAddress));
         $$->code->push_back(IlocCode(LOADAI, rfp, std::string("4"), regRestoreRsp));
         $$->code->push_back(IlocCode(LOADAI, rfp, std::string("8"), regRestoreRfp));
-        $$->code->push_back(IlocCode(I2I, regRestoreRsp , std::string(), rsp));
-        $$->code->push_back(IlocCode(I2I, regRestoreRfp , std::string(), rfp));
-        $$->code->push_back(IlocCode(JUMP, regReturnAddress , std::string(), std::string()));
+        $$->code->push_back(IlocCode(I2I, regRestoreRsp , nullstr, rsp));
+        $$->code->push_back(IlocCode(I2I, regRestoreRfp , nullstr, rfp));
+        $$->code->push_back(IlocCode(JUMP, regReturnAddress , nullstr, nullstr));
     };
 
 func_header:
@@ -985,7 +988,7 @@ call_func_command:
         *temp2 = std::to_string(3+param_address/4);
 
         std::string *calledFuncLabel = (*auxFuncLabelMap)[std::string(id)];
-        $$->code->push_back(IlocCode(JUMPI, *calledFuncLabel, std::string(), std::string()));   // jump to called function
+        $$->code->push_back(IlocCode(JUMPI, *calledFuncLabel, nullstr, nullstr));               // jump to called function
 
     };
 func_parameters_list: 
@@ -1054,9 +1057,9 @@ return_command:
         $$->code->push_back(IlocCode(LOADAI, rfp, std::string("0"), newRegister1));
         $$->code->push_back(IlocCode(LOADAI, rfp, std::string("4"), newRegister2));
         $$->code->push_back(IlocCode(LOADAI, rfp, std::string("8"), newRegister3));
-        $$->code->push_back(IlocCode(I2I, newRegister2 , std::string(), rsp));
-        $$->code->push_back(IlocCode(I2I, newRegister3 , std::string(), rfp));
-        $$->code->push_back(IlocCode(JUMP, newRegister1 , std::string(), std::string()));
+        $$->code->push_back(IlocCode(I2I, newRegister2 , nullstr, rsp));
+        $$->code->push_back(IlocCode(I2I, newRegister3 , nullstr, rfp));
+        $$->code->push_back(IlocCode(JUMP, newRegister1 , nullstr, nullstr));
 
     };
 
@@ -1101,13 +1104,13 @@ conditional_flux_control:
         
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
         if(s1 != NULL) for (IlocCode c : *(s1->code)) $$->code->push_back(c);
-        if (maybe_else != NULL) $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));
+        if (maybe_else != NULL) $$->code->push_back(IlocCode(JUMPI, *z, nullstr, nullstr));
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));
         
         if (maybe_else != NULL)
         {
             for (IlocCode c : *(maybe_else->code)) $$->code->push_back(c);
-            $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));
+            $$->code->push_back(IlocCode(*z, NOP, nullstr, nullstr, nullstr));
         }
 
     };
@@ -1140,8 +1143,7 @@ for_flux_control:
 
         std::string *x = createLabel();
         std::string *y = createLabel();
-        std::string *z1 = createLabel();
-        std::string *z2 = new std::string; *z2 = *z1;
+        std::string *z = createLabel();
         
         // mend the patches in exp's tl with x and fl with y
         for (std::string* s : *(exp->tl)) *s = *x;
@@ -1149,12 +1151,12 @@ for_flux_control:
 
         // define node's resulting ILOC code
         for (IlocCode c : *(s1->code)) $$->code->push_back(c);                     // S1.code
-        $$->code->push_back(IlocCode(z1, NOP, NULL, NULL, NULL));                   // z: nop
+        $$->code->push_back(IlocCode(*z, NOP, nullstr, nullstr, nullstr));         // z: nop
         for (IlocCode c : *(exp->code)) $$->code->push_back(c);                    // B.code
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));                   // x: nop
         if(s3 != NULL) for (IlocCode c : *(s3->code)) $$->code->push_back(c);      // S3.code
         for (IlocCode c : *(s2->code)) $$->code->push_back(c);                     // S2.code
-        $$->code->push_back(IlocCode(JUMPI, z2, NULL, NULL));                       // jump z
+        $$->code->push_back(IlocCode(JUMPI, *z, nullstr, nullstr));                // jump z
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));                   // y: nop
 
     };
@@ -1182,17 +1184,17 @@ while_flux_control:
         std::string *x = createLabel();
         std::string *y = createLabel();
         std::string *z = createLabel();
-        
+
         // mend the patches in exp's tl with x and fl with y
         for (std::string* s : *(exp->tl)) *s = *x;
         for (std::string* s : *(exp->fl)) *s = *y;
 
         // define node's resulting ILOC code
-        $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));                    // z: nop
+        $$->code->push_back(IlocCode(*z, NOP, nullstr, nullstr, nullstr));          // z: nop
         for (IlocCode c : *(exp->code)) $$->code->push_back(c);                     // B.code
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));                    // x: nop
         if(s1 != NULL) for (IlocCode c : *(s1->code)) $$->code->push_back(c);       // S1.code
-        $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));                         // jump z
+        $$->code->push_back(IlocCode(JUMPI, *z, nullstr, nullstr));                 // jump z
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));                    // y: nop
 
     };
@@ -1232,12 +1234,12 @@ expression:
         
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));
         for (IlocCode c : *(exp2->code)) $$->code->push_back(c);
-        $$->code->push_back(IlocCode(I2I, std::string(*(exp2->local)), std::string(), std::string(*($$->local))));
+        $$->code->push_back(IlocCode(I2I, std::string(*(exp2->local)), nullstr, std::string(*($$->local))));
         $$->code->push_back(IlocCode(JUMPI, z, NULL, NULL));
 
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));
         for (IlocCode c : *(exp3->code)) $$->code->push_back(c);
-        $$->code->push_back(IlocCode(I2I, std::string(*(exp3->local)), std::string(), std::string(*($$->local))));
+        $$->code->push_back(IlocCode(I2I, std::string(*(exp3->local)), nullstr, std::string(*($$->local))));
         $$->code->push_back(IlocCode(z, NOP, NULL, NULL, NULL));
 
     } | 
