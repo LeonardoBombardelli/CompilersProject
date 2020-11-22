@@ -62,9 +62,26 @@ void generateAsm(std::list<IlocCode> ilocList)
             case DIV:     break;
             case ADDI:
                 
+                // addI rpc... is the start of the function call sequence
                 if (instFstArg == std::string("rpc"))
                 {
-                    
+                    // Ignore this and the next three instructions:
+                    // addI rpc, 5 => tmp       Return address is calculated by call inst...
+                    // storeAI tmp => rsp,0     ...and also pushed by call inst.
+                    // storeAI rsp => rsp,4     Both RSP and RFP/RBP will be pushed...
+                    // storeAI rfp => rsp,8     ...in the beginning of the calle function
+                    for (int i = 0; i < 4; i++) ilocList.pop_front();
+
+                    // Translate "jumpI -> L0" to "call foo", assuming L0 is the head label of function foo
+                    asmList.push_back(AsmCode("call", findFuncByLabel(*ilocList.front().firstArg), nullstr));
+                    ilocList.pop_front();
+                }
+                // The only other case is when we update the RSP. In this case, we need to translate
+                // the instruction to a subtraction, as the stack in the ASM code grows downwards.
+                else
+                {
+                    asmList.push_back(AsmCode("subq", instSecArg, instTrdArg));
+                    ilocList.pop_front();
                 }
 
                 break;
