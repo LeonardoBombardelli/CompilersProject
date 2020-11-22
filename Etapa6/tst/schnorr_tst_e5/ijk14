@@ -1,0 +1,9 @@
+//O comando de atribuição com variável
+int z;
+int main()
+{
+  int a;
+  z = 393;
+  a = z;
+  return 0;
+}
