@@ -1251,10 +1251,11 @@ exp_log_or:
         
         std::string *x = createLabel();
         
-        std::list<std::string*> *b1tl = $1->tl;
-        std::list<std::string*> *b1fl = $1->fl;
-        std::list<std::string*> *b2tl = $3->tl;
-        std::list<std::string*> *b2fl = $3->fl;
+        // make a deep copy of the tl and fl lists
+        std::list<std::string*> *b1tl = new std::list<std::string*>; for (std::string* s : *($1->tl)) b1tl->push_back(s);
+        std::list<std::string*> *b1fl = new std::list<std::string*>; for (std::string* s : *($1->fl)) b1tl->push_back(s);
+        std::list<std::string*> *b2tl = new std::list<std::string*>; for (std::string* s : *($3->tl)) b1tl->push_back(s);
+        std::list<std::string*> *b2fl = new std::list<std::string*>; for (std::string* s : *($3->fl)) b1tl->push_back(s);
 
         // mend the patches in first exp's fl
         for (std::string* s : *b1fl) *s = *x;
@@ -1279,10 +1280,11 @@ exp_log_and:
         
         std::string *x = createLabel();
         
-        std::list<std::string*> *b1tl = $1->tl;
-        std::list<std::string*> *b1fl = $1->fl;
-        std::list<std::string*> *b2tl = $3->tl;
-        std::list<std::string*> *b2fl = $3->fl;
+        // make a deep copy of the tl and fl lists
+        std::list<std::string*> *b1tl = new std::list<std::string*>; for (std::string* s : *($1->tl)) b1tl->push_back(s);
+        std::list<std::string*> *b1fl = new std::list<std::string*>; for (std::string* s : *($1->fl)) b1tl->push_back(s);
+        std::list<std::string*> *b2tl = new std::list<std::string*>; for (std::string* s : *($3->tl)) b1tl->push_back(s);
+        std::list<std::string*> *b2fl = new std::list<std::string*>; for (std::string* s : *($3->fl)) b1tl->push_back(s);
 
         // mend the patches in first exp's fl
         for (std::string* s : *b1tl) *s = *x;
