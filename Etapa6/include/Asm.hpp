@@ -33,5 +33,10 @@ public:
 
 void generateAsm(std::list<IlocCode> code);
 std::string findFuncByLabel(std::string label);
+std::string registerILOCtoASM(std::string ilocReg, std::list<IlocCode> ilocCodeList);
+std::string allocateRegisterASM(std::string ilocReg, std::list<IlocCode> ilocCodeList);
+void liberateRegisterASM(std::string asmReg);
+bool passiveLiberateASMreg(std::string ilocReg, std::list<IlocCode> ilocCodeList);
+void createMaps();
 
 #endif

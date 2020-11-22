@@ -2,8 +2,14 @@
 
 // REMEMBER: STACK IS TOP-DOWN!!!
 
+std::map<std::string, std::string>  regMapILOCtoASM;
+std::map<std::string, bool>         regASMfree;
+
+
 void generateAsm(std::list<IlocCode> ilocList)
 {
+    createMaps();
+
     std::list<AsmCode> asmList = std::list<AsmCode>();
     std::string nullstr = std::string();
 
@@ -138,4 +144,99 @@ std::string findFuncByLabel(std::string label)
     }
 
     return std::string();
+}
+
+std::string registerILOCtoASM(std::string ilocReg, std::list<IlocCode> ilocCodeList)
+{
+    std::map<std::string, std::string>::iterator it = regMapILOCtoASM.find(ilocReg);
+    
+    if(it != regMapILOCtoASM.end())
+    {
+        return it->second;
+    }
+
+    else
+    {
+        return allocateRegisterASM(ilocReg, ilocCodeList);
+    }
+    
+}
+
+void liberateRegisterASM(std::string asmReg)
+{
+    regASMfree[asmReg] = false;
+    
+    bool notFound = true;
+    std::map<std::string, std::string>::iterator it = regMapILOCtoASM.begin();
+
+    while(notFound && it == regMapILOCtoASM.end())
+    {
+        if(it->second == asmReg)
+        {
+            notFound = false;
+            regMapILOCtoASM.erase(it);
+        }
+
+        ++it;
+    }
+
+    return;
+}
+
+
+std::string allocateRegisterASM(std::string ilocReg, std::list<IlocCode> ilocCodeList)
+{
+    std::map<std::string, bool>::iterator it = regASMfree.begin();
+    
+    while(it != regASMfree.end())
+    {
+        if(it->second == false)
+        {
+            it->second = true;
+            regMapILOCtoASM[ilocReg] = it->first;
+            return it->first;
+        }
+    } 
+
+    bool anyLiberated = false;
+    for(std::pair<std::string, std::string> item: regMapILOCtoASM)
+        anyLiberated = anyLiberated || passiveLiberateASMreg(item.first, ilocCodeList);
+
+    // From here on out, we were supposed to implement a spill mechanism for the registers.
+
+    return(std::string(""));
+}
+
+bool passiveLiberateASMreg(std::string ilocReg, std::list<IlocCode> ilocCodeList)
+{
+    for(IlocCode inst: ilocCodeList)
+    {
+        if(ilocReg == *(inst.firstArg) || ilocReg == *(inst.secondArg) || ilocReg == *(inst.thirdArg)) return false;
+    }
+
+    liberateRegisterASM(regMapILOCtoASM[ilocReg]);
+
+    return true;
+}
+
+void createMaps()
+{
+    regMapILOCtoASM = std::map<std::string, std::string>();
+    regASMfree = std::map<std::string, bool>();
+
+    regASMfree["%eax"] = false;
+    regASMfree["%ecx"] = false;
+    regASMfree["%edx"] = false;
+    regASMfree["%ebx"] = false;
+    regASMfree["%esi"] = false;
+    regASMfree["%edi"] = false;
+    regASMfree["%r8d"] = false;
+    regASMfree["%r9d"] = false;
+    regASMfree["%r10d"] = false;
+    regASMfree["%r11d"] = false;
+    regASMfree["%r12d"] = false;
+    regASMfree["%r13d"] = false;
+    regASMfree["%r14d"] = false;
+    regASMfree["%r15d"] = false;
+    
 }
