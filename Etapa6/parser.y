@@ -580,7 +580,7 @@ local_var_declaration:
         $$ = $4;
         
         std::string rsp = std::string("rsp");
-        $$->code->push_front(IlocCode(ADDI, std::to_string(localVarListSize), rsp, rsp));
+        $$->code->push_front(IlocCode(ADDI, rsp, std::to_string(localVarListSize), rsp));
 
         // free temp var list and aux init type map
         delete tempVarList;
@@ -691,7 +691,7 @@ local_var:
         /* intermediate code generation */
 
         // select correct base register
-        bool var_is_global = SymbolIsInSymbolTable(s3_name, scopeStack->front());
+        bool var_is_global = IsVarGlobal(s3_name);
         std::string baseReg = var_is_global ? "rbss" : "rfp";
 
         // load s3's value in newRegister
@@ -729,7 +729,7 @@ var_access:
         /* intermediate code generation */
 
         // select correct base register
-        bool var_is_global = SymbolIsInSymbolTable(id, scopeStack->front());
+        bool var_is_global = IsVarGlobal(id);
         std::string baseReg = var_is_global ? "rbss" : "rfp";
 
         std::string *newRegister = createRegister();
@@ -854,7 +854,7 @@ attribution_command:
             /* intermediate code generation */
 
             // select correct base register
-            bool var_is_global = SymbolIsInSymbolTable(id, scopeStack->front());
+            bool var_is_global = IsVarGlobal(id);
             std::string baseReg = var_is_global ? "rbss" : "rfp";
 
             for (IlocCode c : *($3->code)) $$->code->push_back(c);
@@ -972,20 +972,28 @@ call_func_command:
         $$->code->push_back(IlocCode(STOREAI, rsp, std::string("4"), rsp));                     // save rsp
         $$->code->push_back(IlocCode(STOREAI, rsp, std::string("8"), rfp));                     // save rfp
 
-        int param_address = 12; // start stacking params in rsp+16 (skip an addr to store return value)
+        int param_address = 12;         // start stacking params in rsp+16 (skip an addr to store return value)
         Node* param = $3;
+
+        int instructions_to_jump = 5;   // jump at least over storeAIs and jumpI
+
         while (param != NULL)
         {
             param_address += 4;
-            for (IlocCode c : *(param->code)) $$->code->push_back(c);                           // copy param's code
+            for (IlocCode c : *(param->code))
+            {
+                $$->code->push_back(c);                           // copy param's code
+                instructions_to_jump++;
+            }
             std::string str_param_address = std::to_string(param_address);
             std::string str_param_reg     = std::string(*(param->local));
             $$->code->push_back(IlocCode(STOREAI, rsp, str_param_address, str_param_reg));      // stack param in rsp+param_address
+            instructions_to_jump++;
             param = param->sequenceNode;
         }
 
         // compute number of instructions to jump over (to jump right after the JUMP instruction)
-        *temp2 = std::to_string(3+param_address/4);
+        *temp2 = std::to_string(instructions_to_jump);
 
         std::string *calledFuncLabel = (*auxFuncLabelMap)[std::string(id)];
         $$->code->push_back(IlocCode(JUMPI, *calledFuncLabel, nullstr, nullstr));               // jump to called function

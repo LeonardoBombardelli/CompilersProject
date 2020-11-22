@@ -139,6 +139,19 @@ SymbolTableEntry* GetFirstOccurrence(char *symbol)
     return entryToReturn;
 }
 
+// this function assumes the var exists (which is ok because we only call it after error checks :) )
+bool IsVarGlobal(char *symbol)
+{
+    std::list<Scope *>::reverse_iterator it = scopeStack->rbegin();
+    while(it != scopeStack->rend())
+    {
+        if(SymbolIsInSymbolTable(symbol, *it)) return ((*it)->scopeName == NULL);
+        ++it;
+    }
+
+    return false; // just to avoid compiler warning...
+}
+
 SymbolType LiteralTypeToSymbolType(LiteralType type)
 {
     switch(type)

@@ -30,13 +30,17 @@ L1:
 i2i rsp => rfp
 addI rsp, 16 => rsp
 addI rsp, 4 => rsp
-addI rpc, 7 => r10
-storeAI r10 => rsp, 0
-storeAI rsp => rsp, 4
-storeAI rfp => rsp, 8
-loadI 5 => r9
-storeAI r9 => rsp, 16
+
+addI rpc, 7 => r10      // call sequence begin. ignore instruction
+storeAI r10 => rsp, 0   // ignore instruction
+storeAI rsp => rsp, 4   // ignore
+storeAI rfp => rsp, 8   // ignore
+
+loadI 5 => r9           // translate expression normally
+storeAI r9 => rsp, 16   //
+
 jumpI -> L0
+
 loadAI rsp, 12 => r11
 storeAI r11 => rfp, 16
 loadAI rfp, 0 => r12

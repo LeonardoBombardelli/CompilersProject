@@ -85,7 +85,7 @@ void DestroyStack();
 
 bool SymbolIsInSymbolTable(char *symbol, Scope *scope);
 SymbolTableEntry* GetFirstOccurrence(char *symbol);
-
+bool IsVarGlobal(char *symbol);
 
 // aux
 SymbolType LiteralTypeToSymbolType(LiteralType type);

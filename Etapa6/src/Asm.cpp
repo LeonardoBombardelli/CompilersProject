@@ -28,16 +28,63 @@ void generateAsm(std::list<IlocCode> ilocList)
         }
     }
 
+    asmList.push_back(AsmCode(std::string(".text"), nullstr, nullstr));
+
     while (!ilocList.empty())
     {
         std::string label = *ilocList.front().label;
         ilocList.pop_front();
         std::string funcName = findFuncByLabel(label);
 
+        asmList.push_back(AsmCode(std::string(".globl"), funcName, nullstr));
+        asmList.push_back(AsmCode(std::string(".type"), funcName, std::string("@object")));
         asmList.push_back(AsmCode(funcName, nullstr, nullstr, nullstr));    // func label
+        asmList.push_back(AsmCode("pushq", "%rsp", nullstr));               // save old rsp
         asmList.push_back(AsmCode("pushq", "%rbp", nullstr));               // save old rbp
         asmList.push_back(AsmCode("movq", "%rsp", "%rbp"));                 // new rbp = old rsp
 
+        do {
+            IlocCode inst = ilocList.front();
+            std::string instLabel  = *(inst.label);
+            std::string instFstArg = *(inst.firstArg);
+            std::string instSecArg = *(inst.secondArg);
+            std::string instTrdArg = *(inst.thirdArg);
+
+            switch(inst.opcode)
+            {
+            // case HALT:    break;
+            case NOP:
+                asmList.push_back(AsmCode(instLabel, "nop", nullstr, nullstr));
+                break;
+            case ADD:     break;
+            case SUB:     break;
+            case MULT:    break;
+            case DIV:     break;
+            case ADDI:
+                
+                if (instFstArg == std::string("rpc"))
+                {
+                    
+                }
+
+                break;
+            case LOADI:   break;
+            case LOADAI:  break;
+            case STOREAI: break;
+            case I2I:     break;
+            case JUMPI:   break;
+            case JUMP:    break;
+            case CBR:     break;
+            case CMP_LT:  break;
+            case CMP_LE:  break;
+            case CMP_EQ:  break;
+            case CMP_GE:  break;
+            case CMP_GT:  break;
+            case CMP_NE:  break;
+            default:      break;
+            }
+
+        } while (/**/true);
 
     }
 

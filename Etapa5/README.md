@@ -11,9 +11,9 @@
 - **(4 errors)** Test files `ijk1A` and `ijk1B` (2 tests each) went wrong because we didn't deal correctly with the unary operations in lines `a = -4;` and `a = -3;`, respectively. If the expressions are changed to `a = 0 - 4` and `a = 0 - 3` both programs run correctly. That's what makes me think the problem is in unary operations.
     - **TODO**: solve this in phase 6.
 - **(3 errors)** Test files `ijk22`, `ijk23` and `ijk24` went wrong for the data segment verifications (one test for each). Files `ijk22` and `ijk24` also had a stack verification each, and both were right. The problem here appears to be in saving correctly the return value of a function to the var it's attributed to.
-    - **TODO**: solve this in phase 6.
+    - ~~**TODO**: solve this in phase 6.~~ Fixed in phase 6.
 - **(15 errors)** Test files `ijk25`, `ijk27`, `ijk29` and `ijk30` (which had respectively 3, 5, 5 and 2 tests) entered a loop when executed by the simulator. It seems that we miscalculated the number of instructions to be jumped over in the function call sequence.
-    - **TODO**: solve this in phase 6.
+    - **TODO**: solve this in phase 6. (Partially solved. Only `ijk30` still with problem)
 - **(10 errors)** Test files `ijk26` (6 tests) and `ijk28` (4 tests) went wrong because we didn't deal with recursion in this phase (deliberately, as there would be no time to deal with it).
     - **TODO**: maybe implement recursion in phase 6? (If there is enough time...) Check video E5D3.
 
