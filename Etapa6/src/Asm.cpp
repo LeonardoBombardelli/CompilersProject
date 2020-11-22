@@ -52,16 +52,37 @@ void generateAsm(std::list<IlocCode> ilocList)
 
             switch(inst.opcode)
             {
+            // the only halt inst is in the (ignored) prologue of the ILOC code 
             // case HALT:    break;
+            
             case NOP:
                 asmList.push_back(AsmCode(instLabel, "nop", nullstr, nullstr));
                 break;
-            case ADD:     break;
-            case SUB:     break;
-            case MULT:    break;
-            case DIV:     break;
+
+
+            // Arithmetic instructions "inst r1, r2 => r1" translated to "inst r2, r1" because 
+            // the result is saved in the second argument
+            case ADD:
+                asmList.push_back(AsmCode("addl", instSecArg, instTrdArg));
+                ilocList.pop_front();
+                break;
+            case SUB:
+                asmList.push_back(AsmCode("subl", instSecArg, instTrdArg));
+                ilocList.pop_front();
+                break;
+            case MULT:
+                // imull is the signed multiplication inst
+                asmList.push_back(AsmCode("imull", instSecArg, instTrdArg));
+                ilocList.pop_front();
+                break;
+            case DIV:
+                // idivl is the signed division inst
+                asmList.push_back(AsmCode("idivl", instSecArg, instTrdArg));
+                ilocList.pop_front();
+                break;
+
+
             case ADDI:
-                
                 // addI rpc... is the start of the function call sequence
                 if (instFstArg == std::string("rpc"))
                 {
@@ -69,7 +90,7 @@ void generateAsm(std::list<IlocCode> ilocList)
                     // addI rpc, 5 => tmp       Return address is calculated by call inst...
                     // storeAI tmp => rsp,0     ...and also pushed by call inst.
                     // storeAI rsp => rsp,4     Both RSP and RFP/RBP will be pushed...
-                    // storeAI rfp => rsp,8     ...in the beginning of the calle function
+                    // storeAI rfp => rsp,8     ...in the beginning of the callee function
                     for (int i = 0; i < 4; i++) ilocList.pop_front();
 
                     // Translate "jumpI -> L0" to "call foo", assuming L0 is the head label of function foo
@@ -83,8 +104,8 @@ void generateAsm(std::list<IlocCode> ilocList)
                     asmList.push_back(AsmCode("subq", instSecArg, instTrdArg));
                     ilocList.pop_front();
                 }
-
                 break;
+
             case LOADI:   break;
             case LOADAI:  break;
             case STOREAI: break;
@@ -101,7 +122,7 @@ void generateAsm(std::list<IlocCode> ilocList)
             default:      break;
             }
 
-        } while (/**/true);
+        } while (/* not start of another function */true);
 
     }
 
