@@ -962,38 +962,29 @@ call_func_command:
         
         std::string rfp = std::string("rfp");
         std::string rsp = std::string("rsp");
+        std::string rpc = std::string("rpc");
 
-        std::string *temp1 = new std::string; *temp1 = std::string("rpc");
-        std::string *temp2 = new std::string;   // number of instructions to jump over
-        std::string *newRegister = createRegister();
-
-        $$->code->push_back(IlocCode(ADDI, temp1, temp2, newRegister));                         // compute return address
-        $$->code->push_back(IlocCode(STOREAI, rsp, std::string("0"), *newRegister));            // save return address
-        $$->code->push_back(IlocCode(STOREAI, rsp, std::string("4"), rsp));                     // save rsp
-        $$->code->push_back(IlocCode(STOREAI, rsp, std::string("8"), rfp));                     // save rfp
+        std::string newRegister = createRegisterDirect();
 
         int param_address = 12;         // start stacking params in rsp+16 (skip an addr to store return value)
         Node* param = $3;
 
-        int instructions_to_jump = 5;   // jump at least over storeAIs and jumpI
-
         while (param != NULL)
         {
             param_address += 4;
-            for (IlocCode c : *(param->code))
-            {
-                $$->code->push_back(c);                           // copy param's code
-                instructions_to_jump++;
-            }
+            for (IlocCode c : *(param->code)) $$->code->push_back(c);                           // copy param's code
             std::string str_param_address = std::to_string(param_address);
             std::string str_param_reg     = std::string(*(param->local));
             $$->code->push_back(IlocCode(STOREAI, rsp, str_param_address, str_param_reg));      // stack param in rsp+param_address
-            instructions_to_jump++;
             param = param->sequenceNode;
         }
 
         // compute number of instructions to jump over (to jump right after the JUMP instruction)
-        *temp2 = std::to_string(instructions_to_jump);
+        $$->code->push_back(IlocCode(ADDI, rpc, std::string("5"), newRegister));
+        
+        $$->code->push_back(IlocCode(STOREAI, rsp, std::string("0"), newRegister));             // save return address
+        $$->code->push_back(IlocCode(STOREAI, rsp, std::string("4"), rsp));                     // save rsp
+        $$->code->push_back(IlocCode(STOREAI, rsp, std::string("8"), rfp));                     // save rfp
 
         std::string *calledFuncLabel = (*auxFuncLabelMap)[std::string(id)];
         $$->code->push_back(IlocCode(JUMPI, *calledFuncLabel, nullstr, nullstr));               // jump to called function
@@ -1592,7 +1583,25 @@ exp_pow:
     unary_exp                                   { $$ = $1; };
 
 unary_exp: 
-    unary_op unary_exp  { $$ = create_node_unary_operation($1, $2, InferType($2->nodeType, NODE_TYPE_BOOL, $1->line_number)); } | 
+    unary_op unary_exp  {
+        $$ = create_node_unary_operation($1, $2, InferType($2->nodeType, NODE_TYPE_BOOL, $1->line_number));
+
+        $$->code = $2->code;
+        
+        // create new register name to save the result
+        std::string *newRegister = createRegister();
+        delete $$->local;
+        $$->local = newRegister;
+
+        std::string newRegister2 = createRegisterDirect();
+
+        if ($1->tokenValue.character == '-')
+        {
+            $$->code->push_back(IlocCode(LOADI, std::string("-1"), nullstr, newRegister2));
+            $$->code->push_back(IlocCode(MULT, *($2->local), newRegister2, *newRegister));
+        }
+
+    } | 
     operand             { $$ = $1; };
 unary_op: 
     '+' { $$ = $1; } | 
