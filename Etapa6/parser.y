@@ -1497,17 +1497,16 @@ exp_sum:
 
         /* intermediate code generation */
 
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
+
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
+        *($$->local) = exp1local;
 
         // resulting code has first exp's code, then second one's code, then ADD instruction
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string exp1local = std::string(*($1->local));
-        std::string exp2local = std::string(*($3->local));
-        $$->code->push_back(IlocCode(ADD, exp1local, exp2local, *newRegister));
+        $$->code->push_back(IlocCode(ADD, exp1local, exp2local, exp1local));
 
     } | 
     exp_sum '-' exp_mult {
@@ -1515,17 +1514,16 @@ exp_sum:
 
         /* intermediate code generation */
 
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
+
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
+        *($$->local) = exp1local;
 
         // resulting code has first exp's code, then second one's code, then SUB instruction
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string exp1local = std::string(*($1->local));
-        std::string exp2local = std::string(*($3->local));
-        $$->code->push_back(IlocCode(SUB, exp1local, exp2local, *newRegister));
+        $$->code->push_back(IlocCode(SUB, exp1local, exp2local, exp1local));
 
     } | 
     exp_mult { $$ = $1; };
@@ -1535,17 +1533,16 @@ exp_mult:
 
         /* intermediate code generation */
 
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
+
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
+        *($$->local) = exp1local;
 
         // resulting code has first exp's code, then second one's code, then MULT instruction
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string exp1local = std::string(*($1->local));
-        std::string exp2local = std::string(*($3->local));
-        $$->code->push_back(IlocCode(MULT, exp1local, exp2local, *newRegister));
+        $$->code->push_back(IlocCode(MULT, exp1local, exp2local, exp1local));
 
     } | 
     exp_mult '/' exp_pow {
@@ -1553,17 +1550,16 @@ exp_mult:
 
         /* intermediate code generation */
 
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
+
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
+        *($$->local) = exp1local;
 
         // resulting code has first exp's code, then second one's code, then DIV instruction
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
-        std::string exp1local = std::string(*($1->local));
-        std::string exp2local = std::string(*($3->local));
-        $$->code->push_back(IlocCode(DIV, exp1local, exp2local, *newRegister));
+        $$->code->push_back(IlocCode(DIV, exp1local, exp2local, exp1local));
 
     } | 
     exp_mult '%' exp_pow                        { $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number)); } | 
@@ -1579,16 +1575,14 @@ unary_exp:
         $$->code = $2->code;
         
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
-
-        std::string newRegister2 = createRegisterDirect();
+        std::string local = *($2->local);
+        *($$->local) = local;
 
         if ($1->tokenValue.character == '-')
         {
-            $$->code->push_back(IlocCode(LOADI, std::string("-1"), nullstr, newRegister2));
-            $$->code->push_back(IlocCode(MULT, *($2->local), newRegister2, *newRegister));
+            std::string newRegister = createRegisterDirect();
+            $$->code->push_back(IlocCode(LOADI, std::string("-1"), nullstr, newRegister));
+            $$->code->push_back(IlocCode(MULT, local, newRegister, local));
         }
 
     } | 
