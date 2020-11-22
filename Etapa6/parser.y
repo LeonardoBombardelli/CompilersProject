@@ -1313,23 +1313,21 @@ exp_relat_1:
 
         /* intermediate code generation */
         
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
+
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
+        *($$->local) = exp1local;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string(*($1->local));
-        std::string exp2local = std::string(*($3->local));
-
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_EQ, exp1local, exp2local, *newRegister));
-        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CMP_EQ, exp1local, exp2local, exp1local));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(exp1local);
         $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
@@ -1342,23 +1340,21 @@ exp_relat_1:
 
         /* intermediate code generation */
         
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
+
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
+        *($$->local) = exp1local;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string(*($1->local));
-        std::string exp2local = std::string(*($3->local));
-
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_NE, exp1local, exp2local, *newRegister));
-        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CMP_NE, exp1local, exp2local, exp1local));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(exp1local);
         $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
@@ -1373,23 +1369,21 @@ exp_relat_2:
 
         /* intermediate code generation */
         
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
+
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
+        *($$->local) = exp1local;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string(*($1->local));
-        std::string exp2local = std::string(*($3->local));
-
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_LE, exp1local, exp2local, *newRegister));
-        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CMP_LE, exp1local, exp2local, exp1local));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(exp1local);
         $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
@@ -1402,23 +1396,21 @@ exp_relat_2:
 
         /* intermediate code generation */
         
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
+
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
+        *($$->local) = exp1local;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string(*($1->local));
-        std::string exp2local = std::string(*($3->local));
-
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_GE, exp1local, exp2local, *newRegister));
-        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CMP_GE, exp1local, exp2local, exp1local));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(exp1local);
         $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
@@ -1431,23 +1423,21 @@ exp_relat_2:
 
         /* intermediate code generation */
         
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
+
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
+        *($$->local) = exp1local;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string(*($1->local));
-        std::string exp2local = std::string(*($3->local));
-
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_LT, exp1local, exp2local, *newRegister));
-        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CMP_LT, exp1local, exp2local, exp1local));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(exp1local);
         $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
@@ -1460,23 +1450,21 @@ exp_relat_2:
 
         /* intermediate code generation */
         
+        std::string exp1local = std::string(*($1->local));
+        std::string exp2local = std::string(*($3->local));
+
         // create new register name to save the result
-        std::string *newRegister = createRegister();
-        delete $$->local;
-        $$->local = newRegister;
+        *($$->local) = exp1local;
 
         // resulting code has first exp's code, then second one's code, then EQ instruction
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
         for (IlocCode c : *($3->code)) $$->code->push_back(c);
 
-        std::string exp1local = std::string(*($1->local));
-        std::string exp2local = std::string(*($3->local));
-
         std::string *flPatch = new std::string;
         std::string *tlPatch = new std::string;
 
-        $$->code->push_back(IlocCode(CMP_GT, exp1local, exp2local, *newRegister));
-        std::string *newRegister2 = new std::string; *newRegister2 = std::string(*newRegister);
+        $$->code->push_back(IlocCode(CMP_GT, exp1local, exp2local, exp1local));
+        std::string *newRegister2 = new std::string; *newRegister2 = std::string(exp1local);
         $$->code->push_back(IlocCode(CBR, newRegister2, tlPatch, flPatch));
 
         // patch for future mend
