@@ -6,7 +6,7 @@ std::map<std::string, std::string>  regMapILOCtoASM;
 std::map<std::string, bool>         regASMfree;
 
 
-void generateAsm(std::list<IlocCode> ilocList)
+std::list<AsmCode> generateAsm(std::list<IlocCode> ilocList)
 {
     createMaps();
 
@@ -16,45 +16,54 @@ void generateAsm(std::list<IlocCode> ilocList)
     // ignore ILOC code prologue (register init and main() call)
     for (int i = 0; i < 9; i++) ilocList.pop_front();
 
-    asmList.push_back(AsmCode(std::string(".file"), nullstr, nullstr)); // define empty filename
+    asmList.push_back(AsmCode(std::string(".file"), std::string("\"\""), nullstr)); // define empty filename
     asmList.push_back(AsmCode(std::string(".text"), nullstr, nullstr));
+
+    bool global_vars_exist = false;
 
     // for every global var, insert init code
     for (std::pair<std::string, SymbolTableEntry*> item : *scopeStack->back()->symbolTable)
     {
         if (item.second->entryNature == TABLE_NATURE_VAR)
         {
+            global_vars_exist = true;
             asmList.push_back(AsmCode(std::string(".globl"), item.first, nullstr));
             asmList.push_back(AsmCode(std::string(".data"), nullstr, nullstr));
             asmList.push_back(AsmCode(std::string(".align"), std::string("4"), nullstr));
             asmList.push_back(AsmCode(std::string(".type"), item.first, std::string("@object")));
             asmList.push_back(AsmCode(std::string(".size"), item.first, std::string("4")));
-            asmList.push_back(AsmCode(item.first, nullstr, nullstr, nullstr));
+            asmList.push_back(AsmCode(item.first));
             asmList.push_back(AsmCode(std::string(".long"), std::string("0"), nullstr));
         }
     }
 
-    asmList.push_back(AsmCode(std::string(".text"), nullstr, nullstr));
+    if (global_vars_exist) asmList.push_back(AsmCode(std::string(".text"), nullstr, nullstr));
 
+    // translate every function from ILOC to ASM
     while (!ilocList.empty())
     {
-        std::string label = *ilocList.front().label;
+        std::string funcLabel = *ilocList.front().label;
+        std::string funcName = findFuncByLabel(funcLabel);
         ilocList.pop_front();
-        std::string funcName = findFuncByLabel(label);
+
+        std::string auxString1, auxString2;
+        bool end_of_function = false;
 
         asmList.push_back(AsmCode(std::string(".globl"), funcName, nullstr));
-        asmList.push_back(AsmCode(std::string(".type"), funcName, std::string("@object")));
-        asmList.push_back(AsmCode(funcName, nullstr, nullstr, nullstr));    // func label
-        asmList.push_back(AsmCode("pushq", "%rsp", nullstr));               // save old rsp
-        asmList.push_back(AsmCode("pushq", "%rbp", nullstr));               // save old rbp
-        asmList.push_back(AsmCode("movq", "%rsp", "%rbp"));                 // new rbp = old rsp
+        asmList.push_back(AsmCode(std::string(".type"), funcName, std::string("@function")));
+        asmList.push_back(AsmCode(funcName));                                                       // func label
+        asmList.push_back(AsmCode(std::string("pushq"), std::string("%rsp"), nullstr));             // save old rsp
+        asmList.push_back(AsmCode(std::string("pushq"), std::string("%rbp"), nullstr));             // save old rbp
+        asmList.push_back(AsmCode(std::string("movq"), std::string("%rsp"), std::string("%rbp")));  // new rbp = old rsp (equivalent to i2i)
 
-        do {
+        // translate each ILOC instruction until the end of current function
+        // (i.e. until the starting label of next function)
+        while (!end_of_function && !ilocList.empty()) {
             IlocCode inst = ilocList.front();
-            std::string instLabel  = *(inst.label);
-            std::string instFstArg = *(inst.firstArg);
-            std::string instSecArg = *(inst.secondArg);
-            std::string instTrdArg = *(inst.thirdArg);
+            std::string instLabel  = (inst.label != nullptr)     ? *(inst.label)     : std::string();
+            std::string instFstArg = (inst.firstArg != nullptr)  ? *(inst.firstArg)  : std::string();
+            std::string instSecArg = (inst.secondArg != nullptr) ? *(inst.secondArg) : std::string();
+            std::string instTrdArg = (inst.thirdArg != nullptr)  ? *(inst.thirdArg)  : std::string();
 
             switch(inst.opcode)
             {
@@ -62,28 +71,53 @@ void generateAsm(std::list<IlocCode> ilocList)
             // case HALT:    break;
             
             case NOP:
-                asmList.push_back(AsmCode(instLabel, "nop", nullstr, nullstr));
+                // test if end of function
+                if (findFuncByLabel(instLabel) != nullstr) end_of_function = true;
+                else
+                {
+                    asmList.push_back(AsmCode(instLabel));
+                    ilocList.pop_front();
+                }
                 break;
 
 
             // Arithmetic instructions "inst r1, r2 => r1" translated to "inst r2, r1" because 
             // the result is saved in the second argument
             case ADD:
-                asmList.push_back(AsmCode("addl", instSecArg, instTrdArg));
+                auxString1 = registerILOCtoASM(instSecArg, ilocList);
+                asmList.push_back(AsmCode(std::string("addl"), auxString1, registerILOCtoASM(instTrdArg, ilocList)));
+                liberateRegisterASM(auxString1);
                 ilocList.pop_front();
                 break;
             case SUB:
-                asmList.push_back(AsmCode("subl", instSecArg, instTrdArg));
+                auxString1 = registerILOCtoASM(instSecArg, ilocList);
+                asmList.push_back(AsmCode(std::string("subl"), auxString1, registerILOCtoASM(instTrdArg, ilocList)));
+                liberateRegisterASM(auxString1);
                 ilocList.pop_front();
                 break;
             case MULT:
                 // imull is the signed multiplication inst
-                asmList.push_back(AsmCode("imull", instSecArg, instTrdArg));
+                auxString1 = registerILOCtoASM(instSecArg, ilocList);
+                asmList.push_back(AsmCode(std::string("imul"), auxString1, registerILOCtoASM(instTrdArg, ilocList)));
+                liberateRegisterASM(auxString1);
                 ilocList.pop_front();
                 break;
             case DIV:
-                // idivl is the signed division inst
-                asmList.push_back(AsmCode("idivl", instSecArg, instTrdArg));
+                // save rax and rdx to restore later
+                asmList.push_back(AsmCode(std::string("pushq"), std::string("%rax"), nullstr));
+                asmList.push_back(AsmCode(std::string("pushq"), std::string("%rdx"), nullstr));
+
+                auxString1 = registerILOCtoASM(instSecArg, ilocList);
+                asmList.push_back(AsmCode(std::string("movl"), registerILOCtoASM(instFstArg, ilocList), std::string("%eax")));
+                asmList.push_back(AsmCode(std::string("cltd"), nullstr, nullstr));
+                asmList.push_back(AsmCode(std::string("idivl"), auxString1, nullstr));
+                asmList.push_back(AsmCode(std::string("movl"), std::string("%eax"), registerILOCtoASM(instTrdArg, ilocList)));
+
+                // restore rax and rdx
+                asmList.push_back(AsmCode(std::string("popq"), std::string("%rdx"), nullstr));
+                asmList.push_back(AsmCode(std::string("popq"), std::string("%rax"), nullstr));
+
+                liberateRegisterASM(auxString1);
                 ilocList.pop_front();
                 break;
 
@@ -99,40 +133,212 @@ void generateAsm(std::list<IlocCode> ilocList)
                     // storeAI rfp => rsp,8     ...in the beginning of the callee function
                     for (int i = 0; i < 4; i++) ilocList.pop_front();
 
+                    asmList.push_back(AsmCode(std::string("pushq"), std::string("%rax"), nullstr));
+
                     // Translate "jumpI -> L0" to "call foo", assuming L0 is the head label of function foo
-                    asmList.push_back(AsmCode("call", findFuncByLabel(*ilocList.front().firstArg), nullstr));
+                    asmList.push_back(AsmCode(std::string("call"), findFuncByLabel(*ilocList.front().firstArg), nullstr));
+                    
+                    asmList.push_back(AsmCode(std::string("movl"), std::string("%eax"), std::string("-12(%rsp)")));
+                    asmList.push_back(AsmCode(std::string("popq"), std::string("%rax"), nullstr));
+                    
+                    
                     ilocList.pop_front();
                 }
                 // The only other case is when we update the RSP. In this case, we need to translate
                 // the instruction to a subtraction, as the stack in the ASM code grows downwards.
                 else
                 {
-                    asmList.push_back(AsmCode("subq", instSecArg, instTrdArg));
+                    // second arg is a literal, third arg is a register
+                    auxString1 = std::string("$") + instSecArg;
+                    asmList.push_back(AsmCode(std::string("subq"), auxString1, registerILOCtoASM(instTrdArg, ilocList)));
                     ilocList.pop_front();
                 }
                 break;
 
-            case LOADI:   break;
-            case LOADAI:  break;
-            case STOREAI: break;
-            case I2I:     break;
-            case JUMPI:   break;
-            case JUMP:    break;
-            case CBR:     break;
-            case CMP_LT:  break;
-            case CMP_LE:  break;
-            case CMP_EQ:  break;
-            case CMP_GE:  break;
-            case CMP_GT:  break;
-            case CMP_NE:  break;
-            default:      break;
+
+            case LOADI:
+                auxString1 = std::string("$") + instFstArg;
+                asmList.push_back(AsmCode(std::string("movl"), auxString1, registerILOCtoASM(instTrdArg, ilocList)));
+                ilocList.pop_front();
+                break;
+            case LOADAI:
+                // loadAI rfp, 0 =>... is the start of the function return sequence
+                if (instFstArg == std::string("rfp") && instSecArg == std::string("0"))
+                {
+                    // Ignore this and the next five instructions:
+                    // loadAI rfp, 0 => ...     Get ret address (ret inst will do)
+                    // loadAI rfp, 4 => ...     Get old RSP value (pop inst will do)
+                    // loadAI rfp, 8 => ...     Get old RFP/RBP value (pop inst will do)
+                    // i2i ... => rsp           
+                    // i2i ... => rfp           
+                    // jump -> ...              Jump to ret address (ret inst will do)
+                    for (int i = 0; i < 6; i++) ilocList.pop_front();
+                    
+                    // In the main function, we need to set %eax to be the return value. This is because
+                    // we normally (for other functions) save the return value in the stack (rbp,12).
+                    if (funcName == std::string("main"))
+                    {
+                        asmList.push_back(AsmCode(std::string("movl"), std::string("-12(%rbp)"), std::string("%eax")));
+                    }
+
+                    asmList.push_back(AsmCode(std::string("movq"), std::string("%rbp"), std::string("%rsp")));
+                    asmList.push_back(AsmCode(std::string("popq"), std::string("%rbp"), nullstr));
+                    asmList.push_back(AsmCode(std::string("popq"), std::string("%rsp"), nullstr));
+                    asmList.push_back(AsmCode(std::string("ret"), nullstr, nullstr));
+                    // asmList.push_back(AsmCode(std::string(".size"), funcName, std::string(".-") + funcName));
+                }
+                else
+                {
+                    // global var access
+                    if (instFstArg == std::string("rbss"))
+                    {
+                        auxString1 = retrieveGlobalNameFromDesloc(instSecArg) + std::string("(%rip)");
+                    }
+                    // local var access
+                    else
+                    {
+                        auxString1 = std::string("-") + instSecArg + std::string("(") + registerILOCtoASM(instFstArg, ilocList) + std::string(")");
+                    }
+
+                    asmList.push_back(AsmCode(std::string("movl"), auxString1, registerILOCtoASM(instTrdArg, ilocList)));
+                    ilocList.pop_front();
+                }
+
+                break;
+
+
+            case STOREAI:
+                auxString2 = registerILOCtoASM(instTrdArg, ilocList);
+                
+                // store global var
+                if (instFstArg == std::string("rbss"))
+                {
+                    auxString1 = retrieveGlobalNameFromDesloc(instSecArg) + std::string("(%rip)");
+                    asmList.push_back(AsmCode(std::string("movl"), auxString2, auxString1));
+                }
+                // store local var
+                else
+                {
+                    auxString1 = std::string("-") + instSecArg + std::string("(") + registerILOCtoASM(instFstArg, ilocList) + std::string(")");
+                    asmList.push_back(AsmCode(std::string("movl"), auxString2, auxString1));
+                }
+
+                ilocList.pop_front();
+
+                // when we store a register to memory, we NEVER use it anymore, so we can free it to be used again
+                liberateRegisterASM(auxString2);
+                break;
+
+
+            // Ignore i2i inst because it is used in only two situations:
+            // - in the function return sequence, we ignore it (see LOADI)
+            // - in the beginning of the function we ignore it (because the "movq rsp, rfp" is done before this switch) 
+            case I2I:
+                ilocList.pop_front();
+                break;
+
+            
+            // Here we only deal with jumpI instructions outside of function calls. For function calls see case ADDI
+            case JUMPI:
+                asmList.push_back(AsmCode(std::string("jmp"), instFstArg, nullstr));
+                ilocList.pop_front();
+                break;
+
+            // Here we don't need to do anything because jump instructions are only used in function return sequence (see case LOADI)
+            // case JUMP:    break;
+
+            // Ignore because it is treted in the CMPs
+            // case CBR:     break;
+
+            case CMP_LT:
+                auxString1 = registerILOCtoASM(instFstArg, ilocList);
+                auxString2 = registerILOCtoASM(instSecArg, ilocList);
+                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                ilocList.pop_front();
+
+                // Here we take the cbr instruction
+                auxString1 = *ilocList.front().secondArg;
+                auxString2 = *ilocList.front().thirdArg;
+                asmList.push_back(AsmCode(std::string("jl"), auxString1, nullstr));
+                asmList.push_back(AsmCode(std::string("jge"), auxString2, nullstr));
+                ilocList.pop_front();
+                break;
+            case CMP_LE:
+                auxString1 = registerILOCtoASM(instFstArg, ilocList);
+                auxString2 = registerILOCtoASM(instSecArg, ilocList);
+                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                ilocList.pop_front();
+
+                // Here we take the cbr instruction
+                auxString1 = *ilocList.front().secondArg;
+                auxString2 = *ilocList.front().thirdArg;
+                asmList.push_back(AsmCode(std::string("jle"), auxString1, nullstr));
+                asmList.push_back(AsmCode(std::string("jg"), auxString2, nullstr));
+                ilocList.pop_front();
+                break;
+            case CMP_EQ:
+                auxString1 = registerILOCtoASM(instFstArg, ilocList);
+                auxString2 = registerILOCtoASM(instSecArg, ilocList);
+                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                ilocList.pop_front();
+
+                // Here we take the cbr instruction
+                auxString1 = *ilocList.front().secondArg;
+                auxString2 = *ilocList.front().thirdArg;
+                asmList.push_back(AsmCode(std::string("je"), auxString1, nullstr));
+                asmList.push_back(AsmCode(std::string("jne"), auxString2, nullstr));
+                ilocList.pop_front();
+                break;
+            case CMP_GE:
+                auxString1 = registerILOCtoASM(instFstArg, ilocList);
+                auxString2 = registerILOCtoASM(instSecArg, ilocList);
+                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                ilocList.pop_front();
+
+                // Here we take the cbr instruction
+                auxString1 = *ilocList.front().secondArg;
+                auxString2 = *ilocList.front().thirdArg;
+                asmList.push_back(AsmCode(std::string("jge"), auxString1, nullstr));
+                asmList.push_back(AsmCode(std::string("jl"), auxString2, nullstr));
+                ilocList.pop_front();
+                break;
+            case CMP_GT:
+                auxString1 = registerILOCtoASM(instFstArg, ilocList);
+                auxString2 = registerILOCtoASM(instSecArg, ilocList);
+                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                ilocList.pop_front();
+
+                // Here we take the cbr instruction
+                auxString1 = *ilocList.front().secondArg;
+                auxString2 = *ilocList.front().thirdArg;
+                asmList.push_back(AsmCode(std::string("jg"), auxString1, nullstr));
+                asmList.push_back(AsmCode(std::string("jle"), auxString2, nullstr));
+                ilocList.pop_front();
+                break;
+            case CMP_NE:
+                auxString1 = registerILOCtoASM(instFstArg, ilocList);
+                auxString2 = registerILOCtoASM(instSecArg, ilocList);
+                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                ilocList.pop_front();
+
+                // Here we take the cbr instruction
+                auxString1 = *ilocList.front().secondArg;
+                auxString2 = *ilocList.front().thirdArg;
+                asmList.push_back(AsmCode(std::string("jne"), auxString1, nullstr));
+                asmList.push_back(AsmCode(std::string("je"), auxString2, nullstr));
+                ilocList.pop_front();
+                break;
+            default:
+                std::cout << "Something went wrong. Exiting..." << std::endl;
+                exit(1);
+                break;
             }
 
-        } while (/* not start of another function */true);
+        }
 
     }
 
-
+    return asmList;
 
 }
 
@@ -148,6 +354,9 @@ std::string findFuncByLabel(std::string label)
 
 std::string registerILOCtoASM(std::string ilocReg, std::list<IlocCode> ilocCodeList)
 {
+    if (ilocReg == std::string("rsp")) return std::string("%rsp");
+    if (ilocReg == std::string("rfp")) return std::string("%rbp");
+
     std::map<std::string, std::string>::iterator it = regMapILOCtoASM.find(ilocReg);
     
     if(it != regMapILOCtoASM.end())
@@ -196,6 +405,7 @@ std::string allocateRegisterASM(std::string ilocReg, std::list<IlocCode> ilocCod
             regMapILOCtoASM[ilocReg] = it->first;
             return it->first;
         }
+        ++it;
     } 
 
     bool anyLiberated = false;
@@ -204,7 +414,7 @@ std::string allocateRegisterASM(std::string ilocReg, std::list<IlocCode> ilocCod
 
     // From here on out, we were supposed to implement a spill mechanism for the registers.
 
-    return(std::string(""));
+    return(std::string());
 }
 
 bool passiveLiberateASMreg(std::string ilocReg, std::list<IlocCode> ilocCodeList)
@@ -239,4 +449,33 @@ void createMaps()
     regASMfree["%r14d"] = false;
     regASMfree["%r15d"] = false;
     
+}
+
+std::string retrieveGlobalNameFromDesloc(std::string desloc)
+{
+    for (std::pair<std::string, SymbolTableEntry*> item : *scopeStack->back()->symbolTable)
+    {
+        if(std::to_string(item.second->desloc) == desloc)
+            return item.first;
+    }
+
+    return std::string();
+}
+
+void PrintAsmCode(std::list<AsmCode> code)
+{
+    std::string nullstr = std::string();
+
+    for (AsmCode inst : code)
+    {
+        if (inst.label != nullstr) std::cout << inst.label << ":";
+        else
+        {
+            std::cout << "\t" << inst.opcode;
+            if (inst.firstArg != nullstr) std::cout << "\t" << inst.firstArg;
+            if (inst.secondArg != nullstr) std::cout << ", " << inst.secondArg;
+        }
+        std::cout << std::endl;
+    }
+
 }

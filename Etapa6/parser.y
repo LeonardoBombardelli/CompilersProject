@@ -2,6 +2,7 @@
     #include <cstdio>
     #include <map>
     #include "../include/AST.hpp"
+    #include "../include/Asm.hpp"
     #include "../include/Scope.hpp"
     #include "../include/ILOC.hpp"
 
@@ -33,8 +34,6 @@
     int auxCurrentFuncLine        = 0;                   // Save current func's decl. line. Used when creating STEs for function's args
     int stringConcatSize          = 0;                   // Used to calculate the final size when concating strings
     int localVarListSize          = 0;                   // Used to calculate offset in relation to rsp
-
-    std::string *mainFuncLabel = new std::string;
 
     /* Aux map to help complete ILOC instructions in local var declarations with init  */
     std::map<std::string, std::string*> *auxLocalVarDecDesloc = new std::map<std::string, std::string*>;
@@ -214,8 +213,10 @@ programa:
         std::string newRegister = createRegisterDirect();
         int codeSize = $2->code->size() + 9;
 
+        std::string mainFuncLabel = std::string(*(*auxFuncLabelMap)[std::string("main")]);
+
         $2->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
-        $2->code->push_front(IlocCode(JUMPI, mainFuncLabel, NULL, NULL));               // add instruction to jump to function main
+        $2->code->push_front(IlocCode(JUMPI, mainFuncLabel, nullstr, nullstr));         // add instruction to jump to function main
         $2->code->push_front(IlocCode(STOREAI, rsp, std::string("8"), rfp));            // save rfp
         $2->code->push_front(IlocCode(STOREAI, rsp, std::string("4"), rsp));            // save rsp
         $2->code->push_front(IlocCode(STOREAI, rsp, std::string("0"), newRegister));
@@ -226,6 +227,15 @@ programa:
         $2->code->push_front(IlocCode(LOADI, std::string("1024"), nullstr, rfp));       // ... and frame pointer
 
         $$ = $2; arvore = $$;
+
+        // translate ILOC code to ASM and print it
+        PrintAsmCode(generateAsm(*($$->code)));
+
+        // deallocate the remaining aux structures (those that are needed in the ASM generation)
+        DestroyStack(); 
+        for (std::pair<std::string, std::string*> item : *auxFuncLabelMap) delete item.second;
+        delete auxFuncLabelMap;
+        
     };
 program_list: 
     global_var_declaration program_list   { $$ = $2; /* ignore global vars in AST */    } |
@@ -252,18 +262,13 @@ init_stack:
 destroy_stack:
     %empty {
     
-        // deallocate all aux structures used during construction of the AST
-        DestroyStack(); 
+        // deallocate ALMOST all aux structures used during construction of the AST
         free(auxLiteral); 
         free(auxScopeName);
         delete auxInitTypeMap;
         delete tempVarList;
         delete tempFuncArgList;
 
-        *mainFuncLabel = std::string(*(*auxFuncLabelMap)[std::string("main")]);
-        for (std::pair<std::string, std::string*> item : *auxFuncLabelMap) delete item.second;
-        delete auxFuncLabelMap;
-        
         // for (std::pair<std::string, std::string*> item : *auxLocalVarDecDesloc) delete item.second;
         delete auxLocalVarDecDesloc;
         
@@ -1253,9 +1258,9 @@ exp_log_or:
         
         // make a deep copy of the tl and fl lists
         std::list<std::string*> *b1tl = new std::list<std::string*>; for (std::string* s : *($1->tl)) b1tl->push_back(s);
-        std::list<std::string*> *b1fl = new std::list<std::string*>; for (std::string* s : *($1->fl)) b1tl->push_back(s);
-        std::list<std::string*> *b2tl = new std::list<std::string*>; for (std::string* s : *($3->tl)) b1tl->push_back(s);
-        std::list<std::string*> *b2fl = new std::list<std::string*>; for (std::string* s : *($3->fl)) b1tl->push_back(s);
+        std::list<std::string*> *b1fl = new std::list<std::string*>; for (std::string* s : *($1->fl)) b1fl->push_back(s);
+        std::list<std::string*> *b2tl = new std::list<std::string*>; for (std::string* s : *($3->tl)) b2tl->push_back(s);
+        std::list<std::string*> *b2fl = new std::list<std::string*>; for (std::string* s : *($3->fl)) b2fl->push_back(s);
 
         // mend the patches in first exp's fl
         for (std::string* s : *b1fl) *s = *x;
@@ -1282,9 +1287,9 @@ exp_log_and:
         
         // make a deep copy of the tl and fl lists
         std::list<std::string*> *b1tl = new std::list<std::string*>; for (std::string* s : *($1->tl)) b1tl->push_back(s);
-        std::list<std::string*> *b1fl = new std::list<std::string*>; for (std::string* s : *($1->fl)) b1tl->push_back(s);
-        std::list<std::string*> *b2tl = new std::list<std::string*>; for (std::string* s : *($3->tl)) b1tl->push_back(s);
-        std::list<std::string*> *b2fl = new std::list<std::string*>; for (std::string* s : *($3->fl)) b1tl->push_back(s);
+        std::list<std::string*> *b1fl = new std::list<std::string*>; for (std::string* s : *($1->fl)) b1fl->push_back(s);
+        std::list<std::string*> *b2tl = new std::list<std::string*>; for (std::string* s : *($3->tl)) b2tl->push_back(s);
+        std::list<std::string*> *b2fl = new std::list<std::string*>; for (std::string* s : *($3->fl)) b2fl->push_back(s);
 
         // mend the patches in first exp's fl
         for (std::string* s : *b1tl) *s = *x;
