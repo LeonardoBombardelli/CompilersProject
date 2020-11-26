@@ -10,8 +10,11 @@
 
     extern int yylineno;
     extern void *arvore;
+    extern int only_iloc;       // Store compiler option to stop compilation in the intermediate representation
     int yylex(void);
     void yyerror (char const *s);
+
+    std::list<AsmCode> asmCode; // Store compiled x86_64 Assembly code
 
     /* Aux function to print error message and exit execution with error */
     void throw_error(int err_code, int line, char* identifier, TableEntryNature nature);
@@ -228,8 +231,8 @@ programa:
 
         $$ = $2; arvore = $$;
 
-        // translate ILOC code to ASM and print it
-        PrintAsmCode(generateAsm(*($$->code)));
+        // translate ILOC code to ASM
+        if (!only_iloc) asmCode = generateAsm(*($$->code));
 
         // deallocate the remaining aux structures (those that are needed in the ASM generation)
         DestroyStack(); 
@@ -1713,7 +1716,9 @@ void yyerror (char const *s) {
 
 void exporta (void *arvore) {
     // PrintAll((Node*) arvore);
-    PrintIlocCode(*((Node*) arvore)->code);
+
+    if (only_iloc) PrintIlocCode(*((Node*) arvore)->code);
+    else PrintAsmCode(asmCode);
 }
 
 void libera (void *arvore) {
