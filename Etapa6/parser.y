@@ -147,9 +147,10 @@
 %token<valor_lexico> '$'
 %token<valor_lexico> '?'
 
+%type<node> do_everything
 %type<node> programa
-%type<node> init_stack
-%type<node> destroy_stack
+%type<node> init_aux
+%type<node> destroy_aux
 %type<node> program_list
 %type<node> maybe_const
 %type<node> maybe_static
@@ -206,39 +207,42 @@
 %type<node> operand
 
 %%
+do_everything:
+    init_aux programa destroy_aux {
+        arvore = $2;
+    };
+
 programa: 
-    init_stack program_list destroy_stack {
+    program_list {
 
-        std::string rsp  = std::string("rsp");
-        std::string rfp  = std::string("rfp");
-        std::string rbss = std::string("rbss");
+        if ($1 != NULL)
+        {
+            std::string rsp  = std::string("rsp");
+            std::string rfp  = std::string("rfp");
+            std::string rbss = std::string("rbss");
 
-        std::string newRegister = createRegisterDirect();
-        int codeSize = $2->code->size() + 9;
+            std::string newRegister = createRegisterDirect();
+            int codeSize = $1->code->size() + 9;
 
-        std::string mainFuncLabel = std::string(*(*auxFuncLabelMap)[std::string("main")]);
+            std::string mainFuncLabel = std::string(*(*auxFuncLabelMap)[std::string("main")]);
 
-        $2->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
-        $2->code->push_front(IlocCode(JUMPI, mainFuncLabel, nullstr, nullstr));         // add instruction to jump to function main
-        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("8"), rfp));            // save rfp
-        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("4"), rsp));            // save rsp
-        $2->code->push_front(IlocCode(STOREAI, rsp, std::string("0"), newRegister));
-        $2->code->push_front(IlocCode(LOADI, std::string("8"), nullstr, newRegister));  // save return address (halt)
+            $1->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
+            $1->code->push_front(IlocCode(JUMPI, mainFuncLabel, nullstr, nullstr));         // add instruction to jump to function main
+            $1->code->push_front(IlocCode(STOREAI, rsp, std::string("8"), rfp));            // save rfp
+            $1->code->push_front(IlocCode(STOREAI, rsp, std::string("4"), rsp));            // save rsp
+            $1->code->push_front(IlocCode(STOREAI, rsp, std::string("0"), newRegister));
+            $1->code->push_front(IlocCode(LOADI, std::string("8"), nullstr, newRegister));  // save return address (halt)
 
-        $2->code->push_front(IlocCode(LOADI, std::to_string(codeSize), nullstr, rbss)); // define starting points to data segment ...
-        $2->code->push_front(IlocCode(LOADI, std::string("1024"), nullstr, rsp));       // ... stack pointer ...
-        $2->code->push_front(IlocCode(LOADI, std::string("1024"), nullstr, rfp));       // ... and frame pointer
+            $1->code->push_front(IlocCode(LOADI, std::to_string(codeSize), nullstr, rbss)); // define starting points to data segment ...
+            $1->code->push_front(IlocCode(LOADI, std::string("1024"), nullstr, rsp));       // ... stack pointer ...
+            $1->code->push_front(IlocCode(LOADI, std::string("1024"), nullstr, rfp));       // ... and frame pointer
 
-        $$ = $2; arvore = $$;
+            $$ = $1;
 
-        // translate ILOC code to ASM
-        if (!only_iloc) asmCode = generateAsm(*($$->code));
+            // translate ILOC code to ASM
+            if (!only_iloc) asmCode = generateAsm(*($$->code));
+        }
 
-        // deallocate the remaining aux structures (those that are needed in the ASM generation)
-        DestroyStack(); 
-        for (std::pair<std::string, std::string*> item : *auxFuncLabelMap) delete item.second;
-        delete auxFuncLabelMap;
-        
     };
 program_list: 
     global_var_declaration program_list   { $$ = $2; /* ignore global vars in AST */    } |
@@ -249,7 +253,7 @@ program_list:
     } |
     %empty                                { $$ = NULL;                                  };
 
-init_stack:
+init_aux:
     %empty {
 
         // initialize global stack of scopes (which contain the symbol tables)
@@ -262,17 +266,21 @@ init_stack:
         $$ = NULL;
     }
 
-destroy_stack:
+destroy_aux:
     %empty {
     
-        // deallocate ALMOST all aux structures used during construction of the AST
+        // deallocate all aux structures used during construction of the AST
+        DestroyStack(); 
         free(auxLiteral); 
         free(auxScopeName);
         delete auxInitTypeMap;
         delete tempVarList;
         delete tempFuncArgList;
 
-        // for (std::pair<std::string, std::string*> item : *auxLocalVarDecDesloc) delete item.second;
+        for (std::pair<std::string, std::string*> item : *auxFuncLabelMap) delete item.second;
+        delete auxFuncLabelMap;
+
+        // no need to delete the pointed strings here because the pointers are used (and deleted) elsewhere
         delete auxLocalVarDecDesloc;
         
         $$ = NULL;
@@ -1722,13 +1730,16 @@ void exporta (void *arvore) {
 }
 
 void libera (void *arvore) {
-    for (IlocCode c : *(((Node *)arvore)->code))
+    if (arvore != NULL)
     {
-        if(c.label != NULL) delete c.label;
-        if(c.firstArg != NULL) delete c.firstArg;
-        if(c.secondArg != NULL) delete c.secondArg;
-        if(c.thirdArg != NULL) delete c.thirdArg;
-    } 
+        for (IlocCode c : *(((Node *)arvore)->code))
+        {
+            if(c.label != NULL) delete c.label;
+            if(c.firstArg != NULL) delete c.firstArg;
+            if(c.secondArg != NULL) delete c.secondArg;
+            if(c.thirdArg != NULL) delete c.thirdArg;
+        } 
 
-    FreeTree((Node*) arvore);
+        FreeTree((Node*) arvore);
+    }
 }
