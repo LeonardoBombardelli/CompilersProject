@@ -1,5 +1,5 @@
-#ifndef ASM_HPP
-#define ASM_HPP
+#ifndef ASSEMBLY_HPP
+#define ASSEMBLY_HPP
 
 #include "ILOC.hpp"
 #include "Scope.hpp"

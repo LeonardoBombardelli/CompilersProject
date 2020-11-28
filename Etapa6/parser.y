@@ -2,7 +2,7 @@
     #include <cstdio>
     #include <map>
     #include "../include/AST.hpp"
-    #include "../include/Asm.hpp"
+    #include "../include/Assembly.hpp"
     #include "../include/Scope.hpp"
     #include "../include/ILOC.hpp"
 
