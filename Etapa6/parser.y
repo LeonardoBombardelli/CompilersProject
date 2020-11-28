@@ -1600,10 +1600,10 @@ unary_exp:
     unary_op unary_exp  {
         $$ = create_node_unary_operation($1, $2, InferType($2->nodeType, NODE_TYPE_BOOL, $1->line_number));
 
-        $$->code = $2->code;
+        for (IlocCode c : *($2->code)) $$->code->push_back(c);
         
         // create new register name to save the result
-        std::string local = *($2->local);
+        std::string local = std::string(*($2->local));
         *($$->local) = local;
 
         if ($1->tokenValue.character == '-')
