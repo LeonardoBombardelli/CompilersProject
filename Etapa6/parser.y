@@ -215,29 +215,41 @@ do_everything:
 programa: 
     program_list {
 
-        if ($1 != NULL)
+        Node* program = $1;
+
+        if (program != NULL)
         {
             std::string rsp  = std::string("rsp");
             std::string rfp  = std::string("rfp");
             std::string rbss = std::string("rbss");
 
-            std::string newRegister = createRegisterDirect();
-            int codeSize = $1->code->size() + 9;
+            std::string newRegister = createRegisterDirect();       // create temp used to save main function return address
+            int codeSize = program->code->size() + 9;               // calculate data segment starting point
 
+            // get main function's label to jump and start execution
             std::string mainFuncLabel = std::string(*(*auxFuncLabelMap)[std::string("main")]);
 
-            $1->code->push_front(IlocCode(HALT, NULL, NULL, NULL));
-            $1->code->push_front(IlocCode(JUMPI, mainFuncLabel, nullstr, nullstr));         // add instruction to jump to function main
-            $1->code->push_front(IlocCode(STOREAI, rsp, std::string("8"), rfp));            // save rfp
-            $1->code->push_front(IlocCode(STOREAI, rsp, std::string("4"), rsp));            // save rsp
-            $1->code->push_front(IlocCode(STOREAI, rsp, std::string("0"), newRegister));
-            $1->code->push_front(IlocCode(LOADI, std::string("8"), nullstr, newRegister));  // save return address (halt)
+            // temp list to insert prologue code in front of existing code
+            std::list<IlocCode> newCode = std::list<IlocCode>();
 
-            $1->code->push_front(IlocCode(LOADI, std::to_string(codeSize), nullstr, rbss)); // define starting points to data segment ...
-            $1->code->push_front(IlocCode(LOADI, std::string("1024"), nullstr, rsp));       // ... stack pointer ...
-            $1->code->push_front(IlocCode(LOADI, std::string("1024"), nullstr, rfp));       // ... and frame pointer
+            newCode.push_back(IlocCode(LOADI, std::string("1024"), nullstr, rfp));          // init frame pointer
+            newCode.push_back(IlocCode(LOADI, std::string("1024"), nullstr, rsp));          // init stack pointer ...
+            newCode.push_back(IlocCode(LOADI, std::to_string(codeSize), nullstr, rbss));    // define data segment starting point
 
-            $$ = $1;
+            newCode.push_back(IlocCode(LOADI, std::string("8"), nullstr, newRegister));     // save return address (8, i.e. halt)
+            newCode.push_back(IlocCode(STOREAI, rsp, std::string("0"), newRegister));
+
+            newCode.push_back(IlocCode(STOREAI, rsp, std::string("4"), rsp));               // save rsp
+            newCode.push_back(IlocCode(STOREAI, rsp, std::string("8"), rfp));               // save rfp
+            newCode.push_back(IlocCode(JUMPI, mainFuncLabel, nullstr, nullstr));            // add instruction to jump to function main
+            newCode.push_back(IlocCode(HALT, NULL, NULL, NULL));
+
+            // write program code below prologue and write it all in program->code
+            for (IlocCode c: *(program->code)) newCode.push_back(c);
+            program->code = new std::list<IlocCode>;
+            for (IlocCode c: newCode) program->code->push_back(c);
+
+            $$ = program;
 
             // translate ILOC code to ASM
             if (!only_iloc) asmCode = generateAsm(*($$->code));
