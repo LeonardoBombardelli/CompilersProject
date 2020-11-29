@@ -472,8 +472,8 @@ func_header:
         std::list<FuncArgument*> *deepCopy = new std::list<FuncArgument*>;
         for (FuncArgument* arg : *tempFuncArgList) deepCopy->push_back(arg);
 
-        // add function to symbol table
-        SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, deepCopy, 0, 0);
+        // add function to symbol table (offset of -1 so it's not mistaken for a variable)
+        SymbolTableEntry* ste = CreateSymbolTableEntry(IntToSymbolType($2), $3->line_number, TABLE_NATURE_FUNC, deepCopy, 0, -1);
         (*scopeStack->back()->symbolTable)[std::string(id)] = ste;
 
         // update aux vars with new scope name, current function's type and current function's line
