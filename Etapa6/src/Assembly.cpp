@@ -253,7 +253,7 @@ std::list<AsmCode> generateAsm(std::list<IlocCode> ilocList)
             case CMP_LT:
                 auxString1 = registerILOCtoASM(instFstArg, ilocList);
                 auxString2 = registerILOCtoASM(instSecArg, ilocList);
-                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                asmList.push_back(AsmCode(std::string("cmpl"), auxString2, auxString1));
                 ilocList.pop_front();
 
                 // Here we take the cbr instruction
@@ -266,7 +266,7 @@ std::list<AsmCode> generateAsm(std::list<IlocCode> ilocList)
             case CMP_LE:
                 auxString1 = registerILOCtoASM(instFstArg, ilocList);
                 auxString2 = registerILOCtoASM(instSecArg, ilocList);
-                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                asmList.push_back(AsmCode(std::string("cmpl"), auxString2, auxString1));
                 ilocList.pop_front();
 
                 // Here we take the cbr instruction
@@ -279,7 +279,7 @@ std::list<AsmCode> generateAsm(std::list<IlocCode> ilocList)
             case CMP_EQ:
                 auxString1 = registerILOCtoASM(instFstArg, ilocList);
                 auxString2 = registerILOCtoASM(instSecArg, ilocList);
-                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                asmList.push_back(AsmCode(std::string("cmpl"), auxString2, auxString1));
                 ilocList.pop_front();
 
                 // Here we take the cbr instruction
@@ -292,7 +292,7 @@ std::list<AsmCode> generateAsm(std::list<IlocCode> ilocList)
             case CMP_GE:
                 auxString1 = registerILOCtoASM(instFstArg, ilocList);
                 auxString2 = registerILOCtoASM(instSecArg, ilocList);
-                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                asmList.push_back(AsmCode(std::string("cmpl"), auxString2, auxString1));
                 ilocList.pop_front();
 
                 // Here we take the cbr instruction
@@ -305,7 +305,7 @@ std::list<AsmCode> generateAsm(std::list<IlocCode> ilocList)
             case CMP_GT:
                 auxString1 = registerILOCtoASM(instFstArg, ilocList);
                 auxString2 = registerILOCtoASM(instSecArg, ilocList);
-                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                asmList.push_back(AsmCode(std::string("cmpl"), auxString2, auxString1));
                 ilocList.pop_front();
 
                 // Here we take the cbr instruction
@@ -318,7 +318,7 @@ std::list<AsmCode> generateAsm(std::list<IlocCode> ilocList)
             case CMP_NE:
                 auxString1 = registerILOCtoASM(instFstArg, ilocList);
                 auxString2 = registerILOCtoASM(instSecArg, ilocList);
-                asmList.push_back(AsmCode(std::string("cmp"), auxString1, auxString2));
+                asmList.push_back(AsmCode(std::string("cmpl"), auxString2, auxString1));
                 ilocList.pop_front();
 
                 // Here we take the cbr instruction
