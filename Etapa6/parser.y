@@ -435,12 +435,11 @@ func_definition:
         SymbolTableEntry* ste = GetFirstOccurrence(funcName);
         int num_params = ste->funcArguments->size();
 
-        std::string *funcLabel = createLabel();
-        (*auxFuncLabelMap)[std::string(funcName)] = funcLabel;
+        std::string funcLabel = *(*auxFuncLabelMap)[std::string(funcName)];
 
         int incr_rsp = 16+4*num_params;
 
-        $$->code->push_back(IlocCode(*funcLabel, NOP, nullstr, nullstr, nullstr));  // instruction with func's label
+        $$->code->push_back(IlocCode(funcLabel, NOP, nullstr, nullstr, nullstr));  // instruction with func's label
         $$->code->push_back(IlocCode(I2I, rsp, nullstr, rfp));                      // copy rsp to rfp
         $$->code->push_back(IlocCode(ADDI, rsp, std::to_string(incr_rsp), rsp));    // update rsp
         if($2 != NULL) for (IlocCode c : *($2->code)) $$->code->push_back(c);       // copy command block's code
@@ -481,6 +480,10 @@ func_header:
         auxScopeName = strdup(id);
         auxCurrentFuncType = IntToSymbolType($2);
         auxCurrentFuncLine = $3->line_number;
+
+        // create function's label, which will be used to call it
+        std::string *funcLabel = createLabel();
+        (*auxFuncLabelMap)[std::string(id)] = funcLabel;
 
         $$ = create_node_function_declaration($3, NULL);
         FreeValorLexico($4); FreeValorLexico($6);
@@ -1014,8 +1017,8 @@ call_func_command:
         $$->code->push_back(IlocCode(STOREAI, rsp, std::string("4"), rsp));                     // save rsp
         $$->code->push_back(IlocCode(STOREAI, rsp, std::string("8"), rfp));                     // save rfp
 
-        std::string *calledFuncLabel = (*auxFuncLabelMap)[std::string(id)];
-        $$->code->push_back(IlocCode(JUMPI, *calledFuncLabel, nullstr, nullstr));               // jump to called function
+        std::string calledFuncLabel = std::string(*(*auxFuncLabelMap)[std::string(id)]);
+        $$->code->push_back(IlocCode(JUMPI, calledFuncLabel, nullstr, nullstr));               // jump to called function
 
     };
 func_parameters_list: 
@@ -1210,18 +1213,18 @@ while_flux_control:
 
         std::string *x = createLabel();
         std::string *y = createLabel();
-        std::string *z = createLabel();
+        std::string z = createLabelDirect();
 
         // mend the patches in exp's tl with x and fl with y
         for (std::string* s : *(exp->tl)) *s = std::string(*x);
         for (std::string* s : *(exp->fl)) *s = std::string(*y);
 
         // define node's resulting ILOC code
-        $$->code->push_back(IlocCode(*z, NOP, nullstr, nullstr, nullstr));          // z: nop
+        $$->code->push_back(IlocCode(z, NOP, nullstr, nullstr, nullstr));           // z: nop
         for (IlocCode c : *(exp->code)) $$->code->push_back(c);                     // B.code
         $$->code->push_back(IlocCode(x, NOP, NULL, NULL, NULL));                    // x: nop
         if(s1 != NULL) for (IlocCode c : *(s1->code)) $$->code->push_back(c);       // S1.code
-        $$->code->push_back(IlocCode(JUMPI, *z, nullstr, nullstr));                 // jump z
+        $$->code->push_back(IlocCode(JUMPI, z, nullstr, nullstr));                  // jump z
         $$->code->push_back(IlocCode(y, NOP, NULL, NULL, NULL));                    // y: nop
 
     };
