@@ -246,7 +246,7 @@ programa:
 
             // write program code below prologue and write it all in program->code
             for (IlocCode c: *(program->code)) newCode.push_back(c);
-            program->code = new std::list<IlocCode>;
+            program->code->clear();
             for (IlocCode c: newCode) program->code->push_back(c);
 
             $$ = program;
@@ -1123,8 +1123,8 @@ conditional_flux_control:
         if (maybe_else != NULL) z = createLabel();
         
         // mend the patches in exp's tl with x and fl with y
-        for (std::string* s : *(exp->tl)) *s = *x;
-        for (std::string* s : *(exp->fl)) *s = *y;
+        for (std::string* s : *(exp->tl)) *s = std::string(*x);
+        for (std::string* s : *(exp->fl)) *s = std::string(*y);
 
         // resulting code has first exp's code, then label "x", then second one's code
         for (IlocCode c : *(exp->code)) $$->code->push_back(c);
@@ -1173,8 +1173,8 @@ for_flux_control:
         std::string *z = createLabel();
         
         // mend the patches in exp's tl with x and fl with y
-        for (std::string* s : *(exp->tl)) *s = *x;
-        for (std::string* s : *(exp->fl)) *s = *y;
+        for (std::string* s : *(exp->tl)) *s = std::string(*x);
+        for (std::string* s : *(exp->fl)) *s = std::string(*y);
 
         // define node's resulting ILOC code
         for (IlocCode c : *(s1->code)) $$->code->push_back(c);                     // S1.code
@@ -1213,8 +1213,8 @@ while_flux_control:
         std::string *z = createLabel();
 
         // mend the patches in exp's tl with x and fl with y
-        for (std::string* s : *(exp->tl)) *s = *x;
-        for (std::string* s : *(exp->fl)) *s = *y;
+        for (std::string* s : *(exp->tl)) *s = std::string(*x);
+        for (std::string* s : *(exp->fl)) *s = std::string(*y);
 
         // define node's resulting ILOC code
         $$->code->push_back(IlocCode(*z, NOP, nullstr, nullstr, nullstr));          // z: nop
@@ -1276,22 +1276,18 @@ exp_log_or:
         $$ = create_node_binary_operation($2, $1, $3, InferType($1->nodeType, $3->nodeType, $2->line_number));
 
         /* intermediate code generation */
-        
+
         std::string *x = createLabel();
-        
-        // make a deep copy of the tl and fl lists
-        std::list<std::string*> *b1tl = new std::list<std::string*>; for (std::string* s : *($1->tl)) b1tl->push_back(s);
-        std::list<std::string*> *b1fl = new std::list<std::string*>; for (std::string* s : *($1->fl)) b1fl->push_back(s);
-        std::list<std::string*> *b2tl = new std::list<std::string*>; for (std::string* s : *($3->tl)) b2tl->push_back(s);
-        std::list<std::string*> *b2fl = new std::list<std::string*>; for (std::string* s : *($3->fl)) b2fl->push_back(s);
 
-        // mend the patches in first exp's fl
-        for (std::string* s : *b1fl) *s = *x;
+        // mend(B1.fl, x)
+        for (std::string* s : *($1->fl)) *s = std::string(*x);
 
-        // propagate the other lists
-        $$->fl = b2fl;
-        $$->tl = b1tl;
-        for (std::string* s : *b2tl) $$->fl->push_back(s);
+        // B.fl = B2.fl
+        for (std::string* s : *($3->fl)) $$->fl->push_back(s);
+
+        // B.tl = concat(B1.tl, B2.tl)
+        for (std::string* s : *($1->tl)) $$->tl->push_back(s);
+        for (std::string* s : *($3->tl)) $$->tl->push_back(s);
 
         // resulting code has first exp's code, then label "x", then second one's code
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
@@ -1308,19 +1304,15 @@ exp_log_and:
         
         std::string *x = createLabel();
         
-        // make a deep copy of the tl and fl lists
-        std::list<std::string*> *b1tl = new std::list<std::string*>; for (std::string* s : *($1->tl)) b1tl->push_back(s);
-        std::list<std::string*> *b1fl = new std::list<std::string*>; for (std::string* s : *($1->fl)) b1fl->push_back(s);
-        std::list<std::string*> *b2tl = new std::list<std::string*>; for (std::string* s : *($3->tl)) b2tl->push_back(s);
-        std::list<std::string*> *b2fl = new std::list<std::string*>; for (std::string* s : *($3->fl)) b2fl->push_back(s);
+        // mend(B1.tl, x)
+        for (std::string* s : *($1->tl)) *s = std::string(*x);
 
-        // mend the patches in first exp's fl
-        for (std::string* s : *b1tl) *s = *x;
+        // B.tl = B2.tl
+        for (std::string* s : *($3->tl)) $$->tl->push_back(s);
 
-        // propagate the other lists
-        $$->tl = b2tl;
-        $$->fl = b1fl;
-        for (std::string* s : *b2fl) $$->fl->push_back(s);
+        // B.fl = concat(B1.fl, B2.fl)
+        for (std::string* s : *($1->fl)) $$->fl->push_back(s);
+        for (std::string* s : *($3->fl)) $$->fl->push_back(s);
 
         // resulting code has first exp's code, then label "x", then second one's code
         for (IlocCode c : *($1->code)) $$->code->push_back(c);
