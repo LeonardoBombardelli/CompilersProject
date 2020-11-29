@@ -230,10 +230,17 @@ std::list<AsmCode> generateAsm(std::list<IlocCode> ilocList)
                 break;
 
 
-            // Ignore i2i inst because it is used in only two situations:
+            // These two uses of i2i are dealt with in other parts of the code:
             // - in the function return sequence, we ignore it (see LOADI)
             // - in the beginning of the function we ignore it (because the "movq rsp, rfp" is done before this switch) 
+            // Here we deal only with its use in the ternary operator.
             case I2I:
+                if (instFstArg != std::string("rsp") && instTrdArg != std::string("rbp"))
+                {
+                    auxString1 = registerILOCtoASM(instFstArg, ilocList);
+                    auxString2 = registerILOCtoASM(instTrdArg, ilocList);
+                    asmList.push_back(AsmCode(std::string("movl"), auxString1, auxString2));
+                }
                 ilocList.pop_front();
                 break;
 
