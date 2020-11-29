@@ -6,7 +6,8 @@
 - (No test files revealed until recorrection...)
 #### Problems (those we knew of when we first submitted)
 - This may not actually be a problem but one thing we spent some time thinking about is the fact that x86_64 Assembly stacks data in 8-byte blocks. As our data type (integer) has only 4 bytes, we might need to do a conversion sometimes.
-- Need to check what's happening with `for` and `while do` loops. The ILOC code seems to be correct (as run in `ilocsim.py`) so the problem should be in the Assembly translation...
+- ~~Need to check what's happening with `for` and `while do` loops. The ILOC code seems to be correct (as run in `ilocsim.py`) so the problem should be in the Assembly translation...~~
+    - Fixed in second try. The problem was in the order that the Assembly instruction `cmp` compares the arguments: swapping the arguments we were passing, it started to work...
 - ~~Last problem doesn't really affect the execution. It's a memory-related problem that happens with unary expressions... Need to check the semantic rule in `parser.y`.~~
     - Fixed in second try. The problem was we weren't actually copying the data from one node to the other, only attributing the same data — so we ended up with double frees when deallocating the data.
 
